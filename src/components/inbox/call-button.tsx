@@ -1,4 +1,5 @@
-import { Phone, PhoneCall, Copy, MessageCircle } from "lucide-react";
+import { useState } from "react";
+import { Phone, PhoneCall, Copy, MessageCircle, Grid3x3 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import { WebDialerDialog } from "./web-dialer-dialog";
 
 /** Somente dígitos, no formato aceito por links tel:/WhatsApp. */
 function normalizePhone(raw: string): string {
@@ -33,13 +35,10 @@ interface CallButtonProps {
 }
 
 /**
- * Ligação para o contato do inbox.
- *
- * A Stevo não expõe endpoint de chamada (WhatsApp não permite originar
- * chamadas por API), então a ação abre o discador do dispositivo ou o
- * WhatsApp, onde a chamada de voz pode ser iniciada.
+ * Ligação para o contato do inbox via Stevo Voice (SIP), discador web e app de voz.
  */
 export function CallButton({ phone, contactName, variant = "icon", className }: CallButtonProps) {
+  const [dialerOpen, setDialerOpen] = useState(false);
   const digits = phone ? normalizePhone(phone) : "";
   const disabled = digits.length < 8;
 
@@ -83,27 +82,52 @@ export function CallButton({ phone, contactName, variant = "icon", className }: 
   if (disabled) return trigger;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
-          {contactName ? `${contactName} · ` : ""}
-          {formatPhone(digits)}
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => open(`tel:+${digits}`)}>
-          <PhoneCall className="mr-2 h-4 w-4" />
-          Ligar pelo telefone
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => open(`https://wa.me/${digits}`)}>
-          <MessageCircle className="mr-2 h-4 w-4" />
-          Chamada de voz no WhatsApp
-        </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => void copy()}>
-          <Copy className="mr-2 h-4 w-4" />
-          Copiar número
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>{trigger}</DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          <DropdownMenuLabel className="truncate text-xs font-normal text-muted-foreground">
+            {contactName ? `${contactName} · ` : ""}
+            {formatPhone(digits)}
+          </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onSelect={() => open(`sip:+${digits}`)}>
+            <PhoneCall className="mr-2 h-4 w-4 text-emerald-600" />
+            Ligar via Stevo Voice (SIP)
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onSelect={() => setDialerOpen(true)}>
+            <Grid3x3 className="mr-2 h-4 w-4 text-primary" />
+            Discador Web Zenda
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onSelect={() => open(`https://wa.me/${digits}`)}>
+            <MessageCircle className="mr-2 h-4 w-4 text-sky-500" />
+            Chamada de voz no WhatsApp
+          </DropdownMenuItem>
+
+          <DropdownMenuItem onSelect={() => open(`tel:+${digits}`)}>
+            <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+            Telefone do dispositivo
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem onSelect={() => void copy()}>
+            <Copy className="mr-2 h-4 w-4 text-muted-foreground" />
+            Copiar número
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <WebDialerDialog
+        open={dialerOpen}
+        onOpenChange={setDialerOpen}
+        phone={digits}
+        contactName={contactName}
+      />
+    </>
   );
 }

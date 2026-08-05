@@ -303,7 +303,30 @@ export const sendMessage = createServerFn({ method: "POST" })
       }
     }
 
-    // Dispatch to provider (best-effort — returns skipped when no real credentials)
+    // 1. Inserção prévia no banco com status 'sending' para garantir que o registro exista localmente
+    const { data: initialMsg, error: insertError } = await context.supabase
+      .from("messages")
+      .insert({
+        company_id: conv.company_id,
+        conversation_id: data.conversationId,
+        channel_id: channel?.id ?? null,
+        direction: "outbound",
+        type: data.type,
+        body: data.body ?? null,
+        media_url: data.mediaUrl ?? null,
+        media_metadata: Object.keys(data.mediaMetadata ?? {}).length ? (data.mediaMetadata as never) : null,
+        reply_to_id: data.replyToId ?? null,
+        sender_user_id: context.userId,
+        status: "sending",
+      })
+      .select("*")
+      .single();
+
+    if (insertError || !initialMsg) {
+      throw new Error(insertError?.message ?? "Falha ao gravar mensagem inicial no banco de dados");
+    }
+
+    // 2. Dispatch to provider (best-effort)
     let providerMessageId: string | null = null;
     let sendError: string | null = null;
     if (channel && toPhone) {
@@ -342,42 +365,40 @@ export const sendMessage = createServerFn({ method: "POST" })
       ...(sendError ? { send_error: sendError } : {}),
     };
 
-    let { data: msg, error } = await context.supabase
+    // 3. Atualiza o registro prévio com o provider_message_id e status final
+    let updatedMsg: typeof initialMsg | null = null;
+    let updateError: { message?: string } | null = null;
+
+    const { data: uMsg, error: uErr } = await context.supabase
       .from("messages")
-      .insert({
-        company_id: conv.company_id,
-        conversation_id: data.conversationId,
-        channel_id: channel?.id ?? null,
-        direction: "outbound",
-        type: data.type,
-        body: data.body ?? null,
-        media_url: data.mediaUrl ?? null,
-        media_metadata: Object.keys(mergedMeta).length ? (mergedMeta as never) : null,
-        provider_message_id: providerMessageId,
-        reply_to_id: data.replyToId ?? null,
-        sender_user_id: context.userId,
+      .update({
+        provider_message_id: providerMessageId ?? null,
         status: sendError ? "failed" : "sent",
+        media_metadata: Object.keys(mergedMeta).length ? (mergedMeta as never) : null,
       })
+      .eq("id", initialMsg.id)
       .select("*")
       .single();
 
-    if (error) {
-      if (providerMessageId && (error.code === "23505" || error.message?.includes("messages_channel_provider_msg_idx"))) {
-        const { data: existing } = await context.supabase
-          .from("messages")
-          .select("*")
-          .eq("conversation_id", data.conversationId)
-          .eq("provider_message_id", providerMessageId)
-          .maybeSingle();
-        if (existing) {
-          msg = existing;
-          error = null;
-        }
+    updatedMsg = uMsg;
+    updateError = uErr;
+
+    // Trata colisão se o webhook registrou o provider_message_id primeiro em outra linha
+    if (updateError && providerMessageId) {
+      const { data: existing } = await context.supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", data.conversationId)
+        .eq("provider_message_id", providerMessageId)
+        .maybeSingle();
+      if (existing) {
+        await context.supabase.from("messages").delete().eq("id", initialMsg.id);
+        updatedMsg = existing;
+        updateError = null;
       }
-      if (error) throw new Error(error.message);
     }
 
-    if (!msg) throw new Error("Falha ao criar registro de mensagem");
+    const msg = updatedMsg ?? initialMsg;
 
     if (sendError && channel?.id) {
       await context.supabase.from("channel_events").insert({

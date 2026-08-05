@@ -418,6 +418,11 @@ function IntegrationSettings({
   const [verifyToken, setVerifyToken] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
 
+  const creds = ((channel as { credentials?: Record<string, unknown> }).credentials ?? {}) as Record<string, unknown>;
+  const [stevoInstanceId, setStevoInstanceId] = useState(typeof creds.instance_id === "string" ? creds.instance_id : "");
+  const [sipServer, setSipServer] = useState(typeof creds.sip_server === "string" ? creds.sip_server : "sm-grilo.stevo.chat:5060");
+  const [sipUsername, setSipUsername] = useState(typeof creds.sip_username === "string" ? creds.sip_username : "");
+
   const providerPath = channel.provider_type === "stevo" ? "stevo" : "whatsapp";
   const webhookUrl =
     typeof window !== "undefined"
@@ -441,6 +446,7 @@ function IntegrationSettings({
   };
 
   const isCloud = channel.provider_type === "whatsapp_cloud";
+  const isStevo = channel.provider_type === "stevo";
   const maskedPlaceholder = "•••••••••••• (configurado)";
 
   return (
@@ -547,6 +553,52 @@ function IntegrationSettings({
               <li>Em <b>WhatsApp → Configuration → Webhook</b>, cole a URL acima e o <b>Verify token</b>. Assine os campos <code>messages</code>.</li>
               <li>Envie uma mensagem de teste para o número — ela deve aparecer no inbox em segundos.</li>
             </ol>
+          </div>
+        </div>
+      ) : isStevo ? (
+        <div className="space-y-4 rounded-xl border p-4">
+          <p className="text-sm font-medium">Credenciais — Stevo (SM v2 & Stevo Voice)</p>
+          <div className="space-y-1">
+            <Label className="text-xs">Instance ID</Label>
+            <Input
+              value={stevoInstanceId}
+              onChange={(e) => setStevoInstanceId(e.target.value)}
+              onBlur={() => {
+                if (stevoInstanceId.length > 0)
+                  onPatch({ credentials: { ...creds, instance_id: stevoInstanceId } });
+              }}
+              placeholder="ex: inst_12345"
+            />
+          </div>
+
+          <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-foreground">Credenciais SIP (Stevo Voice)</p>
+              <Badge variant="outline" className="bg-emerald-500/10 text-emerald-600 text-[10px]">Stevo Voice Ativo</Badge>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Utilize em qualquer softphone ou PBX (MicroSIP, Zoiper, 3CX) para efetuar chamadas pelo WhatsApp desta instância.
+            </p>
+            <div className="space-y-2">
+              <div>
+                <Label className="text-[11px]">Servidor SIP</Label>
+                <Input
+                  value={sipServer}
+                  onChange={(e) => setSipServer(e.target.value)}
+                  onBlur={() => onPatch({ credentials: { ...creds, sip_server: sipServer } })}
+                  placeholder="ex: sm-grilo.stevo.chat:5060"
+                />
+              </div>
+              <div>
+                <Label className="text-[11px]">Usuário SIP</Label>
+                <Input
+                  value={sipUsername}
+                  onChange={(e) => setSipUsername(e.target.value)}
+                  onBlur={() => onPatch({ credentials: { ...creds, sip_username: sipUsername } })}
+                  placeholder="ex: Zenda_1785950675671"
+                />
+              </div>
+            </div>
           </div>
         </div>
       ) : (
