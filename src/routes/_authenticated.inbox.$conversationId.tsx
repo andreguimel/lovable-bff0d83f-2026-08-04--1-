@@ -496,7 +496,7 @@ function ConversationView() {
                           </div>
                         )}
                         {cluster.messages.map((m, i) => {
-                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number; reaction?: string } | null) ?? null;
+                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number; reaction?: string; is_group?: boolean; sender_name?: string; sender_phone?: string } | null) ?? null;
                           const isLast = i === cluster.messages.length - 1;
                           const isDeleted = !!m.deleted_at;
                           const isSelected = selected.has(m.id);
@@ -580,6 +580,11 @@ function ConversationView() {
                                   </p>
                                 ) : (
                                   <>
+                                    {!cluster.outbound && (meta?.sender_name || meta?.sender_phone) && (
+                                      <p className="mb-0.5 text-[11px] font-semibold text-primary/90">
+                                        {meta.sender_name ?? meta.sender_phone}
+                                      </p>
+                                    )}
                                     {m.type === "text" && (
                                       <p className="whitespace-pre-wrap break-words">{m.body}</p>
                                     )}
@@ -967,7 +972,7 @@ function ConversationView() {
                           </div>
                         )}
                         {cluster.messages.map((m, i) => {
-                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number; reaction?: string } | null) ?? null;
+                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number; reaction?: string; is_group?: boolean; sender_name?: string; sender_phone?: string } | null) ?? null;
                           const isLast = i === cluster.messages.length - 1;
                           const isDeleted = !!m.deleted_at;
                           const isSelected = selected.has(m.id);
@@ -996,6 +1001,11 @@ function ConversationView() {
                                 </p>
                               ) : (
                                 <>
+                                  {!cluster.outbound && (meta?.sender_name || meta?.sender_phone) && (
+                                    <p className="mb-0.5 text-[11px] font-semibold text-primary/90">
+                                      {meta.sender_name ?? meta.sender_phone}
+                                    </p>
+                                  )}
                                   {m.reply_to_id && messagesById.get(m.reply_to_id) && (
                                     <QuotedMessage
                                       quoted={messagesById.get(m.reply_to_id)!}

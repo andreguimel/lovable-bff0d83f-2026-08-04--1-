@@ -1,12 +1,13 @@
-import { Mail, LayoutList, Clock, Star } from "lucide-react";
+import { Mail, LayoutList, Clock, Star, Users } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-export type InboxTab = "unread" | "all" | "recent" | "starred";
+export type InboxTab = "unread" | "all" | "groups" | "recent" | "starred";
 
 const tabs: Array<{ value: InboxTab; label: string; icon: typeof Mail }> = [
   { value: "unread", label: "Não lido", icon: Mail },
-  { value: "all", label: "Todos", icon: LayoutList },
+  { value: "all", label: "Diretas", icon: LayoutList },
+  { value: "groups", label: "Grupos", icon: Users },
   { value: "recent", label: "Recente", icon: Clock },
   { value: "starred", label: "Estrelado", icon: Star },
 ];

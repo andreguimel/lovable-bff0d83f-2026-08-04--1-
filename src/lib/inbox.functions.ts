@@ -7,12 +7,22 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 export const listConversations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(
-    (input: { status?: string; search?: string; scope?: "all" | "mine" | "unassigned" } | undefined) =>
+    (
+      input:
+        | {
+            status?: string;
+            search?: string;
+            scope?: "all" | "mine" | "unassigned";
+            chatType?: "all" | "direct" | "group";
+          }
+        | undefined,
+    ) =>
       z
         .object({
           status: z.enum(["open", "pending", "resolved", "all"]).optional(),
           search: z.string().optional(),
           scope: z.enum(["all", "mine", "unassigned"]).optional(),
+          chatType: z.enum(["all", "direct", "group"]).optional(),
         })
         .optional()
         .parse(input),
@@ -69,7 +79,7 @@ export const listConversations = createServerFn({ method: "GET" })
           : null,
     }));
 
-    const filtered =
+    let filtered =
       data?.search && data.search.trim().length > 0
         ? withProfiles.filter((r) => {
             const s = data.search!.toLowerCase();
@@ -81,6 +91,19 @@ export const listConversations = createServerFn({ method: "GET" })
             );
           })
         : withProfiles;
+
+    if (data?.chatType === "group") {
+      filtered = filtered.filter((r) => {
+        const c = r.contact as { name?: string; phone?: string } | null;
+        return c?.phone?.includes("g.us") || c?.name?.toLowerCase().includes("grupo");
+      });
+    } else if (data?.chatType === "direct") {
+      filtered = filtered.filter((r) => {
+        const c = r.contact as { name?: string; phone?: string } | null;
+        return !c?.phone?.includes("g.us") && !c?.name?.toLowerCase().includes("grupo");
+      });
+    }
+
     return filtered ?? [];
   });
 

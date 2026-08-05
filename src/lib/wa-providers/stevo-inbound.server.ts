@@ -16,6 +16,10 @@ export type StevoInboundMessage = {
   media_metadata: Record<string, unknown> | null;
   reply_to_provider_id: string | null;
   from_me?: boolean;
+  is_group?: boolean;
+  group_jid?: string;
+  sender_name?: string | null;
+  sender_phone?: string | null;
 };
 
 export type StevoStatusUpdate = {
@@ -212,22 +216,35 @@ export function normalizeStevoWebhook(payload: unknown): {
 
     const hasMessage = Object.keys(message).length > 0 || !!content.body || !!content.media_url;
 
-    if (hasMessage && providerId && chatJid && !isGroupJid(chatJid)) {
-      const phone = jidToPhone(fromMe ? chatJid : (senderJid ?? chatJid));
+    const isGroup = isGroupJid(chatJid);
+    if (hasMessage && providerId && chatJid) {
+      const phone = jidToPhone(isGroup ? chatJid : (fromMe ? chatJid : (senderJid ?? chatJid)));
       if (phone) {
         const ctx = asRecord(
           asRecord(message.extendedTextMessage).contextInfo ?? asRecord(message.ExtendedTextMessage).contextInfo ?? event.contextInfo ?? root.contextInfo,
         );
+        const pushName = str(info.PushName) ?? str(event.pushName) ?? str(event.pushname) ?? str(root.pushName) ?? str(root.pushname) ?? null;
+        const senderPhone = jidToPhone(senderJid);
+
+        const meta = {
+          ...(content.media_metadata ?? {}),
+          ...(isGroup ? { is_group: true, sender_name: pushName, sender_phone: senderPhone } : {}),
+        };
+
         inbound.push({
           provider_message_id: providerId,
           from_phone: phone,
-          contact_name: fromMe ? null : (str(info.PushName) ?? str(event.pushName) ?? str(event.pushname) ?? str(root.pushName) ?? str(root.pushname) ?? null),
+          contact_name: isGroup ? null : (fromMe ? null : pushName),
           type: content.type,
           body: content.body,
           media_url: content.media_url,
-          media_metadata: content.media_metadata,
+          media_metadata: meta,
           reply_to_provider_id: str(ctx.stanzaId) ?? str(ctx.stanzaID) ?? null,
           from_me: fromMe,
+          is_group: isGroup,
+          group_jid: isGroup ? chatJid : undefined,
+          sender_name: pushName,
+          sender_phone: senderPhone,
         });
       }
     }

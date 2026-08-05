@@ -65,6 +65,17 @@ function InboxLayout() {
     let rows = allConversations;
     if (tab === "unread") rows = rows.filter((c) => (c.unread_count ?? 0) > 0);
     if (tab === "starred") rows = rows.filter((c) => Boolean(c.pinned));
+    if (tab === "groups") {
+      rows = rows.filter((c) => {
+        const contact = c.contact as { name?: string; phone?: string } | null;
+        return contact?.phone?.includes("g.us") || contact?.name?.toLowerCase().includes("grupo");
+      });
+    } else if (tab === "all") {
+      rows = rows.filter((c) => {
+        const contact = c.contact as { name?: string; phone?: string } | null;
+        return !contact?.phone?.includes("g.us") && !contact?.name?.toLowerCase().includes("grupo");
+      });
+    }
     if (channelId !== "all") {
       rows = rows.filter((c) => (c as { channel_id?: string | null }).channel_id === channelId);
     }
