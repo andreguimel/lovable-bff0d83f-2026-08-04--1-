@@ -1695,7 +1695,7 @@ export const toggleMessageReaction = createServerFn({ method: "POST" })
     const currentReaction = typeof meta.reaction === "string" ? meta.reaction : null;
     const newReaction = currentReaction === data.emoji ? null : data.emoji;
 
-    const nextMeta = { ...meta, reaction: newReaction };
+    const nextMeta: Record<string, unknown> = { ...meta, reaction: newReaction };
     if (newReaction === null) {
       delete nextMeta.reaction;
     }

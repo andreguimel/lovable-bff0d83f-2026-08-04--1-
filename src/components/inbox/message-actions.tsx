@@ -48,7 +48,8 @@ export interface MessageActionsProps {
   /** Open the forward dialog for this single message. */
   onForward?: () => void;
   /** Open the "Message info" side/bottom sheet for this single message. */
-  onInfo?: ()   /** Trigger an emoji reaction to this message. */
+  onInfo?: () => void;
+  /** Trigger an emoji reaction to this message. */
   onReact?: (emoji: string) => void;
   /** Enter multi-select mode with this message pre-selected. */
   onEnterSelect: () => void;
@@ -142,7 +143,6 @@ export function MessageActions({
           <Reply className="mr-2 h-3.5 w-3.5" />
           Responder
         </ContextMenuItem>
-      )}em>
       )}
       <ContextMenuItem
         disabled={!canCopy}

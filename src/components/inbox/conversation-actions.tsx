@@ -274,7 +274,7 @@ export function ConversationActions({
         >
           <CheckCheck className="mr-2 h-4 w-4" />
           {conversation.status === "resolved" ? "Reabrir conversa" : "Resolver conversa"}
-        </Separator>
+        </Item>
         <Separator />
         <UnavailableItem Item={Item} icon={<Reply className="mr-2 h-4 w-4" />} label="Responder" reason="Disponível no composer da conversa; quote por menu ainda não existe." />
         <UnavailableItem Item={Item} icon={<Smile className="mr-2 h-4 w-4" />} label="Reagir" reason="Requer suporte de reactions por provider." />

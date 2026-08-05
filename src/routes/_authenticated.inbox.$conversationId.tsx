@@ -496,7 +496,7 @@ function ConversationView() {
                           </div>
                         )}
                         {cluster.messages.map((m, i) => {
-                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number } | null) ?? null;
+                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number; reaction?: string } | null) ?? null;
                           const isLast = i === cluster.messages.length - 1;
                           const isDeleted = !!m.deleted_at;
                           const isSelected = selected.has(m.id);
@@ -594,9 +594,9 @@ function ConversationView() {
                                       <MediaFile path={m.media_url} messageId={m.id} name={meta?.name} size={meta?.size} />
                                     )}
 
-                                    {meta && typeof (meta as Record<string, unknown>).reaction === "string" && (
+                                    {meta?.reaction && (
                                       <span className="absolute -bottom-2 -right-1 flex items-center justify-center rounded-full bg-card px-1.5 py-0.5 text-xs shadow ring-1 ring-border/50">
-                                        {(meta as Record<string, unknown>).reaction as string}
+                                        {meta.reaction}
                                       </span>
                                     )}
                                   </>
@@ -967,7 +967,7 @@ function ConversationView() {
                           </div>
                         )}
                         {cluster.messages.map((m, i) => {
-                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number } | null) ?? null;
+                          const meta = (m.media_metadata as { name?: string; size?: number; duration?: number; reaction?: string } | null) ?? null;
                           const isLast = i === cluster.messages.length - 1;
                           const isDeleted = !!m.deleted_at;
                           const isSelected = selected.has(m.id);
