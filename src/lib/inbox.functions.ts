@@ -342,7 +342,7 @@ export const sendMessage = createServerFn({ method: "POST" })
       ...(sendError ? { send_error: sendError } : {}),
     };
 
-    const { data: msg, error } = await context.supabase
+    let { data: msg, error } = await context.supabase
       .from("messages")
       .insert({
         company_id: conv.company_id,
@@ -360,7 +360,24 @@ export const sendMessage = createServerFn({ method: "POST" })
       })
       .select("*")
       .single();
-    if (error) throw new Error(error.message);
+
+    if (error) {
+      if (providerMessageId && (error.code === "23505" || error.message?.includes("messages_channel_provider_msg_idx"))) {
+        const { data: existing } = await context.supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", data.conversationId)
+          .eq("provider_message_id", providerMessageId)
+          .maybeSingle();
+        if (existing) {
+          msg = existing;
+          error = null;
+        }
+      }
+      if (error) throw new Error(error.message);
+    }
+
+    if (!msg) throw new Error("Falha ao criar registro de mensagem");
 
     if (sendError && channel?.id) {
       await context.supabase.from("channel_events").insert({
