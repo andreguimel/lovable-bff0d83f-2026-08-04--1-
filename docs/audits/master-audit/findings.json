@@ -1,0 +1,139 @@
+{
+  "generated_at": "2026-07-15T20:30:00.000Z",
+  "hotfixes": [
+    {
+      "id": "HF-01.1",
+      "finding": "pending_invites_anon_token_exposure",
+      "status": "resolved",
+      "migration": "20260715-200446",
+      "summary": "Removida policy anon USING(true) em pending_invites; REVOKE ALL em anon; criada RPC SECURITY DEFINER preview_invite_by_token; previewInvite server fn atualizada.",
+      "report": "docs/audits/master-audit/hotfix-01.1.md"
+    }
+  ],
+  "missions": [
+    {
+      "id": "M2.1",
+      "name": "Segurança Dinâmica",
+      "report": "docs/audits/master-audit/mission-02.1-report.md",
+      "high_fixed": [
+        {
+          "id": "F-M2-01",
+          "severity": "high",
+          "area": "webhooks",
+          "title": "WhatsApp Cloud webhook aceitava POST sem verificar assinatura quando app_secret ausente",
+          "file": "src/routes/api/public/webhooks/whatsapp.$channelId.ts",
+          "fix": "Assinatura obrigatória. Sem app_secret configurado ou signature inválida → 401 + audit em channel_events."
+        }
+      ],
+      "registered_medium_low": [
+        { "id": "M2.1-M-01", "severity": "medium", "title": "Cron endpoints autenticados por SUPABASE_PUBLISHABLE_KEY (chave pública)" },
+        { "id": "M2.1-M-02", "severity": "medium", "title": "Storage buckets sem allowedMimeTypes/fileSizeLimit explícitos" },
+        { "id": "M2.1-M-03", "severity": "medium", "title": "Endpoints públicos sem rate limit compartilhado (edge KV/Turnstile)" },
+        { "id": "M2.1-M-05", "severity": "medium", "title": "WHATSAPP_WEBHOOK_SECRET opcional no receiver alternativo /hooks/whatsapp-webhook" },
+        { "id": "M2.1-L-01", "severity": "low", "title": "Sem anti-replay explícito por timestamp/nonce em webhooks" },
+        { "id": "M2.1-L-02", "severity": "low", "title": "Sem AbortController timeout em fetchMediaUrl (Meta)" }
+      ],
+      "scans": {
+        "supabase_linter": "11 WARN, 0 ERROR (pré-existentes: pg_net + SECURITY DEFINER helpers by design)",
+        "security_scan": "12 warn, 0 error",
+        "dependency_scan": "0 high/critical"
+      }
+    },
+    {
+      "id": "M2.2",
+      "name": "Confiabilidade Operacional",
+      "report": "docs/audits/master-audit/mission-02.2-report.md",
+      "high_fixed": [
+        {
+          "id": "F-M2.2-01",
+          "severity": "high",
+          "area": "realtime",
+          "title": "subscribeRealtime causava colisão de canal derrubando widgets (postgres_changes after subscribe)",
+          "file": "src/lib/realtime/registry.ts",
+          "fix": "Canal identificado pela chave completa (name|schema|table|event|filter) em vez do name; elimina reuso de instância já subscribed do Supabase JS."
+        }
+      ],
+      "registered_medium_low": [
+        { "id": "M2.2-M-01", "severity": "medium", "title": "Idempotency cache in-memory por worker; migrar para KV compartilhado" },
+        { "id": "M2.2-M-02", "severity": "medium", "title": "Receiver legacy /hooks/whatsapp-webhook aceita POST sem assinatura quando WHATSAPP_WEBHOOK_SECRET ausente" },
+        { "id": "M2.2-M-03", "severity": "medium", "title": "Flow executor sem retry automático com backoff (depende de requeueDeadLetter manual)" },
+        { "id": "M2.2-M-04", "severity": "medium", "title": "Sem heartbeat/watchdog para canais realtime silenciosos" },
+        { "id": "M2.2-L-01", "severity": "low", "title": "console.error residual sem correlationId em alguns componentes" },
+        { "id": "M2.2-L-02", "severity": "low", "title": "flow_run_steps sem UNIQUE(run_id, seq)" }
+      ]
+    }
+  ],
+
+
+  "static": {
+    "typecheck": "pass",
+    "lint_errors": 0,
+    "lint_warnings": 0,
+    "circular_deps": "see log",
+    "orphan_files": 200,
+    "legacy_throw_files": 25
+  },
+  "routes": 32,
+  "build": "pass",
+  "bundle_total_kb": 2546,
+  "bundle_top": [
+    {
+      "file": "dist/client/assets/index-B0OXRC28.js",
+      "kb": 589
+    },
+    {
+      "file": "dist/client/assets/_authenticated.channels-C1TcF1zE.js",
+      "kb": 428
+    },
+    {
+      "file": "dist/client/assets/_authenticated.flows._flowId-Cq73GmAX.js",
+      "kb": 211
+    },
+    {
+      "file": "dist/client/assets/styles-sDm5H9Pg.css",
+      "kb": 169
+    },
+    {
+      "file": "dist/client/assets/_authenticated.settings.audit-CIXZvc2p.js",
+      "kb": 158
+    },
+    {
+      "file": "dist/client/assets/proxy-DwfrXn1u.js",
+      "kb": 118
+    },
+    {
+      "file": "dist/client/assets/_authenticated.inbox._conversationId-jfKUOB47.js",
+      "kb": 57
+    },
+    {
+      "file": "dist/client/assets/_authenticated.team-3h_PJc1Y.js",
+      "kb": 56
+    },
+    {
+      "file": "dist/client/assets/_authenticated.crm.index-UY9MbUkJ.js",
+      "kb": 53
+    },
+    {
+      "file": "dist/client/assets/auth-middleware-CfTRNT57.js",
+      "kb": 42
+    }
+  ],
+  "findings": [
+    {
+      "id": "F-0001",
+      "dim": "codigo",
+      "module": "dead-code",
+      "severity": "low",
+      "title": "200 arquivos órfãos",
+      "evidence": "components/agents/agent-card.tsx\ncomponents/agents/studio/copilot-fab.tsx\ncomponents/agents/studio/kpi-strip.tsx\ncomponents/agents/studio/playground-drawer.tsx\ncomponents/agents/studio/studio-header.tsx\ncomponents/agents/studio/tabs-nav.tsx\ncomponents/agents/studio/tabs/general-tab.tsx\ncomponents/agents/studio/tabs/knowledge-tab.tsx\ncomponents/agents/studio/tabs/logs-tab.tsx\ncomponents/agents/studio/tabs/placeholder-tab.tsx\ncomponents/agents/studio/tabs/prompt-tab.tsx\ncomponents/agents/studio/tabs/tools-tab.tsx\ncomponents/app-sidebar.tsx\ncomponents/app-topbar.tsx\ncomponents/campaigns/campaign-detail-drawer.tsx\ncomponents/campaigns/campaign-wizard.tsx\ncomponents/channels/channel-detail-drawer.tsx\ncomponents/channels/channel-form-sheet.tsx\ncomponents/channels/qr-connect-dialog.tsx\ncomponents/channels/sparkline.tsx\ncomponents/client-time.tsx\ncomponents/crm/contact-form-sheet.tsx\ncomponents/crm/contact-timeline.tsx\ncomponents/crm/custom-fields-manager.tsx\ncomponents/crm/import-csv-dialog.tsx\ncomponents/crm/lead-score.tsx\ncomponents/crm/profile/ai-fab.tsx\ncomponents/crm/profile/tabs/files-tab.tsx\ncomponents/crm/profile/tabs/ia-tab.tsx\ncomponents/crm/profile/tabs/notes-tab.tsx"
+    },
+    {
+      "id": "F-0002",
+      "dim": "codigo",
+      "module": "errors",
+      "severity": "medium",
+      "title": "25 arquivos .functions.ts ainda usam throw new Error() em vez de AppError",
+      "fix_ref": "ADR-005"
+    }
+  ]
+}

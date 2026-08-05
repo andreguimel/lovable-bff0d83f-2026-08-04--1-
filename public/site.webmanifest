@@ -1,0 +1,12 @@
+{
+  "name": "Zenda",
+  "short_name": "Zenda",
+  "description": "CRM omnichannel com múltiplos WhatsApps, agentes de IA e automações visuais.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F172A",
+  "theme_color": "#0F172A",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "any", "type": "image/x-icon" }
+  ]
+}

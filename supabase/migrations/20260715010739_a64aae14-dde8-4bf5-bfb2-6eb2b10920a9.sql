@@ -1,0 +1,1 @@
+ALTER TABLE public.flow_runs ALTER COLUMN conversation_id DROP NOT NULL;

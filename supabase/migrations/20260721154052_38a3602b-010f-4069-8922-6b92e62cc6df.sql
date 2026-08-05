@@ -1,0 +1,1 @@
+ALTER TABLE public.channel_events ALTER COLUMN channel_id DROP NOT NULL;

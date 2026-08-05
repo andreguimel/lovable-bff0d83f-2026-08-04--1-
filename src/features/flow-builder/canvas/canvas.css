@@ -1,0 +1,288 @@
+/*
+ * FB-03 — Canvas + Node system V2.
+ *
+ * Namespace `fbv2-*` para nunca colidir com o V1. Se o flag for
+ * desligado, o V1 continua intocado.
+ */
+
+.fbv2-shell {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  /* Preenche o <main> do layout autenticado (que já é overflow-y-auto).
+   * NUNCA usar 100vh aqui — isso força o shell a exceder a altura do
+   * <main>, fazendo a página inteira rolar e roubando o wheel do canvas
+   * e das sidebars (Library / SmartSidebar). */
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  background: var(--color-background);
+  overflow: hidden;
+}
+.fbv2-body {
+  display: grid;
+  /* Coluna 1: NodeLibraryPanelV3 controla a própria largura (300 / 56 colapsado). */
+  grid-template-columns: auto 1fr auto;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+.fbv2-canvas {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  /* Halos sutis sobre o background do tema (light/dark do SaaS) */
+  background:
+    radial-gradient(
+      1200px 700px at 25% 15%,
+      color-mix(in oklab, var(--color-primary) 8%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      900px 500px at 85% 85%,
+      color-mix(in oklab, var(--color-primary) 5%, transparent),
+      transparent 60%
+    ),
+    var(--color-background);
+
+}
+
+/* React Flow chrome — segue o tema global (light/dark do SaaS) */
+.fbv2-canvas .fbv2-minimap {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--color-card) 88%, transparent) !important;
+  overflow: hidden;
+  box-shadow: 0 16px 40px -18px color-mix(in oklab, var(--color-foreground) 35%, transparent);
+  backdrop-filter: blur(12px);
+}
+.fbv2-canvas .fbv2-minimap .react-flow__minimap-mask {
+  fill: color-mix(in oklab, var(--color-background) 70%, transparent) !important;
+}
+.fbv2-canvas .fbv2-controls {
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: color-mix(in oklab, var(--color-card) 88%, transparent);
+  overflow: hidden;
+  box-shadow: 0 16px 40px -18px color-mix(in oklab, var(--color-foreground) 35%, transparent);
+  backdrop-filter: blur(12px);
+}
+.fbv2-canvas .fbv2-controls button {
+  background: transparent;
+  color: var(--color-muted-foreground);
+  border-bottom: 1px solid var(--color-border);
+  fill: var(--color-muted-foreground);
+}
+.fbv2-canvas .fbv2-controls button svg { fill: currentColor; }
+.fbv2-canvas .fbv2-controls button:last-child { border-bottom: none; }
+.fbv2-canvas .fbv2-controls button:hover {
+  background: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  color: var(--color-foreground);
+}
+
+
+/* FB-13 — Botão flutuante "Organizar" / "Compactar" */
+.fbv2-canvas .fbv2-layout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--color-muted-foreground);
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.fbv2-canvas .fbv2-layout-btn:hover {
+  background: color-mix(in oklab, var(--color-primary) 12%, transparent);
+  color: var(--color-foreground);
+  border-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
+}
+.fbv2-canvas .fbv2-layout-btn:active { transform: translateY(1px); }
+.fbv2-canvas .fbv2-layout-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+
+/* Node card */
+.fbv2-node {
+  position: relative;
+  min-width: 220px;
+  max-width: 260px;
+  padding: 10px 12px 10px 12px;
+  border-radius: 14px;
+  background: color-mix(
+    in oklab,
+    var(--fbv2-accent, var(--color-primary)) 6%,
+    var(--color-card)
+  );
+  border: 1.5px solid
+    color-mix(
+      in oklab,
+      var(--fbv2-accent, var(--color-primary)) 26%,
+      var(--color-border)
+    );
+  box-shadow: 0 6px 18px -10px
+    color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 45%, transparent);
+  transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  font-family: inherit;
+  will-change: transform;
+}
+.fbv2-node:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px -10px
+    color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 60%, transparent);
+  border-color: color-mix(
+    in oklab,
+    var(--fbv2-accent, var(--color-primary)) 50%,
+    var(--color-border)
+  );
+}
+.fbv2-node--selected {
+  border-color: var(--fbv2-accent, var(--color-primary)) !important;
+  box-shadow:
+    0 0 0 3px color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 22%, transparent),
+    0 16px 34px -12px color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 65%, transparent) !important;
+}
+.fbv2-node--invalid {
+  border-color: color-mix(in oklab, oklch(0.7 0.2 45) 55%, var(--color-border));
+}
+.fbv2-node--running {
+  animation: fbv2-node-pulse 1.4s ease-in-out infinite;
+}
+@keyframes fbv2-node-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in oklab, var(--color-primary) 30%, transparent); }
+  50% { box-shadow: 0 0 0 9px color-mix(in oklab, var(--color-primary) 10%, transparent); }
+}
+.fbv2-node--unknown {
+  min-width: 180px;
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.fbv2-node__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.fbv2-node__icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  background: var(--fbv2-accent, var(--color-primary));
+  color: var(--color-card);
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px -2px color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 60%, transparent);
+}
+.fbv2-node__titles { min-width: 0; flex: 1; }
+.fbv2-node__title {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--color-foreground);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fbv2-node__kind {
+  font-size: 9.5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-muted-foreground);
+  line-height: 1;
+  margin-top: 2px;
+}
+.fbv2-node__flag {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  color: oklch(0.62 0.2 45);
+  background: color-mix(in oklab, oklch(0.7 0.2 45) 18%, transparent);
+}
+.fbv2-node__body {
+  margin-top: 8px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  background: color-mix(in oklab, var(--color-background) 55%, transparent);
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: color-mix(in oklab, var(--color-foreground) 82%, var(--color-muted-foreground));
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.fbv2-node__footer {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--color-muted-foreground);
+}
+.fbv2-node__hlabel {
+  position: absolute;
+  right: -10px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  pointer-events: none;
+  color: var(--color-muted-foreground);
+}
+.fbv2-node__hlabel--yes { color: oklch(0.6 0.18 145); border-color: color-mix(in oklab, oklch(0.6 0.18 145) 45%, var(--color-border)); }
+.fbv2-node__hlabel--no  { color: oklch(0.6 0.2 25);  border-color: color-mix(in oklab, oklch(0.6 0.2 25)  45%, var(--color-border)); }
+
+/* Handles — área de clique maior, feedback claro */
+.fbv2-handle {
+  width: 14px !important;
+  height: 14px !important;
+  background: var(--color-card) !important;
+  border: 2px solid var(--fbv2-accent, var(--color-primary)) !important;
+  transition: transform 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+}
+.fbv2-handle::after {
+  /* área de clique invisível maior */
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+}
+.fbv2-handle:hover {
+  background: var(--fbv2-accent, var(--color-primary)) !important;
+  transform: scale(1.35);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 18%, transparent);
+}
+.fbv2-handle--yes { border-color: oklch(0.6 0.18 145) !important; }
+.fbv2-handle--no  { border-color: oklch(0.6 0.2 25)  !important; }
+.fbv2-handle.connectingfrom,
+.fbv2-handle.connectingto {
+  background: var(--fbv2-accent, var(--color-primary)) !important;
+  transform: scale(1.4);
+}
+
+/* Preview de conexão durante drag */
+.react-flow__connection-path {
+  stroke: color-mix(in oklab, var(--color-primary) 65%, transparent);
+  stroke-width: 1.75;
+  stroke-dasharray: 4 3;
+}
+
+.fbv2-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: var(--color-muted-foreground);
+  font-size: 12px;
+}

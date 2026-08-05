@@ -1,0 +1,106 @@
+{
+  "mission": "Sub-missão 2 — Auditoria Runtime (Read-Only, pós-02.1)",
+  "generated_at": "2026-07-16",
+  "scope": "static+db (Runtime Engine, Executor, Flow Runs, Versions, Pipeline, Scheduler, Resume, Wait/Wait Reply, Executor IA, Webhooks, CRM, Providers, Variáveis, Contexto, Persistência, Integridade)",
+  "mode": "READ-ONLY — nenhuma alteração de código, schema, migrations, UI ou config.",
+  "baseline": {
+    "build": "green (bun run build, 1.57s)",
+    "typecheck": "green (bunx tsgo --noEmit)",
+    "unit_tests": "56/56 pass",
+    "dep_scan": "0 high/critical"
+  },
+  "prior_missions": [
+    "Runtime-02 (auditoria original) — findings originais registrados",
+    "Runtime-02.1 (Publish Lock) — R2-C-01 resolvido (verificado nesta auditoria)"
+  ],
+  "state_summary": {
+    "critical_open": 0,
+    "high_open": 5,
+    "medium_open": 4,
+    "low_open": 2,
+    "critical_resolved_this_cycle": 1
+  },
+  "findings": [
+    {
+      "id": "R2-C-01",
+      "severity": "CRITICAL",
+      "status": "RESOLVED (Runtime-02.1)",
+      "evidence": "src/lib/flow-executor.server.ts:578-635 (loadGraph com pinnedVersionId+expectedHash); :795-812 (executeRun usa pinning); :1020-1095 (createAndExecuteRun grava published_version_id/graph_hash e exige versão publicada quando !dryRun). Colunas published_version_id/published_version_number/graph_hash presentes em flow_runs (types.ts)."
+    },
+    {
+      "id": "R2-H-02",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "module": "Executor / Test Drawer",
+      "file": "src/lib/flows.functions.ts",
+      "line": "479-731",
+      "evidence": "runFlowTest ainda implementa walker próprio (switch por node_type) em vez de delegar a createAndExecuteRun({ dryRun: true }). Semântica de condition/ai/wait_reply diverge do executor real.",
+      "root_cause": "Duplicação de motor. Não foi unificado (Runtime-02.2 nunca autorizada).",
+      "impact": "Test Drawer engana o operador — comportamento observado no editor pode não corresponder à execução em produção.",
+      "proposed_fix": "Substituir runFlowTest por chamada única a createAndExecuteRun com flag dryRun=true; retornar flow_run_steps materializados pelo executor."
+    },
+    {
+      "id": "R2-H-03",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "module": "Executor / Cycle Guard",
+      "file": "src/lib/flow-executor.server.ts",
+      "line": "854,866-872",
+      "evidence": "visitedInPass = new Set<string>() ainda ativo: revisita de nó no mesmo pass = 'Loop detectado no nó X' + FAILED.",
+      "root_cause": "Guard binário; não tolera loops legítimos sem wait_reply.",
+      "impact": "Fluxos com re-entrada válida quebram silenciosamente em produção.",
+      "proposed_fix": "Substituir por contador por nó com teto configurável (ex.: 50 visitas)."
+    },
+    {
+      "id": "R2-H-04",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "module": "Flow Studio / Persistência",
+      "file": "src/lib/flows.functions.ts",
+      "line": "207-278",
+      "evidence": "saveFlowGraph continua com delete edges → delete nodes → insert nodes → insert edges, sem RPC transacional.",
+      "root_cause": "Sequência não atômica; falha parcial em INSERT deixa o fluxo zerado.",
+      "impact": "Risco de perda de canvas em erro transitório (RLS/timeout/constraint).",
+      "proposed_fix": "RPC PL/pgSQL transacional ou UPSERT diferencial; validar membership de company_id no caller."
+    },
+    {
+      "id": "R2-H-05",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "module": "Executor / Providers / Inbox",
+      "file": "src/lib/flow-executor.server.ts",
+      "line": "200-208, 250-267",
+      "evidence": "INSERT em public.messages ocorre ANTES do dispatchSend e não inclui provider_message_id; o id só é capturado depois em providerInfo (linhas 219, 284) e persistido em flow_run_steps (linha 759), NUNCA em messages.",
+      "root_cause": "Ordem incorreta: insert-then-send + ausência de UPDATE após dispatch.",
+      "impact": "Webhooks de status (delivered/read/failed) não conseguem casar por provider_message_id em messages → mensagens permanecem 'sent' para sempre; métricas de entrega furadas.",
+      "proposed_fix": "(a) Reordenar: dispatchSend → capturar id → INSERT já com provider_message_id. (b) Alternativa: INSERT prévio + UPDATE após dispatch quando id disponível."
+    },
+    {
+      "id": "R2-H-06",
+      "severity": "HIGH",
+      "status": "OPEN",
+      "module": "Flow Studio / Integridade",
+      "file": "src/lib/flows.functions.ts",
+      "line": "324-337",
+      "evidence": "deleteFlow apaga apenas flow_runs, flow_edges, flow_nodes e flows. flow_run_steps, flow_events, flow_dead_letter e flow_versions permanecem apontando para flow_id inexistente (a menos que FK CASCADE exista — não verificado).",
+      "root_cause": "Cascade incompleto (código + FKs).",
+      "impact": "Órfãos acumulam; dashboards contam histórico de fluxos apagados.",
+      "proposed_fix": "Migration ALTER TABLE ... ADD ... ON DELETE CASCADE nas 4 tabelas OU incluir deletes explícitos em deleteFlow."
+    },
+    { "id": "R2-M-07", "severity": "MEDIUM", "status": "OPEN (backlog)", "note": "resolveVars sem fallback / duplicado em flows.functions.ts:464." },
+    { "id": "R2-M-08", "severity": "MEDIUM", "status": "OPEN (backlog)", "note": "flow-resume sem order(resume_at) e batch fixo 20 (src/routes/api/public/flow-resume.ts:22-27)." },
+    { "id": "R2-M-09", "severity": "MEDIUM", "status": "OPEN (backlog)", "note": "assign_agent reusa transferNode; ignora agent_id." },
+    { "id": "R2-M-10", "severity": "MEDIUM", "status": "OPEN (backlog)", "note": "question envia sem embutir wait_reply." },
+    { "id": "R2-L-11", "severity": "LOW", "status": "OPEN (backlog)", "note": "Retenção JSONB indefinida em flow_events/flow_run_steps." },
+    { "id": "R2-L-12", "severity": "LOW", "status": "OPEN (backlog)", "note": "public.exec_read_sql SECURITY DEFINER com parser frágil." }
+  ],
+  "integrity_check": {
+    "canvas_vs_runtime": "Runtime está pinado à versão publicada (02.1). Test Drawer ainda diverge (R2-H-02).",
+    "runtime_vs_banco": "flow_runs.published_version_id + graph_hash gravados na criação; validados em executeRun.",
+    "executor_vs_scheduler": "flow-resume delega para executeRun via startFlowRun; consistente. Ordering/batch em backlog (R2-M-08)."
+  },
+  "coverage": {
+    "phases_verified_static": ["F1","F2","F3","F4","F6","F7","F8-fixed","F11","F13"],
+    "phases_deferred_live": ["F5-audio","F9-inbox-live","F10-whatsapp-live","F12-perf","F14-realtime","F15-playwright-e2e"]
+  }
+}

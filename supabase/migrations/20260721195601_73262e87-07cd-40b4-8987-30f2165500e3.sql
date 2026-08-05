@@ -1,0 +1,3 @@
+ALTER TABLE public.conversations ADD COLUMN IF NOT EXISTS bot_paused_until timestamptz NULL;
+CREATE INDEX IF NOT EXISTS conversations_bot_paused_until_idx ON public.conversations (bot_paused_until) WHERE bot_paused_until IS NOT NULL;
+COMMENT ON COLUMN public.conversations.bot_paused_until IS 'Se preenchido e futuro, a automação (fluxo/agente IA) fica pausada até esta data. Data no ano 3000 = pausado indefinidamente.';

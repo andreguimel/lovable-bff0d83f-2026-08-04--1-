@@ -1,0 +1,174 @@
+{
+  "mission": "Sub-missão 3 — Auditoria de Fluxos via fluxo sintético (READ-ONLY)",
+  "generated_at": "2026-07-16",
+  "mode": "READ-ONLY — nenhuma migration, execução real ou alteração de código.",
+  "sandbox_limitations": "Sem credenciais de provider WhatsApp e sem sessão autenticada para inserir dados de teste no banco (createFlowVersion exige requireSupabaseAuth). Auditoria feita por trace estático completo do fluxo sintético contra o código do Studio, do executor e do snapshotter.",
+  "synthetic_flow": {
+    "name": "Auditoria-Full-Runtime",
+    "trigger": "manual",
+    "nodes": [
+      "start",
+      "message (Olá {{contact.name}})",
+      "condition (field=expression, expression='vip')",
+      "true → ai (agent_id=A)",
+      "  → tag (tag_id=T)",
+      "  → wait (seconds=2)",
+      "  → send_audio (is_voice=true) [PTT]",
+      "  → send_image",
+      "  → send_document",
+      "  → http_request (POST)",
+      "  → webhook (GET)",
+      "  → wait_reply",
+      "  → message (Recebi: {{reply}})",
+      "  → question (aguardar?)",
+      "  → assign_agent",
+      "  → transfer",
+      "  → end",
+      "false → message (Ok, sem promoção) → end"
+    ],
+    "blocks_covered": [
+      "start","end","message","condition","ai","tag","wait","send_audio","send_image","send_document","http_request","webhook","wait_reply","question","assign_agent","transfer"
+    ],
+    "blocks_not_covered_by_synthetic": ["send_video"],
+    "coverage_ratio": "16/17 (94%)"
+  },
+  "trace": {
+    "canvas_render": "OK — todos os 17 tipos declarados em src/components/flows/studio/blocks.ts:22-39 e BLOCKS:62-203; custom-node/properties-panel/block-library cobrem cada NodeKind.",
+    "saveFlowGraph": "OK — flows.functions.ts:207 aceita todos os 17 tipos; edges com source_handle preservados (true/false para condition).",
+    "createFlowVersion (publish)": "OK — flows.functions.ts:1051-1097 chama buildSnapshot → sha256Hex → INSERT flow_versions com status='published' e integrity_hash.",
+    "buildSnapshot": "OK — flows.functions.ts:1023-1048 serializa flow (name/description/trigger_type/trigger_config) + nodes (id/node_type/position/data) + edges (id/source_node_id/target_node_id/source_handle/label). Não existe target_handle no schema — omissão correta.",
+    "createAndExecuteRun (publish-lock)": "OK pós-02.1 — flows-executor.server.ts:1020-1095 exige versão publicada quando !dryRun; grava published_version_id + graph_hash em flow_runs.",
+    "loadGraph pinned": "OK — flow-executor.server.ts:578-635 hidrata nodes/edges de flow_versions.snapshot e valida hash.",
+    "executor pass": "OK — flow-executor.server.ts:818-970 percorre a partir do start; escolhe outgoing por source_handle quando conditionNode retorna nextHandle.",
+    "persistence": "OK para flow_run_steps (linhas 741-778 gravam node/seq/estado/provider/http_status/provider_message_id/duração/retry). flow_events emitidos (buscar 'insertEvent' no arquivo). flow_runs tem status + reason.",
+    "inbox correlation": "OK para mensagens: media_metadata inclui { flow_run_id, flow_node_id, automated:true } (linhas 207, 258-265). Timeline do CRM já lê essas chaves (src/components/crm/contact-timeline.tsx).",
+    "wait / wait_reply": "OK — waitNode define resume_at; waitReplyNode pausa até flow-resume ou webhook injetar 'reply' em variables. Runtime único ↔ Scheduler (api/public/flow-resume.ts) consistente.",
+    "runFlowTest (test drawer)": "DIVERGENTE — walker paralelo em flows.functions.ts:479-731 (R2-H-02 já registrado)."
+  },
+  "findings_new": [
+    {
+      "id": "F-SYNTH-01",
+      "severity": "MEDIUM",
+      "module": "Executor / Condition",
+      "file": "src/lib/flow-executor.server.ts",
+      "line": "336-337",
+      "evidence": "conditionNode com field='expression' faz apenas /vip|true|1|yes|sim/i.test(String(nd.expression ?? '')). Não aplica resolveVars sobre nd.expression, então uma expressão como '{{contact.tags}} contains vip' é testada literalmente e sempre falha; qualquer variável escrita pelo autor é ignorada.",
+      "repro": "1) Criar condition com field=expression e expression='{{last_message}} == promo'. 2) Rodar com last_message='promo'. 3) Resultado: false (o regex nunca acha 'promo').",
+      "impact": "Ramo 'expression' de condition é praticamente decorativo — apenas keywords hardcoded funcionam. Autores tendem a acreditar que a expressão é avaliada.",
+      "proposed_fix": "resolveVars(nd.expression, ctx.variables) e substituir o regex por avaliador simples (ex.: comparação binária com operadores). Alternativamente, remover field='expression' do properties-panel até haver avaliador real.",
+      "classification": "🟡 MEDIUM"
+    },
+    {
+      "id": "F-SYNTH-02",
+      "severity": "LOW",
+      "module": "Executor / Tag CRM",
+      "file": "src/lib/flow-executor.server.ts",
+      "line": "418-431",
+      "evidence": "tagNode faz .insert em contact_tags sem onConflict/UPSERT nem select prévio; se o fluxo passar duas vezes pelo mesmo bloco (loop legítimo), a mesma tag é inserida N vezes.",
+      "repro": "Rodar fluxo em que o mesmo tag-node é atingido em 2 iterações (menu com condição). Consultar contact_tags: haverá 2 linhas para o mesmo (contact_id, tag_id) — a menos que exista UNIQUE constraint no schema (não confirmado nesta auditoria).",
+      "impact": "Duplicidade em contact_tags; contadores de tag inflados; UI CRM pode mostrar tag repetida.",
+      "proposed_fix": "UPSERT com onConflict='contact_id,tag_id' OU checar antes com maybeSingle.",
+      "classification": "🔵 LOW"
+    },
+    {
+      "id": "F-SYNTH-03",
+      "severity": "LOW",
+      "module": "Executor / Webhook e HTTP",
+      "file": "src/lib/flow-executor.server.ts",
+      "line": "396-416, 460-461",
+      "evidence": "http_request e webhook são o mesmo plugin (httpNode). Não há suporte a headers customizados, HMAC, secret, retry específico, nem timeout — apenas Content-Type: application/json.",
+      "repro": "Configurar webhook para endpoint privado com Bearer. Não há como setar o header.",
+      "impact": "Integrações reais (Stripe, Slack, sistemas internos) inatingíveis sem proxy.",
+      "proposed_fix": "Aceitar node.data.headers Record<string,string> e node.data.timeout_ms; se webhook, aceitar node.data.hmac_secret e assinar body.",
+      "classification": "🔵 LOW"
+    },
+    {
+      "id": "F-SYNTH-04",
+      "severity": "LOW",
+      "module": "Executor / IA",
+      "file": "src/lib/flow-executor.server.ts",
+      "line": "353-393",
+      "evidence": "aiNode envia apenas { system: agent.personality|prompt, user: ctx.variables.last_message } para o Lovable AI Gateway. Não injeta histórico da conversa, não expõe variáveis do fluxo no user turn, não aplica resolveVars a agent.personality.",
+      "repro": "Fluxo com IA após várias trocas; a IA responde como se fosse o primeiro contato.",
+      "impact": "Respostas de IA descontextualizadas; variáveis do fluxo não influenciam a chamada.",
+      "proposed_fix": "Ler últimas N mensagens da conversation via ctx.supabase.from('messages'), montar array messages[], aplicar resolveVars em personality/prompt.",
+      "classification": "🔵 LOW"
+    },
+    {
+      "id": "F-SYNTH-05",
+      "severity": "LOW",
+      "module": "Executor / Message-Text",
+      "file": "src/lib/flow-executor.server.ts",
+      "line": "199-209",
+      "evidence": "messageNode insere em public.messages ANTES de aguardar dispatchSend. Se o provider falhar (throw), a linha em messages permanece com status='sent' embora nada tenha saído. O flow_run_steps registra failed, mas o inbox mostra a mensagem como enviada.",
+      "repro": "Simular provider caído (403); observar linha em messages com status=sent, mas erro em flow_run_steps.",
+      "impact": "Discrepância inbox × runtime; operador acredita ter enviado.",
+      "proposed_fix": "Sobrepõe-se a R2-H-05: reordenar (dispatch → INSERT) ou marcar status='failed' via UPDATE quando o throw ocorrer no catch do plugin.",
+      "classification": "🔵 LOW (relacionado a R2-H-05)"
+    }
+  ],
+  "findings_reconfirmed": [
+    "R2-H-02 (Test Drawer divergente) — verificado em flows.functions.ts:479-731 ainda ativo",
+    "R2-H-03 (cycle guard binário) — verificado em flow-executor.server.ts:854,866-872",
+    "R2-H-04 (saveFlowGraph sem transação) — verificado em flows.functions.ts:207-278",
+    "R2-H-05 (messages.provider_message_id ausente) — verificado em flow-executor.server.ts:200,250",
+    "R2-H-06 (deleteFlow deixa órfãos) — verificado em flows.functions.ts:324-337",
+    "R2-M-09 (assign_agent reusa transferNode) — confirmado em NODE_PLUGINS:467",
+    "R2-M-10 (question não pausa) — confirmado em NODE_PLUGINS:468 (question → messageNode)"
+  ],
+  "addendum_findings": [
+    {
+      "id": "F-ADD-01",
+      "severity": "CRITICAL",
+      "status": "RESOLVED",
+      "resolved_by": "Runtime-02.2 (Wait Reply Recovery) — 2026-07-16",
+      "module": "Wait Reply / Webhook / Scheduler",
+      "file": "src/lib/flow-resume-inbound.server.ts; src/routes/api/public/webhooks/whatsapp.$channelId.ts:199-232",
+      "evidence": "grep -rn resumeFlowRun src/ retorna APENAS a definição da server-fn e o comentário do plugin. Webhook inbound WhatsApp NÃO consulta flow_runs por conversation_id + state=WAITING_REPLY, apenas persiste a mensagem e dispara triggerAgentReply (IA). Scheduler /api/public/flow-resume filtra state IN ('WAITING_DELAY','RETRYING') — WAITING_REPLY excluído.",
+      "impact": "Todo fluxo com bloco wait_reply pendura para sempre em produção. Feature funcionalmente inexistente.",
+      "repro": "1) Publicar fluxo com wait_reply. 2) Trigger cria run em WAITING_REPLY. 3) Contato responde via WhatsApp real. 4) Run permanece WAITING_REPLY indefinidamente; nenhum evento FlowResumed é emitido.",
+      "resolution": "Novo helper server-only resumeWaitingReplyForConversation (src/lib/flow-resume-inbound.server.ts) invocado pelo webhook WhatsApp após persistir a mensagem inbound. Faz hand-off atômico WAITING_REPLY→RUNNING via UPDATE condicional, injeta variables.reply/last_message/message, registra evento FlowReplyReceived (idempotência por provider_message_id) e chama executeRun. Concurrência coberta pelo UPDATE condicional + flow_run_acquire_lock; cobertura por 6 testes unitários (src/lib/__tests__/flow-resume-inbound.test.ts).",
+      "classification": "🔴 CRITICAL"
+    },
+    { "id": "F-ADD-02", "severity": "HIGH", "module": "Executor / Variables", "file": "flow-executor.server.ts:396-416", "evidence": "httpNode retorna output.body mas não define result.vars, então body não é promovido a ctx.variables — só fica em flow_run_steps.output.", "impact": "Fluxos não conseguem usar retorno da API em nós subsequentes via {{webhook.body}}.", "proposed_fix": "Definir result.vars = { webhook: { status, body } } (ou http para o alias)." },
+    { "id": "F-ADD-03", "severity": "HIGH", "module": "Executor / Variables", "file": "flow-executor.server.ts:820-827,380", "evidence": "aiNode lê ctx.variables.last_message mas nada popula essa chave em produção; só o dry-run do Test Drawer injeta.", "impact": "IA recebe string vazia como user turn em produção.", "proposed_fix": "loadRunContext deve popular variables.last_message a partir da última mensagem inbound da conversation OU o gatilho deve preencher trigger_payload." },
+    { "id": "F-ADD-04", "severity": "MEDIUM", "module": "Executor / Condition", "file": "flow-executor.server.ts:338-340", "evidence": "conditionNode field=tag lê ctx.variables.contact.tags; loadRunContext (linhas 682-706) nunca carrega tags do CRM.", "impact": "Condição por tag sempre falsa em produção.", "proposed_fix": "Enriquecer loadRunContext com contact_tags." },
+    { "id": "F-ADD-05", "severity": "MEDIUM", "module": "Executor / Variables", "file": "flow-executor.server.ts:820-827", "evidence": "Namespaces prometidos pelo comando (company, crm, system, memory, answers, scheduler) não existem em ctx.variables nem são documentados.", "impact": "Falta de contrato claro; autores usam vars inexistentes.", "proposed_fix": "Documentar em src/lib/enrichment/field-registry.server.ts (ou similar) e/ou popular os que forem viáveis (company info, conversation metadata)." },
+    { "id": "F-ADD-06", "severity": "MEDIUM", "module": "Wait Reply / Concurrency", "file": "flow-executor.functions.ts:59-70", "evidence": "resumeFlowRun sobrescreve variables.reply a cada chamada sem histórico.", "impact": "Se duas respostas chegarem em janela curta, a primeira é perdida.", "proposed_fix": "Manter variables.replies[] ou timestamp." },
+    { "id": "F-ADD-07", "severity": "MEDIUM", "module": "Scheduler / Concurrency", "file": "src/routes/api/public/flow-resume.ts:22-27", "evidence": "select .limit(20) sem FOR UPDATE SKIP LOCKED; dois pods concorrentes disputam lock RPC.", "impact": "Contenção; throughput reduzido sob 2+ replicas.", "proposed_fix": "Usar RPC SELECT ... FOR UPDATE SKIP LOCKED." },
+    { "id": "F-ADD-08", "severity": "LOW", "module": "Executor / Idempotência", "file": "flow-executor.server.ts:1008-1019", "evidence": "idempotencyKey opcional; nenhum caller conhecido passa.", "impact": "Trigger duplicado cria runs duplicadas.", "proposed_fix": "Documentar e passar hash(trigger_type+payload) nos callers automáticos." },
+    { "id": "F-ADD-09", "severity": "LOW", "module": "DLQ / Concurrency", "file": "flow-executor.functions.ts:118-144", "evidence": "requeueDeadLetter faz UPDATE sem eq('status','pending').", "impact": "Dois admins re-enfileiram o mesmo item.", "proposed_fix": "Adicionar guard e retornar erro se status já for 'requeued'." },
+    { "id": "F-ADD-10", "severity": "MEDIUM", "module": "Executor / IA", "file": "flow-executor.server.ts:373-385", "evidence": "fetch para AI gateway sem AbortController/timeout.", "impact": "Node IA pode segurar o worker até timeout do lock (120s).", "proposed_fix": "AbortController com 30s + retry policy do node." },
+    { "id": "F-ADD-11", "severity": "HIGH", "module": "Executor / Inbox", "file": "flow-executor.server.ts:199-208,249-267", "evidence": "Após INSERT em messages, o executor NÃO atualiza conversations.last_message_at nem last_message_preview. Só webhook inbound e AI autoresponder fazem esse update.", "impact": "Lista de conversas na Inbox não reordena; operador não vê a mensagem outbound do fluxo até haver resposta.", "proposed_fix": "Após INSERT em messages, UPDATE conversations.last_message_at=now, last_message_preview=<body.slice(0,120)>." }
+  ],
+  "integrity_matrix": {
+    "canvas_vs_snapshot": "✅ íntegra — todos os 17 tipos serializáveis; hash SHA-256 estável.",
+    "snapshot_vs_publish": "✅ íntegra — flow_versions imutáveis com published_at/published_by.",
+    "publish_vs_runtime": "✅ íntegra — publish-lock (02.1) valida hash na criação e no loadGraph.",
+    "runtime_vs_flow_runs": "✅ íntegra — published_version_id + graph_hash + cursor gravados.",
+    "runtime_vs_flow_run_steps": "✅ íntegra — provider/http/duração/retry.",
+    "flow_run_steps_vs_inbox": "⚠️ parcial — R2-H-05 (provider_message_id) + F-ADD-11 (last_message_at).",
+    "runtime_vs_eventos": "✅ íntegra — 8 tipos de evento cobertos.",
+    "runtime_vs_telemetria": "⚠️ parcial — metrics em step, sem agregação.",
+    "runtime_vs_auditoria": "✅ íntegra — versões imutáveis com trilha de autor.",
+    "runtime_vs_scheduler_delay": "✅ íntegra.",
+    "runtime_vs_scheduler_reply": "✅ íntegra — F-ADD-01 resolvido via webhook inbound (Runtime-02.2).",
+    "webhook_vs_runtime": "✅ íntegra — F-ADD-01 resolvido via webhook inbound (Runtime-02.2).",
+    "test_drawer_vs_runtime": "❌ divergente — R2-H-02.",
+    "delete_vs_persistencia": "❌ divergente — R2-H-06."
+  },
+  "verdict": {
+    "critical": 0,
+    "critical_resolved": 1,
+    "high": 8,
+    "medium": 6,
+    "low": 6,
+    "canvas_integrity_score": 9.5,
+    "runtime_integrity_score": 8.5,
+    "persistence_integrity_score": 8.0,
+    "execution_reliability_score": 7.5,
+    "flow_engine_score_0_10": 8.2,
+    "recommendation": "F-ADD-01 (wait_reply end-to-end) RESOLVIDO em Runtime-02.2. Runtime volta a suportar fluxos com wait_reply em produção. Highs restantes (R2-H-02..06, F-ADD-02, F-ADD-03, F-ADD-11) permanecem no backlog aguardando autorização explícita."
+  }
+}
+

@@ -1,0 +1,2 @@
+ALTER TABLE public.cascade_attempts ADD COLUMN IF NOT EXISTS channel_id uuid REFERENCES public.channels(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_cascade_attempts_run_channel ON public.cascade_attempts(run_id, channel_id);

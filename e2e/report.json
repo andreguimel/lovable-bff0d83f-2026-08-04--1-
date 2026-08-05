@@ -1,0 +1,70 @@
+{
+  "results": [
+    {
+      "name": "test_cron_endpoint_auth",
+      "status": "PASS",
+      "duration_ms": 402,
+      "error": null
+    },
+    {
+      "name": "test_panel_loads",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_scan_button",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_incident_listener_toast",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_realtime_channel_open",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_incident_persists_in_panel",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_list_incidents_server_fn",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_reporter_dedupes",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_toast_cta_navigates",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    },
+    {
+      "name": "test_cron_endpoint_authorized",
+      "status": "PASS",
+      "duration_ms": 1333,
+      "error": null
+    },
+    {
+      "name": "test_no_console_errors",
+      "status": "SKIP",
+      "duration_ms": 0,
+      "error": "sessão indisponível"
+    }
+  ]
+}

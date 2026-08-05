@@ -1,0 +1,319 @@
+[
+  {
+    "url": "/",
+    "status": 200,
+    "title": "Dashboard \u2014 Comando de opera\u00e7\u00e3o",
+    "perf": {
+      "dom": 64,
+      "load": 79
+    },
+    "console": [
+      "[error] %o\n\n%s\n\n%s\n Error: cannot add `postgres_changes` callbacks for realtime:dashboard-inbox after `subscribe()`.\n    at RealtimeChannel.on (http://localhost:8080/node_modules/.vite/deps/@supabase_supabase",
+      "[error] [widget-crash] Error: cannot add `postgres_changes` callbacks for realtime:dashboard-inbox after `subscribe()`.\n    at RealtimeChannel.on (http://localhost:8080/node_modules/.vite/deps/@supabase_supab",
+      "[error] %o\n\n%s\n\n%s\n Error: cannot add `postgres_changes` callbacks for realtime:dashboard-inbox after `subscribe()`.\n    at RealtimeChannel.on (http://localhost:8080/node_modules/.vite/deps/@supabase_supabase",
+      "[error] [widget-crash] Error: cannot add `postgres_changes` callbacks for realtime:dashboard-inbox after `subscribe()`.\n    at RealtimeChannel.on (http://localhost:8080/node_modules/.vite/deps/@supabase_supab"
+    ],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_.png"
+  },
+  {
+    "url": "/agents/",
+    "status": 200,
+    "title": "AI Studio \u2014 Agentes de IA",
+    "perf": {
+      "dom": 88,
+      "load": 102
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_agents_.png"
+  },
+  {
+    "url": "/auth",
+    "status": 200,
+    "title": "Entrar \u2014 Zenda",
+    "perf": {
+      "dom": 59,
+      "load": 71
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_auth.png"
+  },
+  {
+    "url": "/campaigns",
+    "status": 200,
+    "title": "Campanhas \u00b7 Zenda",
+    "perf": {
+      "dom": 55,
+      "load": 65
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_campaigns.png"
+  },
+  {
+    "url": "/cascades",
+    "status": 200,
+    "title": "Cascatas \u2014 Zenda",
+    "perf": {
+      "dom": 77,
+      "load": 91
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_cascades.png"
+  },
+  {
+    "url": "/channels",
+    "status": 200,
+    "title": "Canais \u2014 Zenda",
+    "perf": {
+      "dom": 83,
+      "load": 98
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_channels.png"
+  },
+  {
+    "url": "/crm/",
+    "status": 200,
+    "title": "CRM \u2014 Centro de Clientes",
+    "perf": {
+      "dom": 69,
+      "load": 80
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_crm_.png"
+  },
+  {
+    "url": "/flows/",
+    "status": 200,
+    "title": "Flow Studio \u2014 Zenda",
+    "perf": {
+      "dom": 72,
+      "load": 86
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_flows_.png"
+  },
+  {
+    "url": "/funnels",
+    "status": 200,
+    "title": "Funil \u2014 Zenda",
+    "perf": {
+      "dom": 73,
+      "load": 86
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_funnels.png"
+  },
+  {
+    "url": "/inbox",
+    "status": 200,
+    "title": "Inbox \u2014 Zenda",
+    "perf": {
+      "dom": 63,
+      "load": 74
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_inbox.png"
+  },
+  {
+    "url": "/inbox/",
+    "status": 200,
+    "title": "Inbox \u2014 Zenda",
+    "perf": {
+      "dom": 68,
+      "load": 80
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_inbox_.png"
+  },
+  {
+    "url": "/quick-replies",
+    "status": 200,
+    "title": "Mensagens r\u00e1pidas \u2014 Zenda",
+    "perf": {
+      "dom": 76,
+      "load": 89
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_quick-replies.png"
+  },
+  {
+    "url": "/reports",
+    "status": 200,
+    "title": "Relat\u00f3rio de conversas \u2014 Zenda",
+    "perf": {
+      "dom": 65,
+      "load": 79
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_reports.png"
+  },
+  {
+    "url": "/reports/",
+    "status": 200,
+    "title": "Relat\u00f3rio de conversas \u2014 Zenda",
+    "perf": {
+      "dom": 78,
+      "load": 93
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_reports_.png"
+  },
+  {
+    "url": "/reports/broadcasts",
+    "status": 200,
+    "title": "Relat\u00f3rio de broadcasts \u2014 Zenda",
+    "perf": {
+      "dom": 83,
+      "load": 94
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_reports_broadcasts.png"
+  },
+  {
+    "url": "/reports/cascades",
+    "status": 200,
+    "title": "Relat\u00f3rio de cascatas \u2014 Zenda",
+    "perf": {
+      "dom": 75,
+      "load": 85
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_reports_cascades.png"
+  },
+  {
+    "url": "/reports/conversations",
+    "status": 200,
+    "title": "Relat\u00f3rio de conversas \u2014 Zenda",
+    "perf": {
+      "dom": 76,
+      "load": 89
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_reports_conversations.png"
+  },
+  {
+    "url": "/settings",
+    "status": 200,
+    "title": "Ajustes \u2014 Zenda",
+    "perf": {
+      "dom": 70,
+      "load": 83
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_settings.png"
+  },
+  {
+    "url": "/settings/",
+    "status": 200,
+    "title": "Ajustes \u2014 Zenda",
+    "perf": {
+      "dom": 56,
+      "load": 66
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_settings_.png"
+  },
+  {
+    "url": "/settings/audit",
+    "status": 200,
+    "title": "Guardi\u00e3o \u2014 Zenda",
+    "perf": {
+      "dom": 72,
+      "load": 84
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_settings_audit.png"
+  },
+  {
+    "url": "/settings/feature-flags",
+    "status": 200,
+    "title": "Feature Flags \u2014 Configura\u00e7\u00f5es",
+    "perf": {
+      "dom": 79,
+      "load": 90
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_settings_feature-flags.png"
+  },
+  {
+    "url": "/settings/features",
+    "status": 200,
+    "title": "Features \u00b7 Zenda",
+    "perf": {
+      "dom": 59,
+      "load": 68
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_settings_features.png"
+  },
+  {
+    "url": "/team",
+    "status": 200,
+    "title": "Equipe \u2014 Centro de Gest\u00e3o",
+    "perf": {
+      "dom": 79,
+      "load": 102
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_team.png"
+  },
+  {
+    "url": "/team/roles",
+    "status": 200,
+    "title": "Cargos & Permiss\u00f5es \u2014 Equipe",
+    "perf": {
+      "dom": 68,
+      "load": 80
+    },
+    "console": [],
+    "console_env_artifacts": 0,
+    "failed_requests": [],
+    "screenshot": "/tmp/browser/audit/_team_roles.png"
+  }
+]
