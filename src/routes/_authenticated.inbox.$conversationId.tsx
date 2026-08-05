@@ -44,6 +44,7 @@ import {
   listCompanyMembers,
   listActiveAgents,
   maybeAutoRespondWithAgent,
+  toggleMessageReaction,
 } from "@/lib/inbox.functions";
 import {
   deleteMessages,
@@ -135,6 +136,16 @@ function ConversationView() {
   const listMembersFn = useServerFn(listCompanyMembers);
   const listAgentsFn = useServerFn(listActiveAgents);
   const autoRespond = useServerFn(maybeAutoRespondWithAgent);
+  const toggleReaction = useServerFn(toggleMessageReaction);
+
+  const reactMut = useMutation({
+    mutationFn: (input: { messageId: string; emoji: string }) =>
+      toggleReaction({ data: input }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["messages", conversationId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   const { data: convData, isLoading: convLoading } = useQuery({
     queryKey: ["conversation", conversationId],
@@ -583,6 +594,11 @@ function ConversationView() {
                                       <MediaFile path={m.media_url} messageId={m.id} name={meta?.name} size={meta?.size} />
                                     )}
 
+                                    {meta && typeof (meta as Record<string, unknown>).reaction === "string" && (
+                                      <span className="absolute -bottom-2 -right-1 flex items-center justify-center rounded-full bg-card px-1.5 py-0.5 text-xs shadow ring-1 ring-border/50">
+                                        {(meta as Record<string, unknown>).reaction as string}
+                                      </span>
+                                    )}
                                   </>
                                 )}
                                 {isLast && (
@@ -699,6 +715,7 @@ function ConversationView() {
             setInfoMessageId(id);
             setMobileSheetMsg(null);
           }}
+          onReact={(id, emoji) => reactMut.mutate({ messageId: id, emoji })}
           onEnterSelect={(id) => enterSelectWith(id)}
           onDelete={(id, scope) => setPendingDelete({ scope, ids: [id] })}
         />
@@ -999,7 +1016,11 @@ function ConversationView() {
                                   {m.type === "file" && m.media_url && (
                                     <MediaFile path={m.media_url} messageId={m.id} name={meta?.name} size={meta?.size} />
                                   )}
-
+                                  {meta && typeof meta.reaction === "string" && (
+                                    <span className="absolute -bottom-2 -right-1 flex items-center justify-center rounded-full bg-card px-1.5 py-0.5 text-xs shadow ring-1 ring-border/50">
+                                      {meta.reaction}
+                                    </span>
+                                  )}
                                 </>
                               )}
                               {isLast && (
@@ -1049,6 +1070,7 @@ function ConversationView() {
                                   onReply={() => startReply(m)}
                                   onForward={() => setForwardingIds([m.id])}
                                   onInfo={() => setInfoMessageId(m.id)}
+                                  onReact={(emoji) => reactMut.mutate({ messageId: m.id, emoji })}
                                   onEnterSelect={() => enterSelectWith(m.id)}
 
                                   onDelete={(scope) =>

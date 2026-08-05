@@ -47,10 +47,13 @@ export interface MobileMessageActionsSheetProps {
   onForward: (id: string) => void;
   /** Open the "Message info" bottom sheet for this single message. */
   onInfo: (id: string) => void;
+  /** Trigger an emoji reaction to this message. */
+  onReact?: (id: string, emoji: string) => void;
   onEnterSelect: (id: string) => void;
   onDelete: (id: string, scope: MobileDeleteScope) => void;
 }
 
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 export function MobileMessageActionsSheet({
   open,
@@ -61,6 +64,7 @@ export function MobileMessageActionsSheet({
   onReply,
   onForward,
   onInfo,
+  onReact,
   onEnterSelect,
   onDelete,
 }: MobileMessageActionsSheetProps) {
@@ -106,6 +110,24 @@ export function MobileMessageActionsSheet({
             Ações da mensagem
           </SheetTitle>
         </SheetHeader>
+
+        {onReact && (
+          <div className="flex items-center justify-around px-4 py-2 border-b border-border/40 bg-muted/30">
+            {QUICK_EMOJIS.map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => {
+                  onReact(message.id, emoji);
+                  close();
+                }}
+                className="text-2xl p-1.5 active:scale-125 transition-transform rounded-full hover:bg-background/80"
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
 
         <div className="flex flex-col py-1">
           <SheetAction

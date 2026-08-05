@@ -1671,3 +1671,105 @@ export const deleteConversation = createServerFn({ method: "POST" })
 
     return { ok: true, alreadyDeleted: false };
   });
+
+// ---- Reação com Emoji em Mensagem ----
+export const toggleMessageReaction = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { messageId: string; emoji: string }) =>
+    z
+      .object({
+        messageId: z.string().uuid(),
+        emoji: z.string().min(1).max(10),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: msg, error: msgErr } = await context.supabase
+      .from("messages")
+      .select("id, conversation_id, media_metadata")
+      .eq("id", data.messageId)
+      .maybeSingle();
+    if (msgErr || !msg) throw new Error("Mensagem não encontrada");
+
+    const meta = (msg.media_metadata as Record<string, unknown> | null) ?? {};
+    const currentReaction = typeof meta.reaction === "string" ? meta.reaction : null;
+    const newReaction = currentReaction === data.emoji ? null : data.emoji;
+
+    const nextMeta = { ...meta, reaction: newReaction };
+    if (newReaction === null) {
+      delete nextMeta.reaction;
+    }
+
+    const { error: updErr } = await context.supabase
+      .from("messages")
+      .update({ media_metadata: nextMeta as never })
+      .eq("id", data.messageId);
+
+    if (updErr) throw new Error(updErr.message);
+    return { ok: true, reaction: newReaction, conversationId: msg.conversation_id };
+  });
+
+// ---- Fixar / Arquivar / Silenciar Conversa ----
+export const toggleConversationPin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { conversationId: string; pin?: boolean }) =>
+    z.object({ conversationId: z.string().uuid(), pin: z.boolean().optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: conv } = await context.supabase
+      .from("conversations")
+      .select("pinned")
+      .eq("id", data.conversationId)
+      .maybeSingle();
+    const nextPin = data.pin ?? !(conv?.pinned ?? false);
+    const { error } = await context.supabase
+      .from("conversations")
+      .update({
+        pinned: nextPin,
+        pinned_at: nextPin ? new Date().toISOString() : null,
+      })
+      .eq("id", data.conversationId);
+    if (error) throw new Error(error.message);
+    return { ok: true, pinned: nextPin };
+  });
+
+export const toggleConversationArchive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { conversationId: string; archive?: boolean }) =>
+    z.object({ conversationId: z.string().uuid(), archive: z.boolean().optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: conv } = await context.supabase
+      .from("conversations")
+      .select("archived_at")
+      .eq("id", data.conversationId)
+      .maybeSingle();
+    const isArchived = !!(conv as { archived_at?: string | null } | null)?.archived_at;
+    const nextArchive = data.archive ?? !isArchived;
+    const { error } = await context.supabase
+      .from("conversations")
+      .update({
+        archived_at: nextArchive ? new Date().toISOString() : null,
+      } as never)
+      .eq("id", data.conversationId);
+    if (error) throw new Error(error.message);
+    return { ok: true, archived: nextArchive };
+  });
+
+export const toggleConversationMute = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { conversationId: string; minutes: number | null }) =>
+    z.object({ conversationId: z.string().uuid(), minutes: z.number().nullable() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const mutedUntil = data.minutes ? new Date(Date.now() + data.minutes * 60_000).toISOString() : null;
+    const { error } = await context.supabase
+      .from("conversations")
+      .update({
+        muted_until: mutedUntil,
+      } as never)
+      .eq("id", data.conversationId);
+    if (error) throw new Error(error.message);
+    return { ok: true, muted_until: mutedUntil };
+  });
+

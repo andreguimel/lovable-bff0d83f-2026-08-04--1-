@@ -59,6 +59,9 @@ import {
   markAsRead,
   markConversationAsUnread,
   updateConversation,
+  toggleConversationArchive,
+  toggleConversationMute,
+  toggleConversationPin,
 } from "@/lib/inbox.functions";
 import { cn } from "@/lib/utils";
 
@@ -74,7 +77,7 @@ export type ConversationActionsConversation = {
   } | null;
 };
 
-type ConversationCommand = "pin" | "read" | "unread" | "resolve" | "reopen";
+type ConversationCommand = "pin" | "read" | "unread" | "resolve" | "reopen" | "archive" | "mute";
 
 interface ConversationActionsProps {
   conversation: ConversationActionsConversation;
@@ -143,6 +146,14 @@ export function ConversationActions({
       if (command === "resolve") {
         await update({ data: { id: conversation.id, status: "resolved" } });
         return "Conversa resolvida";
+      }
+      if (command === "archive") {
+        await toggleConversationArchive({ data: { conversationId: conversation.id } });
+        return "Conversa arquivada";
+      }
+      if (command === "mute") {
+        await toggleConversationMute({ data: { conversationId: conversation.id, minutes: 480 } });
+        return "Conversa silenciada por 8h";
       }
       await update({ data: { id: conversation.id, status: "open" } });
       return "Conversa reaberta";
@@ -248,6 +259,14 @@ export function ConversationActions({
           {isUnread ? <CheckCheck className="mr-2 h-4 w-4" /> : <Mail className="mr-2 h-4 w-4" />}
           {isUnread ? "Marcar como lida" : "Marcar como não lida"}
         </Item>
+        <Item disabled={disabled} onSelect={() => commandMut.mutate("archive")}>
+          <Archive className="mr-2 h-4 w-4" />
+          Arquivar conversa
+        </Item>
+        <Item disabled={disabled} onSelect={() => commandMut.mutate("mute")}>
+          <VolumeX className="mr-2 h-4 w-4" />
+          Silenciar (8h)
+        </Item>
         <Separator />
         <Item
           disabled={disabled}
@@ -255,7 +274,7 @@ export function ConversationActions({
         >
           <CheckCheck className="mr-2 h-4 w-4" />
           {conversation.status === "resolved" ? "Reabrir conversa" : "Resolver conversa"}
-        </Item>
+        </Separator>
         <Separator />
         <UnavailableItem Item={Item} icon={<Reply className="mr-2 h-4 w-4" />} label="Responder" reason="Disponível no composer da conversa; quote por menu ainda não existe." />
         <UnavailableItem Item={Item} icon={<Smile className="mr-2 h-4 w-4" />} label="Reagir" reason="Requer suporte de reactions por provider." />

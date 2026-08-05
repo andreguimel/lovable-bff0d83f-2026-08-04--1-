@@ -48,13 +48,15 @@ export interface MessageActionsProps {
   /** Open the forward dialog for this single message. */
   onForward?: () => void;
   /** Open the "Message info" side/bottom sheet for this single message. */
-  onInfo?: () => void;
-
+  onInfo?: ()   /** Trigger an emoji reaction to this message. */
+  onReact?: (emoji: string) => void;
   /** Enter multi-select mode with this message pre-selected. */
   onEnterSelect: () => void;
   /** Trigger the delete confirmation dialog for this single message with scope. */
   onDelete: (scope: DeleteAction) => void;
 }
+
+const QUICK_EMOJIS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
 async function copyToClipboard(text: string) {
   if (navigator.clipboard?.writeText) {
@@ -89,8 +91,8 @@ export function MessageActions({
   onReply,
   onForward,
   onInfo,
+  onReact,
   onEnterSelect,
-
   onDelete,
 }: MessageActionsProps) {
   const [hover, setHover] = useState(false);
@@ -116,13 +118,31 @@ export function MessageActions({
     }
   };
 
+  const reactionBar = onReact ? (
+    <div className="flex items-center justify-around px-2 py-1.5 border-b border-border/50 bg-muted/40 rounded-t-md">
+      {QUICK_EMOJIS.map((emoji) => (
+        <button
+          key={emoji}
+          type="button"
+          onClick={() => onReact(emoji)}
+          className="text-lg p-1 hover:scale-125 transition-transform rounded hover:bg-background/80"
+          title={`Reagir com ${emoji}`}
+        >
+          {emoji}
+        </button>
+      ))}
+    </div>
+  ) : null;
+
   const menu = (
     <>
+      {reactionBar}
       {onReply && (
         <ContextMenuItem onSelect={() => onReply()}>
           <Reply className="mr-2 h-3.5 w-3.5" />
           Responder
         </ContextMenuItem>
+      )}em>
       )}
       <ContextMenuItem
         disabled={!canCopy}
@@ -221,6 +241,7 @@ export function MessageActions({
                   align={outbound ? "start" : "end"}
                   className="min-w-[180px]"
                 >
+                  {reactionBar}
                   {onReply && (
                     <DropdownMenuItem onSelect={() => onReply()}>
                       <Reply className="mr-2 h-3.5 w-3.5" />
