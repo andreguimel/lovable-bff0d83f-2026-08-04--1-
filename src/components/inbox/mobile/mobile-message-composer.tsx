@@ -69,7 +69,15 @@ export function MobileMessageComposer({ conversationId, contactName, companyId, 
 
   const sendMut = useMutation({
     mutationFn: (input: Parameters<typeof send>[0]["data"]) => send({ data: input }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["messages", conversationId] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      const err = (res?.media_metadata as { send_error?: string } | null)?.send_error;
+      if (err) {
+        toast.warning(`Mensagem salva, mas o provedor retornou: ${err}`);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["messages", conversationId] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
     },
@@ -139,8 +147,13 @@ export function MobileMessageComposer({ conversationId, contactName, companyId, 
     if (!body) return;
     setText("");
     const replyToId = replyingTo?.id;
-    await sendMut.mutateAsync({ conversationId, type: "text", body, replyToId });
-    onClearReply?.();
+    try {
+      await sendMut.mutateAsync({ conversationId, type: "text", body, replyToId });
+    } catch {
+      // toast handled by sendMut
+    } finally {
+      onClearReply?.();
+    }
   };
 
   const uploadAndSend = async (file: File, type: "image" | "audio" | "file" | "video") => {

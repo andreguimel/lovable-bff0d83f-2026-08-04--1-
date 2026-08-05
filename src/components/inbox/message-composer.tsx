@@ -92,7 +92,15 @@ export function MessageComposer({ conversationId, contactName, companyId, replyi
 
   const sendMut = useMutation({
     mutationFn: (input: Parameters<typeof send>[0]["data"]) => send({ data: input }),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["messages", conversationId] });
+      qc.invalidateQueries({ queryKey: ["conversations"] });
+      const err = (res?.media_metadata as { send_error?: string } | null)?.send_error;
+      if (err) {
+        toast.warning(`Mensagem salva, mas o provedor retornou: ${err}`);
+      }
+    },
+    onSettled: () => {
       qc.invalidateQueries({ queryKey: ["messages", conversationId] });
       qc.invalidateQueries({ queryKey: ["conversations"] });
     },
@@ -113,14 +121,19 @@ export function MessageComposer({ conversationId, contactName, companyId, replyi
     if (!body) return;
     setText("");
     const replyToId = replyingTo?.id;
-    await sendMut.mutateAsync({
-      conversationId,
-      type: "text",
-      body,
-      replyToId,
-      channelId: channelOverride ?? undefined,
-    });
-    onClearReply?.();
+    try {
+      await sendMut.mutateAsync({
+        conversationId,
+        type: "text",
+        body,
+        replyToId,
+        channelId: channelOverride ?? undefined,
+      });
+    } catch {
+      // toast shown by sendMut
+    } finally {
+      onClearReply?.();
+    }
   };
 
   const handleKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

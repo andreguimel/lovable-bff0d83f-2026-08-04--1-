@@ -15,6 +15,7 @@ export type StevoInboundMessage = {
   media_url: string | null;
   media_metadata: Record<string, unknown> | null;
   reply_to_provider_id: string | null;
+  from_me?: boolean;
 };
 
 export type StevoStatusUpdate = {
@@ -211,8 +212,8 @@ export function normalizeStevoWebhook(payload: unknown): {
 
     const hasMessage = Object.keys(message).length > 0 || !!content.body || !!content.media_url;
 
-    if (!fromMe && hasMessage && providerId && chatJid && !isGroupJid(chatJid)) {
-      const phone = jidToPhone(senderJid ?? chatJid);
+    if (hasMessage && providerId && chatJid && !isGroupJid(chatJid)) {
+      const phone = jidToPhone(fromMe ? chatJid : (senderJid ?? chatJid));
       if (phone) {
         const ctx = asRecord(
           asRecord(message.extendedTextMessage).contextInfo ?? asRecord(message.ExtendedTextMessage).contextInfo ?? event.contextInfo ?? root.contextInfo,
@@ -220,12 +221,13 @@ export function normalizeStevoWebhook(payload: unknown): {
         inbound.push({
           provider_message_id: providerId,
           from_phone: phone,
-          contact_name: str(info.PushName) ?? str(event.pushName) ?? str(event.pushname) ?? str(root.pushName) ?? str(root.pushname) ?? null,
+          contact_name: fromMe ? null : (str(info.PushName) ?? str(event.pushName) ?? str(event.pushname) ?? str(root.pushName) ?? str(root.pushname) ?? null),
           type: content.type,
           body: content.body,
           media_url: content.media_url,
           media_metadata: content.media_metadata,
           reply_to_provider_id: str(ctx.stanzaId) ?? str(ctx.stanzaID) ?? null,
+          from_me: fromMe,
         });
       }
     }

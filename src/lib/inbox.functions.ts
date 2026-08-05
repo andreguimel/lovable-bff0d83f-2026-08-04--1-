@@ -365,7 +365,6 @@ export const sendMessage = createServerFn({ method: "POST" })
       .update({ last_message_at: new Date().toISOString(), last_message_preview: preview })
       .eq("id", data.conversationId);
 
-    if (sendError) throw new Error(`Falha ao enviar: ${sendError}`);
     return msg;
   });
 

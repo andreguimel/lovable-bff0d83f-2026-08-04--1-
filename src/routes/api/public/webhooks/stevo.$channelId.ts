@@ -162,18 +162,19 @@ export const Route = createFileRoute("/api/public/webhooks/stevo/$channelId")({
           // Insert atômico: o índice único parcial garante que apenas UMA
           // entrega concorrente do mesmo evento siga adiante (evita resposta
           // duplicada do agente/fluxo quando o provedor reenvia o webhook).
+          const isOutboundFromPhone = msg.from_me === true;
+
           const { data: insertedMsg, error: insertErr } = await supabaseAdmin
             .from("messages")
             .insert({
               company_id: channel.company_id,
               conversation_id: conversationId,
               channel_id: channel.id,
-              direction: "inbound",
+              direction: isOutboundFromPhone ? "outbound" : "inbound",
               type: msg.type,
               body: msg.body ?? null,
               media_url: storedMediaUrl,
               media_metadata: (msg.media_metadata as never) ?? null,
-
               provider_message_id: msg.provider_message_id,
               reply_to_id: replyToId,
               status: "delivered",
@@ -195,7 +196,9 @@ export const Route = createFileRoute("/api/public/webhooks/stevo/$channelId")({
             .update({
               last_message_at: new Date().toISOString(),
               last_message_preview: preview,
-              unread_count: (convStat?.unread_count ?? 0) + 1,
+              unread_count: isOutboundFromPhone
+                ? (convStat?.unread_count ?? 0)
+                : (convStat?.unread_count ?? 0) + 1,
             })
             .eq("id", conversationId);
 
@@ -206,6 +209,8 @@ export const Route = createFileRoute("/api/public/webhooks/stevo/$channelId")({
               last_interaction_at: new Date().toISOString(),
             })
             .eq("id", contactId);
+
+          if (isOutboundFromPhone) continue;
 
           if (messageId) {
             try {
