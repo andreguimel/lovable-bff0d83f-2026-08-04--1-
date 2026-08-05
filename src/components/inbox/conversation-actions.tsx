@@ -276,18 +276,6 @@ export function ConversationActions({
           {conversation.status === "resolved" ? "Reabrir conversa" : "Resolver conversa"}
         </Item>
         <Separator />
-        <UnavailableItem Item={Item} icon={<Reply className="mr-2 h-4 w-4" />} label="Responder" reason="Disponível no composer da conversa; quote por menu ainda não existe." />
-        <UnavailableItem Item={Item} icon={<Smile className="mr-2 h-4 w-4" />} label="Reagir" reason="Requer suporte de reactions por provider." />
-        <UnavailableItem Item={Item} icon={<Star className="mr-2 h-4 w-4" />} label="Favoritar" reason="Não há favorito persistente para conversa/mensagem." />
-        <UnavailableItem Item={Item} icon={<Forward className="mr-2 h-4 w-4" />} label="Encaminhar" reason="Requer seletor de destino e reenvio por provider." />
-        <UnavailableItem Item={Item} icon={<Pencil className="mr-2 h-4 w-4" />} label="Editar" reason="Requer provider com edição de mensagem." />
-        <UnavailableItem Item={Item} icon={<Trash2 className="mr-2 h-4 w-4" />} label="Excluir mensagem para mim" reason="Só existe para mensagens individuais." />
-        <UnavailableItem Item={Item} icon={<Trash2 className="mr-2 h-4 w-4" />} label="Excluir mensagem para todos" reason="Só existe para mensagens outbound com provider compatível." />
-        <UnavailableItem Item={Item} icon={<SquareCheckBig className="mr-2 h-4 w-4" />} label="Selecionar mensagens" reason="Existe dentro da conversa; falta abrir a conversa já em modo seleção." />
-        <UnavailableItem Item={Item} icon={<Archive className="mr-2 h-4 w-4" />} label="Arquivar" reason="Não há campo de arquivo persistente em conversas." />
-        <UnavailableItem Item={Item} icon={<VolumeX className="mr-2 h-4 w-4" />} label="Silenciar conversa" reason="Não há preferências de notificação por conversa." />
-        <UnavailableItem Item={Item} icon={<Info className="mr-2 h-4 w-4" />} label="Informações" reason="Não há tela de informações/status por conversa." />
-        <Separator />
         <Item
           disabled={disabled || deleteMut.isPending}
           className="text-destructive focus:text-destructive"
