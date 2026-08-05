@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
-  Plus, QrCode, Search, Settings, Pause, Play, Archive, Trash2, MoreVertical, Zap, MessageSquare, Activity,
+  Plus, QrCode, Search, Settings, Pause, Play, Archive, Trash2, MoreVertical, Zap, MessageSquare, Activity, RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,7 +22,7 @@ import {
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  listChannels, archiveChannel, deleteChannel, setChannelPaused, disconnectChannel,
+  listChannels, archiveChannel, deleteChannel, setChannelPaused, disconnectChannel, syncStevoChannel,
 } from "@/lib/channels.functions";
 import { useRealtimeChannels } from "@/hooks/use-realtime-channels";
 import { useStevoStatusSync } from "@/hooks/use-stevo-status-sync";
@@ -56,6 +56,7 @@ function ChannelsPage() {
   const del = useServerFn(deleteChannel);
   const pause = useServerFn(setChannelPaused);
   const disconnect = useServerFn(disconnectChannel);
+  const syncStevo = useServerFn(syncStevoChannel);
 
   const [showArchived, setShowArchived] = useState(false);
   const [search, setSearch] = useState("");
@@ -242,6 +243,16 @@ function ChannelsPage() {
                       }}>
                         {ch.paused_at ? <><Play className="mr-2 h-4 w-4" /> Retomar</> : <><Pause className="mr-2 h-4 w-4" /> Pausar</>}
                       </DropdownMenuItem>
+                      {ch.provider_type === "stevo" && (
+                        <DropdownMenuItem onClick={async () => {
+                          const res = await syncStevo({ data: { id: ch.id } });
+                          invalidate();
+                          if (res.ok) toast.success(res.message);
+                          else toast.error(res.message);
+                        }}>
+                          <RefreshCw className="mr-2 h-4 w-4" /> Sincronizar Stevo
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={async () => {
                         await archive({ data: { id: ch.id, archived: !ch.archived_at } }); invalidate();

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ClientTime } from "@/components/client-time";
+import { RefreshCw } from "lucide-react";
 import {
   getChannel,
   updateChannel,
@@ -23,6 +24,7 @@ import {
   listAiAgentsForChannel,
   listFlowsForChannel,
   testChannelConnection,
+  syncStevoChannel,
 } from "@/lib/channels.functions";
 
 import { ChannelStatusBadge } from "./channel-status-badge";
@@ -62,6 +64,7 @@ export function ChannelDetailDrawer({ channelId, open, onOpenChange }: Props) {
   const test = useServerFn(sendTestMessage);
   const listAgents = useServerFn(listAiAgentsForChannel);
   const listFlows = useServerFn(listFlowsForChannel);
+  const syncStevo = useServerFn(syncStevoChannel);
 
   const detail = useQuery({
     queryKey: ["channel", channelId],
@@ -91,6 +94,17 @@ export function ChannelDetailDrawer({ channelId, open, onOpenChange }: Props) {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const syncStevoMut = useMutation({
+    mutationFn: () => syncStevo({ data: { id: channelId! } }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["channel", channelId] });
+      qc.invalidateQueries({ queryKey: ["channels"] });
+      if (res.ok) toast.success(res.message);
+      else toast.error(res.message);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const [testPhone, setTestPhone] = useState("");
   const [testBody, setTestBody] = useState("Olá, essa é uma mensagem de teste do Zenda 🚀");
   const testMut = useMutation({
@@ -108,17 +122,30 @@ export function ChannelDetailDrawer({ channelId, open, onOpenChange }: Props) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="flex items-center gap-3">
-            {ch && (
-              <span
-                className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                style={{ backgroundColor: ch.color ?? "#22c55e" }}
+          <SheetTitle className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {ch && (
+                <span
+                  className="h-8 w-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                  style={{ backgroundColor: ch.color ?? "#22c55e" }}
+                >
+                  {ch.name?.[0]?.toUpperCase()}
+                </span>
+              )}
+              {ch?.name ?? "Canal"}
+              {ch && <ChannelStatusBadge status={ch.status} paused={!!ch.paused_at} />}
+            </div>
+            {ch?.provider_type === "stevo" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => syncStevoMut.mutate()}
+                disabled={syncStevoMut.isPending}
               >
-                {ch.name?.[0]?.toUpperCase()}
-              </span>
+                <RefreshCw className={`mr-1 h-3.5 w-3.5 ${syncStevoMut.isPending ? "animate-spin" : ""}`} />
+                Sincronizar Stevo
+              </Button>
             )}
-            {ch?.name ?? "Canal"}
-            {ch && <ChannelStatusBadge status={ch.status} paused={!!ch.paused_at} />}
           </SheetTitle>
         </SheetHeader>
 

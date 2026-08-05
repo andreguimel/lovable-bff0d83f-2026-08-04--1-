@@ -241,6 +241,18 @@ export const updateChannel = createServerFn({ method: "POST" })
       .update(patch as never)
       .eq("id", data.id);
     if (error) throw new Error(error.message);
+
+    if (patch.webhook_verify_token && typeof patch.webhook_verify_token === "string") {
+      const { data: updatedCh } = await context.supabase
+        .from("channels")
+        .select("id, company_id, provider_type, credentials, webhook_verify_token")
+        .eq("id", data.id)
+        .maybeSingle();
+      if (updatedCh?.provider_type === "stevo") {
+        await ensureStevoWebhook(context.supabase, updatedCh);
+      }
+    }
+
     return { ok: true };
   });
 

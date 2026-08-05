@@ -284,7 +284,7 @@ export function QrConnectDialog({ channelId, open, onOpenChange }: Props) {
           )}
         </div>
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          {isStevo && status !== "connected" && (
+          {isStevo && (
             <Button variant="outline" onClick={() => syncMut.mutate()} disabled={syncMut.isPending}>
               <RefreshCw className={`mr-1 h-4 w-4 ${syncMut.isPending ? "animate-spin" : ""}`} />
               Sincronizar
