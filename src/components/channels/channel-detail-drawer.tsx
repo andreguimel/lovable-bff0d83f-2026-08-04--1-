@@ -256,9 +256,8 @@ export function ChannelDetailDrawer({ channelId, open, onOpenChange }: Props) {
                       key={r.value}
                       type="button"
                       onClick={() => patch.mutate({ routing_strategy: r.value })}
-                      className={`text-left rounded-xl border p-3 transition hover:border-primary ${
-                        ch.routing_strategy === r.value ? "border-primary bg-primary/5" : ""
-                      }`}
+                      className={`text-left rounded-xl border p-3 transition hover:border-primary ${ch.routing_strategy === r.value ? "border-primary bg-primary/5" : ""
+                        }`}
                     >
                       <p className="text-sm font-medium">{r.label}</p>
                       <p className="text-xs text-muted-foreground">{r.desc}</p>
