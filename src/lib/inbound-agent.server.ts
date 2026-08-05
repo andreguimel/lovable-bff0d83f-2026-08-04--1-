@@ -18,7 +18,16 @@ export async function triggerAgentReply(args: {
   toPhone: string;
   inboundMessageId?: string | null;
 }) {
-  const apiKey = process.env["LOVABLE_API_KEY"];
+  const { resolveActiveAIProvider } = await import("@/lib/ai-provider.server");
+  const aiConfig = await resolveActiveAIProvider(args.supabaseAdmin, args.companyId).catch(() => null);
+
+  const apiKey =
+    aiConfig?.apiKey ||
+    process.env["LOVABLE_API_KEY"] ||
+    process.env["OPENAI_API_KEY"] ||
+    process.env["GEMINI_API_KEY"] ||
+    process.env["GROQ_API_KEY"];
+
   if (!apiKey) return;
 
   // Guarda anti-duplicidade: uma única auto-resposta por mensagem recebida.
@@ -67,15 +76,32 @@ export async function triggerAgentReply(args: {
       .map((m) => ({ role: m.direction === "outbound" ? "assistant" : "user", content: m.body ?? "" })),
   ];
 
-  const model = agent.model || "google/gemini-2.5-flash";
-  const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-    body: JSON.stringify({ model, messages }),
-  });
-  if (!resp.ok) return;
-  const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  const reply = j.choices?.[0]?.message?.content?.trim();
+  const model = aiConfig?.model || agent.model || "google/gemini-2.5-flash";
+  let reply: string | null = null;
+
+  if (aiConfig && aiConfig.provider !== "lovable") {
+    // Custom user provider (OpenAI, Anthropic, Gemini)
+    const { generateText } = await import("ai");
+    const { buildGuardianModel } = await import("@/lib/ai-provider.server");
+    const built = await buildGuardianModel(args.supabaseAdmin, args.companyId);
+    const res = await generateText({
+      model: built.model,
+      system: systemPrompt,
+      messages: messages.filter((m) => m.role !== "system") as never,
+    });
+    reply = res.text?.trim() ?? null;
+  } else {
+    // Lovable AI Gateway fallback
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
+      body: JSON.stringify({ model, messages }),
+    });
+    if (!resp.ok) return;
+    const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    reply = j.choices?.[0]?.message?.content?.trim() ?? null;
+  }
+
   if (!reply) return;
 
   // Send through provider first (to get provider_message_id), then persist

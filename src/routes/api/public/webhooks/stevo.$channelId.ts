@@ -307,16 +307,19 @@ export const Route = createFileRoute("/api/public/webhooks/stevo/$channelId")({
                 .select("assigned_type, assigned_agent_id, status")
                 .eq("id", conversationId)
                 .maybeSingle();
+              const effectiveAgentId = convAssign?.assigned_agent_id || channel.ai_agent_id;
+              const effectiveType = convAssign?.assigned_type || (channel.ai_agent_id ? "ai_agent" : "unassigned");
+
               if (
-                convAssign?.assigned_type === "ai_agent" &&
-                convAssign.assigned_agent_id &&
-                convAssign.status !== "resolved"
+                effectiveType === "ai_agent" &&
+                effectiveAgentId &&
+                convAssign?.status !== "resolved"
               ) {
                 await triggerAgentReply({
                   supabaseAdmin,
                   companyId: channel.company_id,
                   conversationId,
-                  agentId: convAssign.assigned_agent_id,
+                  agentId: effectiveAgentId,
                   channel: {
                     id: channel.id,
                     provider_type: channel.provider_type,
