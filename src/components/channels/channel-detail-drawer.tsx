@@ -392,10 +392,11 @@ function IntegrationSettings({
   const [verifyToken, setVerifyToken] = useState("");
   const [copied, setCopied] = useState<string | null>(null);
 
+  const providerPath = channel.provider_type === "stevo" ? "stevo" : "whatsapp";
   const webhookUrl =
     typeof window !== "undefined"
-      ? `${window.location.origin}/api/public/webhooks/whatsapp/${channel.id}`
-      : `/api/public/webhooks/whatsapp/${channel.id}`;
+      ? `${window.location.origin}/api/public/webhooks/${providerPath}/${channel.id}`
+      : `/api/public/webhooks/${providerPath}/${channel.id}`;
 
   const copy = async (label: string, value: string) => {
     try {
