@@ -5,6 +5,10 @@ import { useServerFn } from "@tanstack/react-start";
 import {
   Loader2,
   CheckCircle2,
+  Check,
+  CheckCheck,
+  Clock,
+  AlertCircle,
   ArrowRight,
   ArrowRightLeft,
   Bot,
@@ -77,6 +81,51 @@ import { InternalNotesSheet } from "@/components/inbox/internal-notes-sheet";
 import { StickyNote } from "lucide-react";
 void ReplyPreview;
 void summarizeReply;
+
+function MessageStatusIcon({
+  status,
+  isOutbound,
+  isDeleted,
+}: {
+  status?: string | null;
+  isOutbound: boolean;
+  isDeleted: boolean;
+}) {
+  if (!isOutbound || isDeleted) return null;
+  if (status === "sending" || status === "pending") {
+    return (
+      <span title="Enviando...">
+        <Clock className="h-3 w-3 animate-spin opacity-70" />
+      </span>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <span title="Falha no envio">
+        <AlertCircle className="h-3 w-3 text-red-400" />
+      </span>
+    );
+  }
+  if (status === "read") {
+    return (
+      <span title="Lida">
+        <CheckCheck className="h-3.5 w-3.5 text-sky-400 font-semibold" />
+      </span>
+    );
+  }
+  if (status === "delivered") {
+    return (
+      <span title="Entregue">
+        <CheckCheck className="h-3.5 w-3.5 opacity-80" />
+      </span>
+    );
+  }
+  return (
+    <span title="Enviada">
+      <Check className="h-3.5 w-3.5 opacity-80" />
+    </span>
+  );
+}
 
 
 
@@ -629,7 +678,7 @@ function ConversationView() {
                                       </span>
                                     )}
                                     <ClientTime iso={m.created_at} />
-                                    {cluster.outbound && !isDeleted && <CheckCircle2 className="h-2.5 w-2.5 opacity-70" />}
+                                    <MessageStatusIcon status={(m as { status?: string | null }).status} isOutbound={cluster.outbound} isDeleted={isDeleted} />
                                   </div>
                                 )}
                               </div>
@@ -1043,7 +1092,7 @@ function ConversationView() {
                                   )}
                                 >
                                   <ClientTime iso={m.created_at} />
-                                  {cluster.outbound && !isDeleted && <CheckCircle2 className="h-2.5 w-2.5 opacity-70" />}
+                                  <MessageStatusIcon status={(m as { status?: string | null }).status} isOutbound={cluster.outbound} isDeleted={isDeleted} />
                                 </div>
                               )}
                             </div>
