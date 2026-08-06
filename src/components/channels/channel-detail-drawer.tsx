@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
@@ -424,6 +424,25 @@ function IntegrationSettings({
   const [sipUsername, setSipUsername] = useState(typeof creds.sip_username === "string" ? creds.sip_username : "");
   const [sipPassword, setSipPassword] = useState(typeof creds.sip_password === "string" ? creds.sip_password : "");
 
+  useEffect(() => {
+    const c = ((channel as { credentials?: Record<string, unknown> }).credentials ?? {}) as Record<string, unknown>;
+    if (typeof c.instance_id === "string") setStevoInstanceId(c.instance_id);
+    if (typeof c.sip_server === "string") setSipServer(c.sip_server);
+    if (typeof c.sip_username === "string") setSipUsername(c.sip_username);
+    if (typeof c.sip_password === "string") setSipPassword(c.sip_password);
+  }, [channel]);
+
+  const handleSaveStevoCreds = () => {
+    onPatch({
+      credentials: {
+        instance_id: stevoInstanceId,
+        sip_server: sipServer,
+        sip_username: sipUsername,
+        sip_password: sipPassword,
+      },
+    });
+  };
+
   const providerPath = channel.provider_type === "stevo" ? "stevo" : "whatsapp";
   const webhookUrl =
     typeof window !== "undefined"
@@ -605,11 +624,20 @@ function IntegrationSettings({
                   type="password"
                   value={sipPassword}
                   onChange={(e) => setSipPassword(e.target.value)}
-                  onBlur={() => onPatch({ credentials: { ...creds, sip_password: sipPassword } })}
+                  onBlur={handleSaveStevoCreds}
                   placeholder="••••••••••••••••"
                 />
               </div>
             </div>
+
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSaveStevoCreds}
+              className="mt-2 w-full bg-emerald-600 font-medium text-white hover:bg-emerald-700"
+            >
+              Salvar Credenciais Stevo Voice
+            </Button>
           </div>
         </div>
       ) : (
