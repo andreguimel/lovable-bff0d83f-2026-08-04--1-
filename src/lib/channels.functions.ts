@@ -83,13 +83,22 @@ export const getChannel = createServerFn({ method: "GET" })
       has_phone_number_id: isNonEmpty(rawCreds.phone_number_id),
       has_access_token: isNonEmpty(rawCreds.access_token),
       has_app_secret: isNonEmpty(rawCreds.app_secret),
+      has_sip_password: isNonEmpty(rawCreds.sip_password),
     };
     const has_webhook_verify_token = isNonEmpty(
       (ch as { webhook_verify_token?: string | null }).webhook_verify_token,
     );
 
-    // Preserve typing by nulling secrets in place rather than destructuring.
-    const safeChannel = { ...(ch as Record<string, unknown>), credentials: null, webhook_verify_token: null } as typeof ch;
+    const safeCreds = {
+      instance_id: rawCreds.instance_id ?? null,
+      sip_server: rawCreds.sip_server ?? null,
+      sip_username: rawCreds.sip_username ?? null,
+      sip_password: rawCreds.sip_password ?? null,
+      phone_number_id: rawCreds.phone_number_id ?? null,
+    };
+
+    // Preserve typing by keeping safe non-secret fields in credentials.
+    const safeChannel = { ...(ch as Record<string, unknown>), credentials: safeCreds, webhook_verify_token: null } as unknown as typeof ch;
 
     const { data: events } = await context.supabase
       .from("channel_events")
