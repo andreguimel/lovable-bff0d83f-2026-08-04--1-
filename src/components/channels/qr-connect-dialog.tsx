@@ -77,6 +77,14 @@ export function QrConnectDialog({ channelId, open, onOpenChange }: Props) {
       if (!qrString) setQrDataUrl(null);
       return;
     }
+    if (
+      qrString.startsWith("data:") ||
+      qrString.startsWith("http://") ||
+      qrString.startsWith("https://")
+    ) {
+      setQrDataUrl(qrString);
+      return;
+    }
     QRCode.toDataURL(qrString, { width: 320, margin: 1 }).then(setQrDataUrl).catch(() => {});
   }, [qrString, stevoQrImage]);
 

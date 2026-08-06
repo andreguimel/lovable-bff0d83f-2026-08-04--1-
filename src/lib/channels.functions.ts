@@ -411,7 +411,7 @@ export const startChannelSession = createServerFn({ method: "POST" })
         .from("channels")
         .update({
           status: "connecting",
-          qr_code: res.qr,
+          qr_code: res.qr ?? res.qrImage ?? res.pairingCode ?? "stevo-qr-active",
           qr_expires_at: expiresStevo,
         })
         .eq("id", data.id);
@@ -462,8 +462,11 @@ export const syncStevoChannel = createServerFn({ method: "POST" })
     const res = await testStevoInstance({ ...((ch.credentials ?? {}) as Record<string, unknown>), company_id: ch.company_id } as { instance_id?: string });
 
     if (!res.ok) {
-      // Erro de rede transitório não deve derrubar um canal já conectado.
-      if (res.code === "NETWORK_ERROR" && ch.status === "connected") {
+      // Erros transitórios de rede ou credenciais não configuradas não devem derrubar um canal já conectado.
+      if (
+        (res.code === "NETWORK_ERROR" || res.code === "MISSING_API_KEY" || res.code === "MISSING_CREDENTIALS") &&
+        ch.status === "connected"
+      ) {
         await logEvent(context.supabase, ch.company_id, ch.id, "sync_failed", {
           code: res.code,
           kept_status: true,
@@ -572,7 +575,10 @@ export const refreshStevoChannelStatuses = createServerFn({ method: "POST" })
       const res = await testStevoInstance({ ...((ch.credentials ?? {}) as Record<string, unknown>), company_id: ch.company_id } as { instance_id?: string });
       let next: "connected" | "disconnected" | null = null;
       if (!res.ok) {
-        next = res.code === "NETWORK_ERROR" ? null : "disconnected";
+        next =
+          res.code === "NETWORK_ERROR" || res.code === "MISSING_API_KEY" || res.code === "MISSING_CREDENTIALS"
+            ? null
+            : "disconnected";
       } else if (res.instance.connected) {
         next = "connected";
       } else if (res.verified || res.noSession || !res.serverConnected) {
@@ -615,7 +621,7 @@ export const finalizeChannelSession = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!ch) throw new Error("Canal não encontrado");
     if (ch.status === "connected") return { ok: true, already: true };
-    if (!ch.qr_code) throw new Error("Nenhuma sessão em andamento");
+    if (!ch.qr_code && ch.status !== "connecting") throw new Error("Nenhuma sessão em andamento");
     const { error } = await context.supabase
       .from("channels")
       .update({
@@ -944,7 +950,10 @@ export const testChannelConnection = createServerFn({ method: "POST" })
     if (!ch) throw new Error("Canal não encontrado");
     if (ch.provider_type === "stevo") {
       const { testStevoInstance } = await import("@/lib/wa-providers/stevo.server");
-      const res = await testStevoInstance((ch.credentials ?? {}) as { instance_id?: string });
+      const res = await testStevoInstance({
+        ...((ch.credentials ?? {}) as Record<string, unknown>),
+        company_id: ch.company_id,
+      } as { instance_id?: string });
       if (!res.ok) {
         await logEvent(context.supabase, ch.company_id, ch.id, "test_connection_failed", {
           code: res.code,
