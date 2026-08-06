@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { Search, History, Smile, ThumbsUp, Heart, Rocket, PartyPopper } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/dialog"; // or popover
-import { Popover as UiPopover, PopoverContent as UiPopoverContent, PopoverTrigger as UiPopoverTrigger } from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
 const LOCAL_STORAGE_KEY = "zenda_recent_emojis";
@@ -245,8 +244,8 @@ export function EmojiPickerPopover({
   }, [activeTab]);
 
   return (
-    <UiPopover open={open} onOpenChange={setOpen}>
-      <UiPopoverTrigger asChild>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
         {trigger ?? (
           <button
             type="button"
@@ -257,9 +256,9 @@ export function EmojiPickerPopover({
             <Smile className="h-4 w-4" />
           </button>
         )}
-      </UiPopoverTrigger>
+      </PopoverTrigger>
 
-      <UiPopoverContent
+      <PopoverContent
         align={align}
         side={side}
         className="w-80 p-2 shadow-xl border border-border/80 bg-popover text-popover-foreground rounded-2xl"
@@ -373,7 +372,7 @@ export function EmojiPickerPopover({
             </div>
           )}
         </div>
-      </UiPopoverContent>
-    </UiPopover>
+      </PopoverContent>
+    </Popover>
   );
 }

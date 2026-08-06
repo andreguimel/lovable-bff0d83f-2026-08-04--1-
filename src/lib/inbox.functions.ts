@@ -1078,6 +1078,7 @@ export const maybeAutoRespondWithAgent = createServerFn({ method: "POST" })
   .inputValidator((input: { conversationId: string }) =>
     z.object({ conversationId: z.string().uuid() }).parse(input),
   )
+  .handler(async ({ data, context }) => {
     const { data: conv } = await context.supabase
       .from("conversations")
       .select(

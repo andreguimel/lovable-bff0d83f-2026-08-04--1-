@@ -77,31 +77,15 @@ export async function triggerAgentReply(args: {
       .map((m) => ({ role: m.direction === "outbound" ? "assistant" : "user", content: m.body ?? "" })),
   ];
 
-  const model = aiConfig?.model || agent.model || "google/gemini-2.5-flash";
-  let reply: string | null = null;
-
-  if (aiConfig && aiConfig.provider !== "lovable") {
-    // Custom user provider (OpenAI, Anthropic, Gemini)
-    const { generateText } = await import("ai");
-    const { buildGuardianModel } = await import("@/lib/ai-provider.server");
-    const built = await buildGuardianModel(args.supabaseAdmin, args.companyId);
-    const res = await generateText({
-      model: built.model,
-      system: systemPrompt,
-      messages: messages.filter((m) => m.role !== "system") as never,
-    });
-    reply = res.text?.trim() ?? null;
-  } else {
-    // Lovable AI Gateway fallback
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-      body: JSON.stringify({ model, messages }),
-    });
-    if (!resp.ok) return;
-    const j = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    reply = j.choices?.[0]?.message?.content?.trim() ?? null;
-  }
+  const { generateText } = await import("ai");
+  const { buildGuardianModel } = await import("@/lib/ai-provider.server");
+  const built = await buildGuardianModel(args.supabaseAdmin, args.companyId, agent.model);
+  const res = await generateText({
+    model: built.model,
+    system: systemPrompt,
+    messages: messages.filter((m) => m.role !== "system") as never,
+  });
+  const reply = res.text?.trim() ?? null;
 
   if (!reply) return;
 
@@ -128,7 +112,7 @@ export async function triggerAgentReply(args: {
       auto: true,
       agent_id: agent.id,
       agent_name: agent.name,
-      model,
+      model: built.modelId,
       ...(dispatch.ok ? {} : { send_error: dispatch.error }),
     },
   });

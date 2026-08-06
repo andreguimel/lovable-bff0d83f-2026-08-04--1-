@@ -40,6 +40,7 @@ razao_social, nome_fantasia, pix_key, license_plate.`;
 
 export function createLlmExtractor(
   languageModel: LanguageModel,
+  modelName = "custom-model",
 ): EntityExtractor {
   return {
     async extract(input: ExtractionInput): Promise<ExtractionResult> {
@@ -61,30 +62,26 @@ export function createLlmExtractor(
             field_key: e.field_key,
             value: e.value,
             confidence: e.confidence,
-            source: "llm" as const,
             evidence: e.evidence ?? e.value,
           }));
 
         return {
+          model: modelName,
           entities,
           latencyMs,
-          tokensUsed: (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0),
+          tokenUsage: {
+            prompt: result.usage?.inputTokens ?? 0,
+            completion: result.usage?.outputTokens ?? 0,
+          },
         };
       } catch (err: unknown) {
-        const latencyMs = Date.now() - started;
 
         if (NoObjectGeneratedError.isInstance(err)) {
-          throw new ExtractorError("LLM_NO_STRUCTURED_OUTPUT", err.message, {
-            latencyMs,
-            cause: err,
-          });
+          throw new ExtractorError("invalid_response", err.message, false);
         }
 
         const message = err instanceof Error ? err.message : String(err);
-        throw new ExtractorError("LLM_CALL_FAILED", message, {
-          latencyMs,
-          cause: err,
-        });
+        throw new ExtractorError("provider_error", message, true);
       }
     },
   };
@@ -92,8 +89,8 @@ export function createLlmExtractor(
 
 function buildPrompt(input: ExtractionInput): string {
   const parts: string[] = [];
-  if (input.contactHint) {
-    parts.push(`Contact context: ${JSON.stringify(input.contactHint)}`);
+  if (input.known) {
+    parts.push(`Known contact info: ${JSON.stringify(input.known)}`);
   }
   parts.push(`Message to extract from:\n"${input.text}"`);
   return parts.join("\n\n");

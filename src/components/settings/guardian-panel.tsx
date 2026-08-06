@@ -235,10 +235,8 @@ export function GuardianPanel({ initialIncidentId }: { initialIncidentId?: strin
           <AlertDescription className="flex flex-col gap-2">
             <span>
               {activeProvider.data.source === "user"
-                ? "O Guardião está usando a chave cadastrada em Configurações → APIs. Troque de provedor a qualquer momento."
-                : activeProvider.data.source === "fallback"
-                  ? "Nenhum provedor configurado — usando fallback do Lovable AI. Cadastre uma chave em Configurações → APIs para usar seu próprio provedor (OpenAI, Anthropic ou Google Gemini)."
-                  : activeProvider.data.label}
+                ? `O Guardião está usando a chave cadastrada (${activeProvider.data.label}). Troque de provedor a qualquer momento.`
+                : "Nenhum provedor configurado. Cadastre uma chave em Configurações → Integrações para usar seu próprio provedor (OpenAI, Anthropic ou Google Gemini)."}
             </span>
             {activeProvider.data.source !== "user" ? (
               <Link

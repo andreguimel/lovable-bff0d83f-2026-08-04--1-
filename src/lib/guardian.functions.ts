@@ -661,9 +661,7 @@ export const guardianActiveProvider = createServerFn({ method: "POST" })
             ? `OpenAI · ${r.model}`
             : r.provider === "anthropic"
               ? `Anthropic · ${r.model}`
-              : r.provider === "google_gemini"
-                ? `Google Gemini · ${r.model}`
-                : `Lovable AI · ${r.model} (fallback)`,
+              : `Google Gemini · ${r.model}`,
       };
     } catch (err) {
       return { provider: "none" as const, model: null, source: "none" as const, label: (err as Error).message };
