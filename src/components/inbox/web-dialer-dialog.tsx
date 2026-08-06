@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { Phone, PhoneOff, Mic, MicOff, Copy, ShieldCheck, Loader2, MessageCircle } from "lucide-react";
@@ -39,6 +39,26 @@ export function WebDialerDialog({
   const [dialed, setDialed] = useState(phone?.replace(/[^0-9+]/g, "") ?? "");
   const [calling, setCalling] = useState(false);
   const [muted, setMuted] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+
+  useEffect(() => {
+    let timer: any = null;
+    if (calling) {
+      setCallDuration(0);
+      timer = setInterval(() => setCallDuration((p) => p + 1), 1000);
+    } else {
+      setCallDuration(0);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [calling]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  };
 
   const callStevoFn = useServerFn(startStevoCall);
 
@@ -51,11 +71,6 @@ export function WebDialerDialog({
     onSuccess: (res) => {
       setCalling(true);
       toast.success(res.message || "Chamada iniciada no Stevo Voice!");
-      const raw = dialed.replace(/[^0-9]/g, "");
-      const sServer = res.sipServer || sipServer;
-      if (raw.length >= 8 && sServer) {
-        window.location.href = `sip:${raw}@${sServer}`;
-      }
     },
     onError: (e: Error) => {
       toast.error(e.message || "Falha ao disparar ligação no Stevo Voice");
@@ -82,29 +97,9 @@ export function WebDialerDialog({
     }
   };
 
-  const handleWaFallbackCall = () => {
-    const raw = dialed.replace(/[^0-9]/g, "");
-    if (raw.length < 8) {
-      toast.error("Digite um número de telefone válido");
-      return;
-    }
-    toast.info(`Abrindo WhatsApp para +${raw}...`);
-    window.open(`https://wa.me/${raw}`, "_blank");
-  };
-
-  const handleSipCall = () => {
-    const raw = dialed.replace(/[^0-9]/g, "");
-    if (raw.length < 8) {
-      toast.error("Digite um número de telefone válido");
-      return;
-    }
-    const currentSipServer = stevoMutation.data?.sipServer || sipServer;
-    window.location.href = `sip:${raw}@${currentSipServer}`;
-  };
-
   const handleEndCall = () => {
     setCalling(false);
-    toast.success("Chamada finalizada");
+    toast.success("Chamada encerrada");
   };
 
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
@@ -130,10 +125,10 @@ export function WebDialerDialog({
           <div className="flex items-center justify-center gap-2">
             <Badge
               variant={calling ? "default" : "outline"}
-              className={cn("text-xs font-normal", calling && "animate-pulse bg-emerald-600 text-white")}
+              className={cn("text-xs font-medium px-3 py-1", calling && "animate-pulse bg-emerald-600 text-white")}
             >
-              <ShieldCheck className="mr-1 h-3.5 w-3.5" />
-              {calling ? "Em Chamada (Stevo Voice)" : "Stevo Voice Pronto"}
+              <ShieldCheck className="mr-1.5 h-3.5 w-3.5" />
+              {calling ? `Em Chamada (${formatDuration(callDuration)})` : "Stevo Voice Pronto"}
             </Badge>
           </div>
 
@@ -199,29 +194,6 @@ export function WebDialerDialog({
                   </Button>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleSipCall}
-                    className="h-9 text-xs gap-1 border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
-                  >
-                    <Phone className="h-3.5 w-3.5" />
-                    Re-discar (SIP)
-                  </Button>
-
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleCopySip}
-                    className="h-9 text-xs gap-1"
-                  >
-                    <Copy className="h-3.5 w-3.5" />
-                    Copiar SIP
-                  </Button>
-                </div>
               </div>
             ) : (
               <div className="space-y-2">
