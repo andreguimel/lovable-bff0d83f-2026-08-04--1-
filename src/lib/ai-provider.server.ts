@@ -18,30 +18,32 @@ const DEFAULT_MODEL: Record<string, string> = {
  */
 export async function resolveActiveAIProvider(
   supabase: any,
-  companyId: string,
+  companyId?: string | null,
 ): Promise<ResolvedAIProvider> {
-  const { data, error } = await supabase
-    .from("integrations")
-    .select("provider, credentials, config, enabled, updated_at")
-    .eq("company_id", companyId)
-    .in("provider", ["openai", "anthropic", "google_gemini"])
-    .eq("enabled", true)
-    .order("updated_at", { ascending: false })
-    .limit(1);
-  if (error) throw new Error(error.message);
-  const row = (data ?? [])[0];
-  if (row) {
-    const creds = (row.credentials ?? {}) as Record<string, string>;
-    const config = (row.config ?? {}) as Record<string, string>;
-    const apiKey = creds.api_key;
-    if (apiKey) {
-      const p = row.provider as "openai" | "anthropic" | "google_gemini";
-      return {
-        provider: p,
-        apiKey,
-        model: config.default_model || DEFAULT_MODEL[p],
-        source: "user",
-      };
+  if (companyId) {
+    const { data, error } = await supabase
+      .from("integrations")
+      .select("provider, credentials, config, enabled, updated_at")
+      .eq("company_id", companyId)
+      .in("provider", ["openai", "anthropic", "google_gemini"])
+      .eq("enabled", true)
+      .order("updated_at", { ascending: false })
+      .limit(1);
+    if (error) throw new Error(error.message);
+    const row = (data ?? [])[0];
+    if (row) {
+      const creds = (row.credentials ?? {}) as Record<string, string>;
+      const config = (row.config ?? {}) as Record<string, string>;
+      const apiKey = creds.api_key;
+      if (apiKey) {
+        const p = row.provider as "openai" | "anthropic" | "google_gemini";
+        return {
+          provider: p,
+          apiKey,
+          model: config.default_model || DEFAULT_MODEL[p],
+          source: "user",
+        };
+      }
     }
   }
 
@@ -85,7 +87,7 @@ export async function resolveActiveAIProvider(
  */
 export async function buildGuardianModel(
   supabase: any,
-  companyId: string,
+  companyId?: string | null,
   requestedModel?: string,
 ): Promise<{ model: LanguageModel; label: string; providerId: ResolvedAIProvider["provider"]; usingFallback: boolean; modelId: string }> {
   const resolved = await resolveActiveAIProvider(supabase, companyId);

@@ -229,3 +229,70 @@ export const getUnreadSummary = createServerFn({ method: "GET" })
       ],
     };
   });
+
+export const generateDailySummary = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: userData } = await context.supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) throw new Error("Usuário não autenticado");
+
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    const companyId = profile?.company_id ?? undefined;
+
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [convsRes, msgsRes, contactsRes, cascadesRes] = await Promise.all([
+      context.supabase.from("conversations").select("id, status, unread_count").gte("updated_at", since24h),
+      context.supabase.from("messages").select("id, direction").gte("created_at", since24h),
+      context.supabase.from("contacts").select("id").gte("created_at", since24h),
+      context.supabase.from("cascade_runs").select("id, status").gte("created_at", since24h),
+    ]);
+
+    const convs = convsRes.data ?? [];
+    const msgs = msgsRes.data ?? [];
+    const contacts = contactsRes.data ?? [];
+    const cascades = cascadesRes.data ?? [];
+
+    const openCount = convs.filter((c) => c.status === "open" || c.status === "pending").length;
+    const resolvedCount = convs.filter((c) => c.status === "resolved").length;
+    const inboundMsgs = msgs.filter((m) => m.direction === "inbound").length;
+    const outboundMsgs = msgs.filter((m) => m.direction === "outbound").length;
+    const exhaustedCascades = cascades.filter((c) => c.status === "exhausted").length;
+    const runningCascades = cascades.filter((c) => c.status === "running").length;
+
+    const prompt = `Você é o assistente executivo inteligente da plataforma CRM & Atendimento.
+Análise de atividades das últimas 24 horas:
+- Conversas ativas/atualizadas: ${convs.length} (${openCount} em aberto/pendentes, ${resolvedCount} resolvidas)
+- Mensagens recebidas: ${inboundMsgs}
+- Mensagens enviadas: ${outboundMsgs}
+- Novos contatos cadastrados: ${contacts.length}
+- Fluxos de cascata em execução: ${runningCascades}
+- Fluxos de cascata esgotados (transbordo pendente): ${exhaustedCascades}
+
+Por favor, elabore um resumo inteligente, direto e elegante em português com os seguintes tópicos bem formatados:
+1. 📊 Visão Geral do Atendimento
+2. ⚠️ Alertas e Atenção Necessária
+3. 💡 Próximos Passos Sugeridos
+
+Mantenha o tom profissional, direto e acionável. Evite textos muito longos.`;
+
+    const { generateText } = await import("ai");
+    const { buildGuardianModel } = await import("@/lib/ai-provider.server");
+
+    const { model } = await buildGuardianModel(context.supabase, companyId);
+    const result = await generateText({
+      model,
+      prompt,
+    });
+
+    return {
+      summary: result.text.trim(),
+      generatedAt: new Date().toISOString(),
+    };
+  });
+
