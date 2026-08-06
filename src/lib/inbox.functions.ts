@@ -1910,6 +1910,7 @@ export const startStevoCall = createServerFn({ method: "POST" })
     const { stevoMakeCall } = await import("@/lib/wa-providers/stevo.server");
     const res = await stevoMakeCall(
       {
+        ...((channel.credentials as Record<string, unknown>) ?? {}),
         instance_id: (channel.credentials as any)?.instance_id,
         company_id: companyId,
       },

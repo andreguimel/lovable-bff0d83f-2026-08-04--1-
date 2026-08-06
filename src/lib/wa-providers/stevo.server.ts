@@ -797,14 +797,25 @@ export async function stevoMakeCall(
     phone: cleanPhone,
     number: cleanPhone,
     to: cleanPhone,
+    sip_server: (creds as any).sip_server ?? null,
+    sip_username: (creds as any).sip_username ?? null,
+    sip_password: (creds as any).sip_password ?? null,
   };
 
   try {
-    let r = await stevoFetch(`/v1/instances/${encodeURIComponent(instanceId)}/calls`, apiKey, {
+    let r = await stevoFetch(`/v1/instances/${encodeURIComponent(instanceId)}/call/offer`, apiKey, {
       method: "POST",
       body: JSON.stringify(body),
       creds,
     });
+
+    if (!r.ok) {
+      r = await stevoFetch(`/v1/instances/${encodeURIComponent(instanceId)}/calls`, apiKey, {
+        method: "POST",
+        body: JSON.stringify(body),
+        creds,
+      });
+    }
 
     if (!r.ok) {
       r = await stevoFetch(`/v1/instances/${encodeURIComponent(instanceId)}/voice`, apiKey, {
@@ -817,12 +828,22 @@ export async function stevoMakeCall(
     if (!r.ok) {
       const ready = await ensureStevoServerReady(creds);
       if (ready.ok) {
-        const direct = await fetch(`${ready.serverUrl}/call/offer`, {
+        const payload = { number: cleanPhone, to: cleanPhone, callType: "offer" };
+        const directOffer = await fetch(`${ready.serverUrl}/call/offer`, {
           method: "POST",
           headers: { apikey: ready.token, "Content-Type": "application/json" },
-          body: JSON.stringify({ number: cleanPhone, to: cleanPhone }),
-        });
-        if (direct.ok) return { ok: true, message: "Chamada iniciada via Stevo Voice" };
+          body: JSON.stringify(payload),
+        }).catch(() => null);
+
+        if (directOffer?.ok) return { ok: true, message: "Chamada iniciada via Stevo Voice" };
+
+        const directCall = await fetch(`${ready.serverUrl}/chat/sendCall`, {
+          method: "POST",
+          headers: { apikey: ready.token, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => null);
+
+        if (directCall?.ok) return { ok: true, message: "Chamada iniciada via Stevo Voice" };
       }
     }
 
