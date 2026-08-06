@@ -50,11 +50,7 @@ export function WebDialerDialog({
     },
     onSuccess: (res) => {
       setCalling(true);
-      toast.success(res.message || "Chamada enviada ao Stevo Voice!");
-      const targetPhone = res.phone || dialed.replace(/[^0-9]/g, "");
-      if (res.isWebCall && targetPhone) {
-        window.open(`https://wa.me/${targetPhone}`, "_blank");
-      }
+      toast.success(res.message || "Chamada iniciada no Stevo Voice!");
     },
     onError: (e: Error) => {
       toast.error(e.message || "Falha ao disparar ligação no Stevo Voice");
