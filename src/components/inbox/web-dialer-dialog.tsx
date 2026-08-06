@@ -52,8 +52,9 @@ export function WebDialerDialog({
       setCalling(true);
       toast.success(res.message || "Chamada iniciada no Stevo Voice!");
       const raw = dialed.replace(/[^0-9]/g, "");
-      if (raw.length >= 8) {
-        window.open(`https://wa.me/${raw}`, "_blank");
+      const sServer = res.sipServer || sipServer;
+      if (raw.length >= 8 && sServer) {
+        window.location.href = `sip:${raw}@${sServer}`;
       }
     },
     onError: (e: Error) => {
@@ -203,22 +204,22 @@ export function WebDialerDialog({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={handleWaFallbackCall}
+                    onClick={handleSipCall}
                     className="h-9 text-xs gap-1 border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
                   >
-                    <MessageCircle className="h-3.5 w-3.5" />
-                    WhatsApp Web
+                    <Phone className="h-3.5 w-3.5" />
+                    Re-discar (SIP)
                   </Button>
 
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={handleSipCall}
+                    onClick={handleCopySip}
                     className="h-9 text-xs gap-1"
                   >
-                    <Phone className="h-3.5 w-3.5" />
-                    Softphone (SIP)
+                    <Copy className="h-3.5 w-3.5" />
+                    Copiar SIP
                   </Button>
                 </div>
               </div>
@@ -242,17 +243,6 @@ export function WebDialerDialog({
                       Ligar via Stevo Voice
                     </>
                   )}
-                </Button>
-
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  onClick={handleWaFallbackCall}
-                  className="h-9 w-full text-xs text-muted-foreground hover:text-foreground"
-                >
-                  <MessageCircle className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
-                  Ou abrir chamada no WhatsApp Web
                 </Button>
               </div>
             )}
