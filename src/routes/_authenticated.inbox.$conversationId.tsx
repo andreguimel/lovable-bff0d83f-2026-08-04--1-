@@ -58,6 +58,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
 import { formatTime } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { LinkifiedText } from "@/components/inbox/linkified-text";
 import { MessageComposer } from "@/components/inbox/message-composer";
 import { ContactPanel } from "@/components/inbox/contact-panel";
 import { CallButton } from "@/components/inbox/call-button";
@@ -636,7 +637,14 @@ function ConversationView() {
                                       </p>
                                     )}
                                     {m.type === "text" && (
-                                      <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                                      <LinkifiedText
+                                        text={m.body}
+                                        linkClassName={
+                                          cluster.outbound && !cluster.automated
+                                            ? "text-primary-foreground underline font-semibold"
+                                            : "text-primary underline font-semibold"
+                                        }
+                                      />
                                     )}
                                     {m.type === "image" && m.media_url && <MediaImage path={m.media_url} messageId={m.id} />}
                                     {m.type === "audio" && m.media_url && (
@@ -1063,9 +1071,16 @@ function ConversationView() {
                                       outbound={cluster.outbound}
                                     />
                                   )}
-                                  {m.type === "text" && (
-                                    <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                                  )}
+                                   {m.type === "text" && (
+                                     <LinkifiedText
+                                       text={m.body}
+                                       linkClassName={
+                                         cluster.outbound && !cluster.automated
+                                           ? "text-primary-foreground underline font-semibold"
+                                           : "text-primary underline font-semibold"
+                                       }
+                                     />
+                                   )}
                                   {m.type === "image" && m.media_url && <MediaImage path={m.media_url} messageId={m.id} />}
                                   {m.type === "audio" && m.media_url && (
                                     <div className={cn("min-w-[240px]", cluster.outbound && !cluster.automated ? "text-primary-foreground" : "text-foreground")}>
