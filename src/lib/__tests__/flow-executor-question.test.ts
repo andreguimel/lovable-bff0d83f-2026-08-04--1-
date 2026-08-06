@@ -91,7 +91,7 @@ describe("Fazer uma pergunta — pausa, resposta e expiração", () => {
 
     expect(result.status).toBe("ok");
     expect(result.wait?.state).toBe("WAITING_REPLY");
-    expect(result.wait?.resumeAt).toBeString();
+    expect(typeof result.wait?.resumeAt).toBe("string");
     expect(result.nextHandle).toBeUndefined();
     expect(result.output).toMatchObject({
       question_sent: true,

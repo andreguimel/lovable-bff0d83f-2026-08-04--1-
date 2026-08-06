@@ -6,7 +6,7 @@ const mockFn = (implementation?: any) => {
 };
 
 mockFn.module = (modulePath: string, factory: () => any) => {
-  vi.mock(modulePath, factory);
+  vi.doMock(modulePath, factory);
 };
 
 export {
