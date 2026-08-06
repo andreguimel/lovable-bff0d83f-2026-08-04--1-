@@ -666,6 +666,7 @@ export async function testStevoInstance(creds: StevoCreds | null): Promise<
 function toStevoBody(payload: SendPayload): Record<string, unknown> {
   const to = payload.to.replace(/[^0-9]/g, "");
   if (payload.type === "text") return { to, text: payload.body };
+  if (payload.type === "reaction") return { to, reaction: { messageId: payload.targetProviderId, emoji: payload.emoji } };
   const mediaType =
     payload.type === "image" ? "image" : payload.type === "video" ? "video" : payload.type === "audio" ? "audio" : "document";
   const body: Record<string, unknown> = { to, media_url: payload.mediaUrl, media_type: mediaType };

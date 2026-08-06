@@ -1717,7 +1717,7 @@ export const toggleMessageReaction = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: msg, error: msgErr } = await context.supabase
       .from("messages")
-      .select("id, conversation_id, media_metadata")
+      .select("id, conversation_id, provider_message_id, channel_id, media_metadata, conversation:conversations(company_id, channel_id, contact:contacts(phone, phone_canonical))")
       .eq("id", data.messageId)
       .maybeSingle();
     if (msgErr || !msg) throw new Error("Mensagem não encontrada");
@@ -1737,6 +1737,46 @@ export const toggleMessageReaction = createServerFn({ method: "POST" })
       .eq("id", data.messageId);
 
     if (updErr) throw new Error(updErr.message);
+
+    // Opcionalmente despacha a reação para o WhatsApp do contato se houver provider_message_id
+    if (msg.provider_message_id) {
+      const conv = msg.conversation as { company_id?: string; channel_id?: string; contact?: { phone?: string; phone_canonical?: string } } | null;
+      const chId = msg.channel_id ?? conv?.channel_id;
+      const phoneRaw = conv?.contact?.phone_canonical ?? conv?.contact?.phone ?? "";
+      const toPhone = phoneRaw.replace(/^\+/, "").replace(/\D/g, "");
+
+      if (chId && toPhone) {
+        const { data: channel } = await context.supabase
+          .from("channels")
+          .select("id, provider_type, credentials, company_id")
+          .eq("id", chId)
+          .maybeSingle();
+
+        if (channel) {
+          if (channel.provider_type === "whatsapp_cloud") {
+            const { sendViaWhatsAppCloud } = await import("@/lib/wa-providers/whatsapp-cloud.server");
+            await sendViaWhatsAppCloud((channel.credentials ?? {}) as any, {
+              type: "reaction",
+              to: toPhone,
+              emoji: newReaction ?? "",
+              targetProviderId: msg.provider_message_id,
+            }).catch(() => null);
+          } else if (channel.provider_type === "stevo" || channel.provider_type === "evolution" || channel.provider_type === "baileys") {
+            const { sendViaStevo } = await import("@/lib/wa-providers/stevo.server");
+            await sendViaStevo(
+              { ...(channel.credentials as any), company_id: channel.company_id },
+              {
+                type: "reaction",
+                to: toPhone,
+                emoji: newReaction ?? "",
+                targetProviderId: msg.provider_message_id,
+              } as any,
+            ).catch(() => null);
+          }
+        }
+      }
+    }
+
     return { ok: true, reaction: newReaction, conversationId: msg.conversation_id };
   });
 

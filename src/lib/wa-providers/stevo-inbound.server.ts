@@ -10,7 +10,7 @@ export type StevoInboundMessage = {
   provider_message_id: string;
   from_phone: string;
   contact_name: string | null;
-  type: "text" | "image" | "audio" | "video" | "file";
+  type: "text" | "image" | "audio" | "video" | "file" | "reaction";
   body: string | null;
   media_url: string | null;
   media_metadata: Record<string, unknown> | null;
@@ -55,6 +55,22 @@ function readContent(message: Record<string, unknown>): {
   media_url: string | null;
   media_metadata: Record<string, unknown> | null;
 } {
+  const reactionNode = message.reactionMessage ?? message.ReactionMessage;
+  if (reactionNode) {
+    const r = asRecord(reactionNode);
+    const targetKey = asRecord(r.key ?? r.Key);
+    const targetId = str(targetKey.id) ?? str(r.messageId) ?? str(r.targetMessageId);
+    const emoji = str(r.text) ?? str(r.emoji) ?? "";
+    if (targetId) {
+      return {
+        type: "reaction",
+        body: emoji,
+        media_url: null,
+        media_metadata: { reaction_target_provider_id: targetId, emoji },
+      };
+    }
+  }
+
   const conversation =
     str(message.conversation) ??
     str(asRecord(message.extendedTextMessage).text) ??
@@ -202,7 +218,21 @@ export function normalizeStevoWebhook(payload: unknown): {
 
     // Suporte a mensagens aninhadas ou planas (flat payload)
     let content = readContent(message);
-    if (!content.body && !content.media_url) {
+    const directReaction = asRecord(event.reaction ?? root.reaction);
+    if (content.type !== "reaction" && Object.keys(directReaction).length > 0) {
+      const targetId = str(directReaction.messageId) ?? str(directReaction.targetMessageId) ?? str(asRecord(directReaction.key).id);
+      const emoji = str(directReaction.text) ?? str(directReaction.emoji) ?? str(directReaction.value) ?? "";
+      if (targetId) {
+        content = {
+          type: "reaction",
+          body: emoji,
+          media_url: null,
+          media_metadata: { reaction_target_provider_id: targetId, emoji },
+        };
+      }
+    }
+
+    if (!content.body && !content.media_url && content.type !== "reaction") {
       const flatBody = str(event.body) ?? str(event.text) ?? str(event.content) ?? str(root.body) ?? str(root.text) ?? str(root.content);
       const flatMedia = str(event.media_url) ?? str(event.mediaUrl) ?? str(event.url) ?? str(root.media_url) ?? str(root.mediaUrl) ?? str(root.url);
       const rawType = (str(event.type) ?? str(event.messageType) ?? str(root.type) ?? "text").toLowerCase();
@@ -214,7 +244,7 @@ export function normalizeStevoWebhook(payload: unknown): {
       }
     }
 
-    const hasMessage = Object.keys(message).length > 0 || !!content.body || !!content.media_url;
+    const hasMessage = Object.keys(message).length > 0 || !!content.body || !!content.media_url || content.type === "reaction";
 
     const isGroup = isGroupJid(chatJid);
     if (hasMessage && providerId && chatJid) {

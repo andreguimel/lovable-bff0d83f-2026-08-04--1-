@@ -636,6 +636,13 @@ function ConversationView() {
                                         {meta.sender_name ?? meta.sender_phone}
                                       </p>
                                     )}
+                                    {m.reply_to_id && messagesById.get(m.reply_to_id) && (
+                                      <QuotedMessage
+                                        quoted={messagesById.get(m.reply_to_id)!}
+                                        contactName={conv.contact.name ?? "Contato"}
+                                        outbound={cluster.outbound && !cluster.automated}
+                                      />
+                                    )}
                                     {m.type === "text" && (
                                       <LinkifiedText
                                         text={m.body}

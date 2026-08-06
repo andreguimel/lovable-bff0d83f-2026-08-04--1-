@@ -113,6 +113,33 @@ export const Route = createFileRoute("/api/public/webhooks/stevo/$channelId")({
             continue;
           }
 
+          if (msg.type === "reaction") {
+            const targetPid = (msg.media_metadata as { reaction_target_provider_id?: string })?.reaction_target_provider_id;
+            if (targetPid) {
+              const { data: targetMsg } = await supabaseAdmin
+                .from("messages")
+                .select("id, media_metadata")
+                .eq("conversation_id", conversationId)
+                .eq("provider_message_id", targetPid)
+                .maybeSingle();
+
+              if (targetMsg) {
+                const meta = (targetMsg.media_metadata as Record<string, unknown> | null) ?? {};
+                const nextMeta: Record<string, unknown> = { ...meta };
+                if (msg.body && msg.body.trim()) {
+                  nextMeta.reaction = msg.body.trim();
+                } else {
+                  delete nextMeta.reaction;
+                }
+                await supabaseAdmin
+                  .from("messages")
+                  .update({ media_metadata: nextMeta as never })
+                  .eq("id", targetMsg.id);
+              }
+            }
+            continue;
+          }
+
           // Idempotência inbound (pré-checagem barata)
           const { data: existing } = await supabaseAdmin
             .from("messages")

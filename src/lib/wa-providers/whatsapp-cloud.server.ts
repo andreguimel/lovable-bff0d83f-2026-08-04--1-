@@ -12,7 +12,7 @@ export type NormalizedInbound = {
   provider_message_id: string;
   from_phone: string;
   contact_name?: string;
-  type: "text" | "image" | "audio" | "video" | "file";
+  type: "text" | "image" | "audio" | "video" | "file" | "reaction";
   body?: string;
   media_url?: string;
   media_metadata?: Record<string, unknown>;
@@ -75,6 +75,7 @@ export async function normalizeMetaWebhook(
             audio?: { id?: string; mime_type?: string };
             video?: { id?: string; mime_type?: string; caption?: string };
             document?: { id?: string; mime_type?: string; filename?: string };
+            reaction?: { message_id?: string; emoji?: string };
             context?: { id?: string };
           }>;
           statuses?: Array<{ id: string; status: string; errors?: Array<{ message?: string }> }>;
@@ -100,6 +101,13 @@ export async function normalizeMetaWebhook(
 
         if (m.type === "text") {
           body = m.text?.body;
+        } else if (m.type === "reaction" && m.reaction?.message_id) {
+          type = "reaction";
+          body = m.reaction.emoji ?? "";
+          media_metadata = {
+            reaction_target_provider_id: m.reaction.message_id,
+            emoji: m.reaction.emoji ?? "",
+          };
         } else if (m.type === "image" && m.image?.id) {
           type = "image";
           const url = creds.access_token ? await fetchMediaUrl(m.image.id, creds.access_token) : null;
@@ -162,7 +170,8 @@ export async function normalizeMetaWebhook(
 export type SendPayload =
   | { type: "text"; to: string; body: string; replyToProviderId?: string }
   | { type: "image" | "video" | "file"; to: string; mediaUrl: string; caption?: string; filename?: string; replyToProviderId?: string }
-  | { type: "audio"; to: string; mediaUrl: string; voice?: boolean; mime?: string; replyToProviderId?: string };
+  | { type: "audio"; to: string; mediaUrl: string; voice?: boolean; mime?: string; replyToProviderId?: string }
+  | { type: "reaction"; to: string; emoji: string; targetProviderId: string };
 
 export type SendResult =
   | { ok: true; provider_message_id: string; request: Record<string, unknown>; response: unknown; http_status: number }
@@ -180,6 +189,17 @@ export async function sendViaWhatsAppCloud(
   let body: Record<string, unknown>;
   if (payload.type === "text") {
     body = { messaging_product: "whatsapp", to: payload.to, type: "text", text: { body: payload.body } };
+  } else if (payload.type === "reaction") {
+    body = {
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: payload.to,
+      type: "reaction",
+      reaction: {
+        message_id: payload.targetProviderId,
+        emoji: payload.emoji,
+      },
+    };
   } else if (payload.type === "image") {
     body = { messaging_product: "whatsapp", to: payload.to, type: "image", image: { link: payload.mediaUrl, caption: payload.caption } };
   } else if (payload.type === "audio") {
@@ -203,7 +223,7 @@ export async function sendViaWhatsAppCloud(
   // Reply/quote: WhatsApp Cloud attaches context.message_id at the root
   // of the message payload. When present, the recipient sees the quoted
   // message pinned above the reply, native WhatsApp Web-style.
-  if (payload.replyToProviderId) {
+  if ("replyToProviderId" in payload && payload.replyToProviderId) {
     body.context = { message_id: payload.replyToProviderId };
   }
 
