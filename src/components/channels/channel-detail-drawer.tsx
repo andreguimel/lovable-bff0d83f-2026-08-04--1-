@@ -422,6 +422,7 @@ function IntegrationSettings({
   const [stevoInstanceId, setStevoInstanceId] = useState(typeof creds.instance_id === "string" ? creds.instance_id : "");
   const [sipServer, setSipServer] = useState(typeof creds.sip_server === "string" ? creds.sip_server : "sm-grilo.stevo.chat:5060");
   const [sipUsername, setSipUsername] = useState(typeof creds.sip_username === "string" ? creds.sip_username : "");
+  const [sipPassword, setSipPassword] = useState(typeof creds.sip_password === "string" ? creds.sip_password : "");
 
   const providerPath = channel.provider_type === "stevo" ? "stevo" : "whatsapp";
   const webhookUrl =
@@ -596,6 +597,16 @@ function IntegrationSettings({
                   onChange={(e) => setSipUsername(e.target.value)}
                   onBlur={() => onPatch({ credentials: { ...creds, sip_username: sipUsername } })}
                   placeholder="ex: Zenda_1785950675671"
+                />
+              </div>
+              <div>
+                <Label className="text-[11px]">Senha SIP (Stevo Voice)</Label>
+                <Input
+                  type="password"
+                  value={sipPassword}
+                  onChange={(e) => setSipPassword(e.target.value)}
+                  onBlur={() => onPatch({ credentials: { ...creds, sip_password: sipPassword } })}
+                  placeholder="••••••••••••••••"
                 />
               </div>
             </div>

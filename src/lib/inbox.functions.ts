@@ -1906,10 +1906,14 @@ export const startStevoCall = createServerFn({ method: "POST" })
       throw new Error(res.error || "Falha ao disparar chamada via Stevo Voice");
     }
 
+    const creds = (channel.credentials ?? {}) as Record<string, unknown>;
     return {
       ok: true,
       isWebCall: res.isWebCall ?? false,
       phone: phone.replace(/[^0-9]/g, ""),
+      sipServer: (creds.sip_server as string) || "sm-grilo.stevo.chat:5060",
+      sipUsername: (creds.sip_username as string) || "",
+      sipPassword: (creds.sip_password as string) || "",
       message: res.message || "Chamada Stevo Voice iniciada com sucesso!",
     };
   });

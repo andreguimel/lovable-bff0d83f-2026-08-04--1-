@@ -217,20 +217,29 @@ export function WebDialerDialog({
           </div>
 
           {/* Softphone Credentials Info Footer */}
-          <div className="rounded-xl border border-dashed bg-muted/30 p-3 text-[11px] text-muted-foreground">
+          <div className="rounded-xl border border-dashed bg-muted/30 p-3 text-[11px] text-muted-foreground space-y-1.5">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-foreground">Ramal SIP de Apoio</span>
+              <span className="font-semibold text-foreground">Credenciais SIP (Stevo Voice)</span>
               <button
                 type="button"
                 onClick={handleCopySip}
-                className="flex items-center gap-1 font-medium text-primary hover:underline"
+                className="flex items-center gap-1 font-medium text-primary hover:underline text-[10px]"
               >
                 <Copy className="h-3 w-3" />
-                Copiar
+                Copiar Tudo
               </button>
             </div>
-            <p className="mt-1 font-mono text-[10px] truncate">Servidor: {sipServer}</p>
-            {sipUsername && <p className="font-mono text-[10px] truncate">Usuário: {sipUsername}</p>}
+            <div className="flex items-center justify-between font-mono text-[10px]">
+              <span className="truncate">Servidor: {sipServer}</span>
+            </div>
+            {sipUsername && (
+              <div className="flex items-center justify-between font-mono text-[10px]">
+                <span className="truncate">Usuário: {sipUsername}</span>
+              </div>
+            )}
+            <p className="mt-1 text-[10px] text-muted-foreground/80">
+              Insira o Servidor, Usuário e Senha no MicroSIP, Zoiper ou 3CX para discar diretamente da sua extensão pelo WhatsApp.
+            </p>
           </div>
         </div>
       </DialogContent>
