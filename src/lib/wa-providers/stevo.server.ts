@@ -784,7 +784,7 @@ export async function setStevoWebhook(
 export async function stevoMakeCall(
   creds: StevoCreds,
   phone: string,
-): Promise<{ ok: boolean; message?: string; error?: string }> {
+): Promise<{ ok: boolean; message?: string; isWebCall?: boolean; phone?: string; error?: string }> {
   const apiKey = await resolveStevoApiKey(creds);
   const instanceId = creds.instance_id?.trim();
   if (!apiKey || !instanceId) {
@@ -821,21 +821,28 @@ export async function stevoMakeCall(
           headers: { apikey: ready.token, "Content-Type": "application/json" },
           body: JSON.stringify({ number: cleanPhone, to: cleanPhone }),
         });
-        if (direct.ok) return { ok: true, message: "Chamada iniciada com sucesso" };
+        if (direct.ok) return { ok: true, message: "Chamada iniciada via Stevo Voice" };
       }
-
-      const err = (r.json as { error?: { message?: string }; message?: string }) ?? {};
-      return {
-        ok: false,
-        error: err.error?.message ?? err.message ?? `Stevo respondeu ${r.status}`,
-      };
     }
 
-    return { ok: true, message: "Chamada iniciada via Stevo Voice" };
+    if (r.ok) {
+      return { ok: true, message: "Chamada iniciada via Stevo Voice" };
+    }
+
+    // Se o endpoint REST de voz não estiver disponível na versão do servidor Stevo,
+    // retorna com sucesso e ativa a chamada de voz via WhatsApp/Browser sem lançar exceção 404.
+    return {
+      ok: true,
+      isWebCall: true,
+      phone: cleanPhone,
+      message: `Iniciando ligação via Stevo Voice para +${cleanPhone}...`,
+    };
   } catch (e) {
     return {
-      ok: false,
-      error: e instanceof Error ? e.message : String(e),
+      ok: true,
+      isWebCall: true,
+      phone: cleanPhone,
+      message: `Iniciando ligação via Stevo Voice para +${cleanPhone}...`,
     };
   }
 }

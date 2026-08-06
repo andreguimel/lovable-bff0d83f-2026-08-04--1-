@@ -1906,6 +1906,11 @@ export const startStevoCall = createServerFn({ method: "POST" })
       throw new Error(res.error || "Falha ao disparar chamada via Stevo Voice");
     }
 
-    return { ok: true, message: "Chamada Stevo Voice iniciada com sucesso!" };
+    return {
+      ok: true,
+      isWebCall: res.isWebCall ?? false,
+      phone: phone.replace(/[^0-9]/g, ""),
+      message: res.message || "Chamada Stevo Voice iniciada com sucesso!",
+    };
   });
 
