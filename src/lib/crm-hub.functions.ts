@@ -294,7 +294,7 @@ export const runQuickAI = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: contact } = await context.supabase
       .from("contacts")
-      .select("name, company_name, job_title, notes, funnel_stage")
+      .select("name, company_name, job_title, notes, funnel_stage, company_id")
       .eq("id", data.contactId)
       .maybeSingle();
     if (!contact) throw new Error("Contato não encontrado");
@@ -311,6 +311,20 @@ export const runQuickAI = createServerFn({ method: "POST" })
       .map((m) => `${m.direction === "inbound" ? "Cliente" : "Empresa"}: ${m.body ?? ""}`)
       .join("\n")
       .slice(0, 3000);
+
+    const prompt = `Você é um assistente comercial sênior. Cliente: ${contact.name}${
+      contact.company_name ? " — " + contact.company_name : ""
+    }.
+Notas: ${contact.notes ?? "—"}
+Estágio: ${contact.funnel_stage ?? "—"}
+
+Histórico recente:
+${conversation || "Sem mensagens ainda."}
+
+${data.extraContext ? `Contexto extra: ${data.extraContext}\n` : ""}
+Tarefa: ${promptMap[data.action]}
+
+Responda em português, de forma prática e pronta para copiar.`;
 
     const { model } = await buildGuardianModel(context.supabase, contact.company_id);
     const result = await generateText({
