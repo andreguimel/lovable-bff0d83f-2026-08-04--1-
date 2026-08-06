@@ -51,6 +51,10 @@ export function WebDialerDialog({
     onSuccess: (res) => {
       setCalling(true);
       toast.success(res.message || "Chamada iniciada no Stevo Voice!");
+      const raw = dialed.replace(/[^0-9]/g, "");
+      if (raw.length >= 8) {
+        window.open(`https://wa.me/${raw}`, "_blank");
+      }
     },
     onError: (e: Error) => {
       toast.error(e.message || "Falha ao disparar ligação no Stevo Voice");
@@ -66,8 +70,10 @@ export function WebDialerDialog({
   };
 
   const handleCopySip = async () => {
+    const currentSipServer = stevoMutation.data?.sipServer || sipServer;
+    const currentSipUser = stevoMutation.data?.sipUsername || sipUsername;
     try {
-      const info = `Servidor: ${sipServer}\nUsuário: ${sipUsername}`;
+      const info = `Servidor: ${currentSipServer}\nUsuário: ${currentSipUser}`;
       await navigator.clipboard.writeText(info);
       toast.success("Credenciais SIP copiadas!");
     } catch {
@@ -85,12 +91,25 @@ export function WebDialerDialog({
     window.open(`https://wa.me/${raw}`, "_blank");
   };
 
+  const handleSipCall = () => {
+    const raw = dialed.replace(/[^0-9]/g, "");
+    if (raw.length < 8) {
+      toast.error("Digite um número de telefone válido");
+      return;
+    }
+    const currentSipServer = stevoMutation.data?.sipServer || sipServer;
+    window.location.href = `sip:${raw}@${currentSipServer}`;
+  };
+
   const handleEndCall = () => {
     setCalling(false);
     toast.success("Chamada finalizada");
   };
 
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
+
+  const activeSipServer = stevoMutation.data?.sipServer || sipServer;
+  const activeSipUser = stevoMutation.data?.sipUsername || sipUsername;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -154,27 +173,54 @@ export function WebDialerDialog({
           {/* Call Options */}
           <div className="space-y-2 pt-1">
             {calling ? (
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant={muted ? "destructive" : "outline"}
-                  size="icon"
-                  onClick={() => setMuted(!muted)}
-                  className="h-12 w-12 rounded-full"
-                >
-                  {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-                </Button>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={muted ? "destructive" : "outline"}
+                    size="icon"
+                    onClick={() => setMuted(!muted)}
+                    className="h-12 w-12 rounded-full shrink-0"
+                    title={muted ? "Ativar microfone" : "Mutar microfone"}
+                  >
+                    {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                  </Button>
 
-                <Button
-                  type="button"
-                  variant="destructive"
-                  size="lg"
-                  onClick={handleEndCall}
-                  className="h-12 flex-1 rounded-full text-sm font-semibold"
-                >
-                  <PhoneOff className="mr-2 h-4 w-4" />
-                  Encerrar Chamada
-                </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="lg"
+                    onClick={handleEndCall}
+                    className="h-12 flex-1 rounded-full text-sm font-semibold"
+                  >
+                    <PhoneOff className="mr-2 h-4 w-4" />
+                    Encerrar Chamada
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleWaFallbackCall}
+                    className="h-9 text-xs gap-1 border-emerald-600/30 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
+                  >
+                    <MessageCircle className="h-3.5 w-3.5" />
+                    WhatsApp Web
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSipCall}
+                    className="h-9 text-xs gap-1"
+                  >
+                    <Phone className="h-3.5 w-3.5" />
+                    Softphone (SIP)
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="space-y-2">
@@ -226,11 +272,11 @@ export function WebDialerDialog({
               </button>
             </div>
             <div className="flex items-center justify-between font-mono text-[10px]">
-              <span className="truncate">Servidor: {sipServer}</span>
+              <span className="truncate">Servidor: {activeSipServer}</span>
             </div>
-            {sipUsername && (
+            {activeSipUser && (
               <div className="flex items-center justify-between font-mono text-[10px]">
-                <span className="truncate">Usuário: {sipUsername}</span>
+                <span className="truncate">Usuário: {activeSipUser}</span>
               </div>
             )}
             <p className="mt-1 text-[10px] text-muted-foreground/80">
