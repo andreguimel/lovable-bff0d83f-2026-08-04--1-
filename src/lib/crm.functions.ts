@@ -704,20 +704,62 @@ export const startConversationFromContact = createServerFn({ method: "POST" })
     }
 
     if (data.firstMessage?.trim()) {
+      const firstMessageText = data.firstMessage.trim();
+
+      const { data: chRow } = await context.supabase
+        .from("channels")
+        .select("id, provider_type, credentials, phone_number, company_id")
+        .eq("id", data.channelId)
+        .maybeSingle();
+
+      const { data: contactRow } = await context.supabase
+        .from("contacts")
+        .select("phone, phone_canonical")
+        .eq("id", data.contactId)
+        .maybeSingle();
+
+      const toPhoneRaw = contactRow?.phone_canonical ?? contactRow?.phone ?? "";
+      const toPhone = toPhoneRaw.replace(/^\+/, "").replace(/\D/g, "");
+
+      let providerMessageId: string | null = null;
+      let sendError: string | null = null;
+
+      if (chRow && toPhone) {
+        const { dispatchSend } = await import("@/lib/wa-providers/index.server");
+        const res = await dispatchSend(
+          {
+            id: chRow.id,
+            provider_type: chRow.provider_type,
+            credentials: (chRow.credentials ?? {}) as Record<string, unknown>,
+            phone_number: chRow.phone_number,
+            company_id: c.company_id,
+          },
+          { type: "text", to: toPhone, body: firstMessageText },
+        );
+        if (res.ok) providerMessageId = res.provider_message_id;
+        else sendError = res.error;
+      }
+
+      const meta = sendError ? { send_error: sendError } : null;
+
       await context.supabase.from("messages").insert({
         company_id: c.company_id,
         conversation_id: conversationId,
+        channel_id: data.channelId,
         direction: "outbound",
         type: "text",
-        body: data.firstMessage,
+        body: firstMessageText,
         sender_user_id: context.userId,
-        status: "sent",
+        provider_message_id: providerMessageId ?? null,
+        status: sendError ? "failed" : "sent",
+        media_metadata: meta as never,
       });
+
       await context.supabase
         .from("conversations")
         .update({
           last_message_at: new Date().toISOString(),
-          last_message_preview: data.firstMessage.slice(0, 120),
+          last_message_preview: firstMessageText.slice(0, 120),
         })
         .eq("id", conversationId);
     }
