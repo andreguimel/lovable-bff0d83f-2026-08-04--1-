@@ -106,8 +106,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Zenda — Automação de WhatsApp com IA" },
       { name: "twitter:description", content: "CRM omnichannel com múltiplos WhatsApps, agentes de IA, fluxos visuais, campanhas e inbox unificada." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/be7d128f-2ebe-4f33-8272-44693fc1a657/id-preview-c2c16e2e--ef9df983-c11b-4be3-afb7-c9014c9322dd.lovable.app-1784130830684.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/be7d128f-2ebe-4f33-8272-44693fc1a657/id-preview-c2c16e2e--ef9df983-c11b-4be3-afb7-c9014c9322dd.lovable.app-1784130830684.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

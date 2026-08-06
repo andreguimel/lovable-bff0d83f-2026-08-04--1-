@@ -72,11 +72,9 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border/60">
         <Link to="/" className="flex items-center gap-2.5 px-2 py-2">
           <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-primary text-primary-foreground shadow-[0_4px_16px_-4px_color-mix(in_oklab,var(--primary)_50%,transparent)]">
-            <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 4h6v6H4z" />
-              <path d="M14 4h6v6h-6z" />
-              <path d="M4 14h6v6H4z" />
-              <path d="M17 14v6M14 17h6" />
+            <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              <path d="M8 9h8L10 14h6" strokeWidth="2.4" />
             </svg>
           </div>
           <div className="min-w-0 group-data-[collapsible=icon]:hidden">

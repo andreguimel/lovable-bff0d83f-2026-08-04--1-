@@ -75,14 +75,15 @@ export function AudioMessage({ url }: Props) {
   return (
     <div className="flex min-w-[260px] items-center gap-3">
       <button
+        type="button"
         onClick={toggle}
         aria-label={playing ? "Pausar" : "Reproduzir"}
-        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-current text-primary-foreground shadow-sm transition-transform hover:scale-105"
+        className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white text-slate-900 shadow-md transition-transform hover:scale-105 active:scale-95"
       >
         {playing ? (
-          <Pause className="h-4 w-4 text-[color:var(--color-background)]" />
+          <Pause className="h-4.5 w-4.5 fill-slate-900 text-slate-900" />
         ) : (
-          <Play className="h-4 w-4 -translate-x-[1px] text-[color:var(--color-background)]" />
+          <Play className="h-4.5 w-4.5 translate-x-0.5 fill-slate-900 text-slate-900" />
         )}
       </button>
 
