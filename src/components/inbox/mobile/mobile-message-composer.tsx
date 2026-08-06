@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { Bot, Loader2, Mic, Plus, Send, Sparkles, Workflow, Zap } from "lucide-react";
+import { Bot, Loader2, Mic, Plus, Send, Smile, Sparkles, Workflow, Zap } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -32,6 +32,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AudioRecorder } from "../audio-recorder";
 import { ReplyPreview, type ReplyPreviewMessage } from "../reply-preview";
 import { MobileAttachmentSheet } from "./mobile-attachment-sheet";
+import { EmojiPickerPopover } from "../emoji-picker-popover";
 
 interface Props {
   conversationId: string;
@@ -141,6 +142,23 @@ export function MobileMessageComposer({ conversationId, contactName, companyId, 
     el.style.height = `${Math.min(el.scrollHeight, 140)}px`;
   }, []);
   useEffect(autoresize, [text, autoresize]);
+
+  const handleSelectEmoji = (emoji: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setText((prev) => prev + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    setText(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const newPos = start + emoji.length;
+      el.setSelectionRange(newPos, newPos);
+    });
+  };
 
   const handleSendText = async () => {
     const body = text.trim();
@@ -271,6 +289,20 @@ export function MobileMessageComposer({ conversationId, contactName, companyId, 
         </button>
 
         <div className="flex min-h-11 flex-1 items-end rounded-3xl border border-border/60 bg-muted/40 px-3 py-1.5">
+          <EmojiPickerPopover
+            onSelectEmoji={handleSelectEmoji}
+            side="top"
+            align="start"
+            trigger={
+              <button
+                type="button"
+                aria-label="Emoji"
+                className="mb-1.5 mr-1 grid h-7 w-7 shrink-0 place-items-center rounded-full text-muted-foreground active:bg-accent"
+              >
+                <Smile className="h-4 w-4" />
+              </button>
+            }
+          />
           <button
             type="button"
             onClick={() => setQrOpen(true)}

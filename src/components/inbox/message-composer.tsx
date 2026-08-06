@@ -31,6 +31,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { FlowAgentPickerPopover } from "./flow-agent-picker-dialog";
+import { EmojiPickerPopover } from "./emoji-picker-popover";
 
 // INBOX FINALIZATION 01 — validação e upload centralizados em @/lib/attachments
 import {
@@ -115,6 +116,23 @@ export function MessageComposer({ conversationId, contactName, companyId, replyi
   }, []);
 
   useEffect(autoresize, [text, autoresize]);
+
+  const handleSelectEmoji = (emoji: string) => {
+    const el = textareaRef.current;
+    if (!el) {
+      setText((prev) => prev + emoji);
+      return;
+    }
+    const start = el.selectionStart ?? text.length;
+    const end = el.selectionEnd ?? text.length;
+    const next = text.slice(0, start) + emoji + text.slice(end);
+    setText(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const newPos = start + emoji.length;
+      el.setSelectionRange(newPos, newPos);
+    });
+  };
 
   const handleSendText = async () => {
     const body = text.trim();
@@ -313,9 +331,19 @@ export function MessageComposer({ conversationId, contactName, companyId, replyi
             onChange={(e) => handleFile(e, "auto")}
           />
 
-          <ToolbarBtn label="Emoji" onClick={() => {}}>
-            <Smile className="h-4 w-4" />
-          </ToolbarBtn>
+          <EmojiPickerPopover
+            onSelectEmoji={handleSelectEmoji}
+            trigger={
+              <button
+                type="button"
+                aria-label="Emoji"
+                title="Emoji"
+                className="grid h-9 w-9 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              >
+                <Smile className="h-4 w-4" />
+              </button>
+            }
+          />
 
           <Popover open={attachOpen} onOpenChange={setAttachOpen}>
             <PopoverTrigger asChild>
