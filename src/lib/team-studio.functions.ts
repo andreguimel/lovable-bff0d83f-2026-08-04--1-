@@ -674,10 +674,8 @@ export const runTeamCopilot = createServerFn({ method: "POST" })
     }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const apiKey = (globalThis as any).process?.env?.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada.");
     const { generateText } = await import("ai");
-    const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
+    const { buildGuardianModel } = await import("@/lib/ai-provider.server");
 
     const companyId = await currentCompanyId(context);
     const sb = context.supabase as any;
@@ -708,8 +706,7 @@ export const runTeamCopilot = createServerFn({ method: "POST" })
       ask: "Você é um copiloto de gestão de equipes. Responda a pergunta do usuário usando o snapshot abaixo. PT-BR, objetivo.",
     };
 
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
+    const { model } = await buildGuardianModel(sb, companyId);
     const result = await generateText({
       model,
       system: briefs[data.action],

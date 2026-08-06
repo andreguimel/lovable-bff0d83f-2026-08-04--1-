@@ -1,10 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-
-const MODEL = "google/gemini-2.5-flash";
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
+import { buildGuardianModel } from "@/lib/ai-provider.server";
 
 const ALLOWED_MIME = [
   "application/pdf",
@@ -42,8 +41,6 @@ export const draftEmailFromConversation = createServerFn({ method: "POST" })
         .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada");
 
     // Contexto: conversa, contato, canal, atendente
     const { data: conv, error: convErr } = await context.supabase
@@ -118,48 +115,30 @@ Regras:
       );
     }
 
-    const res = await fetch(GATEWAY_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userParts.join("\n") },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    const { model } = await buildGuardianModel(context.supabase, conv.company_id);
+
+    const result = await generateText({
+      model,
+      system: systemPrompt,
+      prompt: userParts.join("\n"),
     });
 
-    if (!res.ok) {
-      const text = await res.text();
-      if (res.status === 429)
-        throw new Error("IA sobrecarregada, tente em alguns segundos.");
-      if (res.status === 402)
-        throw new Error("Créditos de IA esgotados. Adicione créditos no workspace.");
-      throw new Error(`Falha na IA (${res.status}): ${text.slice(0, 200)}`);
-    }
-
-    const payload = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = payload.choices?.[0]?.message?.content ?? "";
     let parsed: { subject?: string; body?: string } = {};
     try {
-      parsed = JSON.parse(content);
+      const match = result.text.match(/\{[\s\S]*\}/);
+      if (match) {
+        parsed = JSON.parse(match[0]);
+      } else {
+        parsed = JSON.parse(result.text);
+      }
     } catch {
-      // fallback: usa tudo como corpo
-      parsed = { subject: "Retorno sobre nossa conversa", body: content.trim() };
+      parsed = { subject: "Assunto", body: result.text };
     }
 
-    const subject = (parsed.subject ?? "").toString().trim() || "Retorno sobre nossa conversa";
-    const body = (parsed.body ?? "").toString().trim();
-    if (!body) throw new Error("A IA não retornou um corpo de e-mail. Tente novamente.");
-
-    return { subject, body };
+    return {
+      subject: parsed.subject ?? "Contato comercial",
+      body: parsed.body ?? result.text,
+    };
   });
 
 // ---------- Envio via Resend ----------

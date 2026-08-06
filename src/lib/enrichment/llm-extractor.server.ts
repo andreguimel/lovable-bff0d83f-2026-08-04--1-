@@ -1,15 +1,12 @@
 /**
- * LLM-backed EntityExtractor via Lovable AI Gateway.
+ * LLM-backed EntityExtractor.
  *
  * Kept isolated behind the EntityExtractor contract so the runtime can
- * remain provider-agnostic and fully testable. Not wired into any
- * pipeline in Phase 2 — the runtime accepts any extractor and the
- * production dispatch (event bus) lands in a later phase.
+ * remain provider-agnostic and fully testable.
  */
 
-import { generateText, Output, NoObjectGeneratedError } from "ai";
+import { generateText, Output, NoObjectGeneratedError, type LanguageModel } from "ai";
 import { z } from "zod";
-import { createLovableAiGatewayProvider } from "../ai-gateway.server";
 import {
   ExtractorError,
   type EntityExtractor,
@@ -41,67 +38,63 @@ Known field keys: name, email, phone, company_name, job_title, cpf,
 cnpj, rg, birthdate, cep, address, city, state, website, instagram,
 razao_social, nome_fantasia, pix_key, license_plate.`;
 
-export type LlmExtractorOptions = {
-  /** Full "vendor/model" id from the Lovable AI chat catalog. */
-  model?: string;
-};
-
 export function createLlmExtractor(
-  apiKey: string,
-  opts: LlmExtractorOptions = {},
+  languageModel: LanguageModel,
 ): EntityExtractor {
-  const model = opts.model ?? "google/gemini-3.5-flash";
-  const gateway = createLovableAiGatewayProvider(apiKey);
-
   return {
     async extract(input: ExtractionInput): Promise<ExtractionResult> {
       const started = Date.now();
       try {
         const result = await generateText({
-          model: gateway(model),
+          model: languageModel,
           system: SYSTEM_PROMPT,
           prompt: buildPrompt(input),
           output: Output.object({ schema: ResponseSchema }),
         });
+
+        const parsed = result.output;
         const latencyMs = Date.now() - started;
+
+        const entities = parsed.entities
+          .filter((e) => e.confidence >= 0.5)
+          .map((e) => ({
+            field_key: e.field_key,
+            value: e.value,
+            confidence: e.confidence,
+            source: "llm" as const,
+            evidence: e.evidence ?? e.value,
+          }));
+
         return {
-          model,
+          entities,
           latencyMs,
-          tokenUsage: result.usage
-            ? {
-                input: (result.usage as { inputTokens?: number }).inputTokens ?? 0,
-                output: (result.usage as { outputTokens?: number }).outputTokens ?? 0,
-              }
-            : undefined,
-          entities: (result.output as { entities: ExtractionResult["entities"] }).entities,
+          tokensUsed: (result.usage?.inputTokens ?? 0) + (result.usage?.outputTokens ?? 0),
         };
-      } catch (err) {
-        if (err instanceof NoObjectGeneratedError) {
-          throw new ExtractorError("invalid_response", "LLM returned unparseable output", false);
+      } catch (err: unknown) {
+        const latencyMs = Date.now() - started;
+
+        if (NoObjectGeneratedError.isInstance(err)) {
+          throw new ExtractorError("LLM_NO_STRUCTURED_OUTPUT", err.message, {
+            latencyMs,
+            cause: err,
+          });
         }
-        const msg = err instanceof Error ? err.message : String(err);
-        const transient = /timeout|429|ECONN|network|fetch failed/i.test(msg);
-        throw new ExtractorError(
-          transient ? "transient" : "provider_error",
-          msg,
-          transient,
-        );
+
+        const message = err instanceof Error ? err.message : String(err);
+        throw new ExtractorError("LLM_CALL_FAILED", message, {
+          latencyMs,
+          cause: err,
+        });
       }
     },
   };
 }
 
 function buildPrompt(input: ExtractionInput): string {
-  const knownLines = Object.entries(input.known ?? {})
-    .filter(([, v]) => v != null && v !== "")
-    .map(([k, v]) => `  - ${k}: ${v}`)
-    .join("\n") || "  (empty)";
-  return `Source: ${input.sourceType}
-Known contact fields:
-${knownLines}
-
-Message:
-"""
-${input.text}
-"""`;
+  const parts: string[] = [];
+  if (input.contactHint) {
+    parts.push(`Contact context: ${JSON.stringify(input.contactHint)}`);
+  }
+  parts.push(`Message to extract from:\n"${input.text}"`);
+  return parts.join("\n\n");
 }

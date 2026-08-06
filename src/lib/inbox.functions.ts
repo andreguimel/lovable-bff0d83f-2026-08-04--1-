@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { buildGuardianModel } from "@/lib/ai-provider.server";
 
 // ---- List conversations ----
 export const listConversations = createServerFn({ method: "GET" })
@@ -847,9 +849,6 @@ export const runAgentOnConversation = createServerFn({ method: "POST" })
     z.object({ conversationId: z.string().uuid(), agentId: z.string().uuid() }).parse(input),
   )
   .handler(async ({ data, context }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY ausente");
-
     const { data: conv } = await context.supabase
       .from("conversations")
       .select("id, company_id, contact:contacts(name)")
@@ -881,33 +880,18 @@ export const runAgentOnConversation = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n\n");
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...(history ?? [])
+    const { model, modelId } = await buildGuardianModel(context.supabase, conv.company_id, agent.model);
+    const result = await generateText({
+      model,
+      system: systemPrompt,
+      messages: (history ?? [])
         .filter((m) => m.type === "text" && m.body)
         .map((m) => ({
-          role: m.direction === "outbound" ? "assistant" : "user",
+          role: m.direction === "outbound" ? ("assistant" as const) : ("user" as const),
           content: m.body ?? "",
         })),
-    ];
-
-    const model = agent.model || "google/gemini-3.5-flash";
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": apiKey,
-      },
-      body: JSON.stringify({ model, messages }),
     });
-    if (!resp.ok) {
-      const txt = await resp.text().catch(() => "");
-      if (resp.status === 429) throw new Error("Limite de uso da IA atingido. Tente novamente em instantes.");
-      if (resp.status === 402) throw new Error("Créditos de IA esgotados. Adicione créditos ao workspace.");
-      throw new Error(`Erro na IA (${resp.status}): ${txt.slice(0, 200)}`);
-    }
-    const json = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const reply = json.choices?.[0]?.message?.content?.trim();
+    const reply = result.text.trim();
     if (!reply) throw new Error("Agente não retornou resposta");
 
     const { error: mErr } = await context.supabase.from("messages").insert({
@@ -922,7 +906,7 @@ export const runAgentOnConversation = createServerFn({ method: "POST" })
         automated: true,
         agent_id: data.agentId,
         agent_name: agent.name,
-        model,
+        model: modelId,
       },
     });
     if (mErr) throw new Error(mErr.message);
@@ -1094,10 +1078,6 @@ export const maybeAutoRespondWithAgent = createServerFn({ method: "POST" })
   .inputValidator((input: { conversationId: string }) =>
     z.object({ conversationId: z.string().uuid() }).parse(input),
   )
-  .handler(async ({ data, context }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return { ok: false, skipped: "no_api_key" as const };
-
     const { data: conv } = await context.supabase
       .from("conversations")
       .select(
@@ -1154,28 +1134,18 @@ export const maybeAutoRespondWithAgent = createServerFn({ method: "POST" })
       .filter(Boolean)
       .join("\n\n");
 
-    const messages = [
-      { role: "system", content: systemPrompt },
-      ...(history ?? [])
+    const { model, modelId } = await buildGuardianModel(context.supabase, conv.company_id, agent.model);
+    const result = await generateText({
+      model,
+      system: systemPrompt,
+      messages: (history ?? [])
         .filter((m) => m.type === "text" && m.body)
         .map((m) => ({
-          role: m.direction === "outbound" ? "assistant" : "user",
+          role: m.direction === "outbound" ? ("assistant" as const) : ("user" as const),
           content: m.body ?? "",
         })),
-    ];
-
-    const model = agent.model || "google/gemini-3.5-flash";
-    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Lovable-API-Key": apiKey },
-      body: JSON.stringify({ model, messages }),
     });
-    if (!resp.ok) {
-      const txt = await resp.text().catch(() => "");
-      throw new Error(`Erro na IA (${resp.status}): ${txt.slice(0, 200)}`);
-    }
-    const json = (await resp.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const reply = json.choices?.[0]?.message?.content?.trim();
+    const reply = result.text.trim();
     if (!reply) return { ok: false, skipped: "no_reply" as const };
 
     await context.supabase.from("messages").insert({
@@ -1191,7 +1161,7 @@ export const maybeAutoRespondWithAgent = createServerFn({ method: "POST" })
         auto: true,
         agent_id: agent.id,
         agent_name: agent.name,
-        model,
+        model: modelId,
       },
     });
 

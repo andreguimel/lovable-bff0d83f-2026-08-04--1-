@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { buildGuardianModel } from "@/lib/ai-provider.server";
 
 // ============ TAREFAS ============
 
@@ -195,7 +197,7 @@ export const generateContactAIInsights = createServerFn({ method: "POST" })
   .handler(async ({ data, context }): Promise<AIInsights> => {
     const { data: contact } = await context.supabase
       .from("contacts")
-      .select("id, name, company_name, job_title, notes, funnel_stage, lead_score")
+      .select("id, name, company_name, job_title, notes, funnel_stage, lead_score, company_id")
       .eq("id", data.contactId)
       .maybeSingle();
     if (!contact) throw new Error("Contato não encontrado");
@@ -213,9 +215,6 @@ export const generateContactAIInsights = createServerFn({ method: "POST" })
       .join("\n")
       .slice(0, 6000);
 
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY não configurada");
-
     const prompt = `Você é um analista comercial sênior. Analise o histórico do cliente abaixo e devolva um JSON com os campos:
 summary (resumo em 2 frases), sentiment (positivo|neutro|negativo), interest (alto|médio|baixo),
 objections (array de strings curtas), probability (0-100), best_time (texto curto),
@@ -231,29 +230,18 @@ ${conversation || "Sem mensagens ainda."}
 
 Responda APENAS com o JSON, sem markdown.`;
 
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": key,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-      }),
+    const { model } = await buildGuardianModel(context.supabase, contact.company_id);
+    const result = await generateText({
+      model,
+      prompt,
     });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`IA indisponível (${res.status}): ${body.slice(0, 200)}`);
-    }
-    const json = await res.json();
-    const content = json?.choices?.[0]?.message?.content ?? "{}";
+
     let parsed: AIInsights = {};
     try {
-      parsed = JSON.parse(content);
+      const match = result.text.match(/\{[\s\S]*\}/);
+      parsed = match ? JSON.parse(match[0]) : JSON.parse(result.text);
     } catch {
-      parsed = { summary: content };
+      parsed = { summary: result.text.slice(0, 300) };
     }
     parsed.generated_at = new Date().toISOString();
 
@@ -324,40 +312,12 @@ export const runQuickAI = createServerFn({ method: "POST" })
       .join("\n")
       .slice(0, 3000);
 
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("LOVABLE_API_KEY não configurada");
-
-    const prompt = `Você é um assistente comercial sênior. Cliente: ${contact.name}${
-      contact.company_name ? " — " + contact.company_name : ""
-    }.
-Notas: ${contact.notes ?? "—"}
-Estágio: ${contact.funnel_stage ?? "—"}
-
-Histórico recente:
-${conversation || "Sem mensagens ainda."}
-
-${data.extraContext ? `Contexto extra: ${data.extraContext}\n` : ""}
-Tarefa: ${promptMap[data.action]}
-
-Responda em português, de forma prática e pronta para copiar.`;
-
-    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": key,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: prompt }],
-      }),
+    const { model } = await buildGuardianModel(context.supabase, contact.company_id);
+    const result = await generateText({
+      model,
+      prompt,
     });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`IA indisponível (${res.status}): ${body.slice(0, 200)}`);
-    }
-    const json = await res.json();
-    return { text: (json?.choices?.[0]?.message?.content ?? "").trim() };
+    return { text: result.text.trim() };
   });
 
 // ============ ARQUIVOS ============

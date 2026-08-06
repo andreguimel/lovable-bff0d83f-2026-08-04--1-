@@ -6,8 +6,12 @@ export const aiGatewayCheck: HealthCheck = {
   severity: "warning",
   async run() {
     const started = Date.now();
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) return { status: "unhealthy", latencyMs: 0, error: "LOVABLE_API_KEY ausente" };
+    const key =
+      process.env.OPENAI_API_KEY ||
+      process.env.ANTHROPIC_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+    if (!key) return { status: "degraded", latencyMs: 0, error: "Nenhum provedor próprio de IA configurado no servidor" };
     return { status: "healthy", latencyMs: Date.now() - started };
   },
 };

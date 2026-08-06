@@ -15,7 +15,9 @@ const ServerConfigSchema = z.object({
   SUPABASE_URL: z.string().url(),
   SUPABASE_PUBLISHABLE_KEY: z.string().min(20),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(20).optional(),
-  LOVABLE_API_KEY: z.string().min(10).optional(),
+  OPENAI_API_KEY: z.string().min(10).optional(),
+  ANTHROPIC_API_KEY: z.string().min(10).optional(),
+  GEMINI_API_KEY: z.string().min(10).optional(),
   FLOW_SCHEDULER_SECRET: z.string().min(16).optional(),
 });
 
@@ -29,7 +31,9 @@ export function assertServerConfig(): ServerConfig {
     SUPABASE_URL: process.env.SUPABASE_URL,
     SUPABASE_PUBLISHABLE_KEY: process.env.SUPABASE_PUBLISHABLE_KEY,
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
-    LOVABLE_API_KEY: process.env.LOVABLE_API_KEY,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     FLOW_SCHEDULER_SECRET: process.env.FLOW_SCHEDULER_SECRET,
   });
   if (!parsed.success) {

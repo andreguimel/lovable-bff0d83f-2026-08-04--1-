@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { buildGuardianModel } from "@/lib/ai-provider.server";
 import { DEFAULT_AGENT_MODEL } from "@/lib/agents.constants";
 import { requireAdmin } from "@/lib/rbac/guard";
 
@@ -170,12 +170,8 @@ export const testAgent = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!agent) throw new Error("Agente não encontrado.");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada.");
-
     const modelId = (agent.model as string) || DEFAULT_AGENT_MODEL;
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway(modelId);
+    const { model } = await buildGuardianModel(context.supabase, agent.company_id, modelId);
 
     const systemParts = [
       `Você é ${agent.name}${agent.role ? `, ${agent.role}` : ""}.`,

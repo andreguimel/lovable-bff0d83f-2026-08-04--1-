@@ -721,27 +721,20 @@ const aiNode: NodeExecutor = {
       return { status: "ok", output: { agent: agent.name, simulated_reply: simulated }, vars: { ai: { output: simulated } } };
     }
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) return { status: "failed", message: "LOVABLE_API_KEY ausente" };
-    const model = agent.model || "google/gemini-2.5-flash";
+    const { buildGuardianModel } = await import("@/lib/ai-provider.server");
+    const { generateText } = await import("ai");
+
     const t0 = Date.now();
-    const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: agent.personality || agent.prompt || "Você é um agente de atendimento." },
-          { role: "user", content: String(ctx.variables.last_message ?? "Olá") },
-        ],
-      }),
+    const { model, modelId } = await buildGuardianModel(ctx.supabase, ctx.companyId, agent.model);
+    const result = await generateText({
+      model,
+      system: agent.personality || agent.prompt || "Você é um agente de atendimento.",
+      prompt: String(ctx.variables.last_message ?? "Olá"),
     });
-    const j = (await r.json().catch(() => ({}))) as { choices?: Array<{ message?: { content?: string } }> };
-    if (!r.ok) throw new Error(`IA (${r.status})`);
-    const reply = j.choices?.[0]?.message?.content?.trim() ?? "";
+    const reply = result.text.trim();
     return {
       status: "ok",
-      output: { agent: agent.name, model, reply },
+      output: { agent: agent.name, model: modelId, reply },
       vars: { ai: { output: reply } },
       metrics: { ai_latency_ms: Date.now() - t0 },
     };

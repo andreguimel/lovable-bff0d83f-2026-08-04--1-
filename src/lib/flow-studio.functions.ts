@@ -3,7 +3,7 @@ import { z } from "zod";
 import { generateText, NoObjectGeneratedError, Output } from "ai";
 
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { buildGuardianModel } from "@/lib/ai-provider.server";
 import { CANONICAL_BLOCK_KINDS } from "@/features/flow-builder/blocks/kinds";
 
 // FB-12.1 — deriva da fonte canônica única de kinds (nunca duplicar a lista).
@@ -22,12 +22,14 @@ export const generateFlowWithAI = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("IA indisponível — configure LOVABLE_API_KEY.");
-
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway(AI_MODEL);
+  .handler(async ({ data, context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const companyId = profile?.company_id ?? "";
+    const { model } = await buildGuardianModel(context.supabase, companyId);
 
     const NodeSchema = z.object({
       key: z.string(),
@@ -126,11 +128,14 @@ export const runFlowCopilotAction = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("IA indisponível — configure LOVABLE_API_KEY.");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway(AI_MODEL);
+  .handler(async ({ data, context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const companyId = profile?.company_id ?? "";
+    const { model } = await buildGuardianModel(context.supabase, companyId);
 
     const brief = {
       improve:

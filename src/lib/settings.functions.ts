@@ -104,7 +104,12 @@ export const getIntegrationsStatus = createServerFn({ method: "GET" })
       configured: Boolean(process.env.RESEND_API_KEY),
       from: process.env.RESEND_FROM_EMAIL ?? null,
     },
-    lovableAI: {
-      configured: Boolean(process.env.LOVABLE_API_KEY),
+    aiProviders: {
+      configured: Boolean(
+        process.env.OPENAI_API_KEY ||
+          process.env.ANTHROPIC_API_KEY ||
+          process.env.GEMINI_API_KEY ||
+          process.env.GOOGLE_GENERATIVE_AI_API_KEY
+      ),
     },
   }));

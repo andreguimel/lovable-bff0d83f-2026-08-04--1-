@@ -3,20 +3,18 @@ import type { LanguageModel } from "ai";
 export type ResolvedAIProvider =
   | { provider: "openai"; apiKey: string; model: string; source: "user" }
   | { provider: "anthropic"; apiKey: string; model: string; source: "user" }
-  | { provider: "google_gemini"; apiKey: string; model: string; source: "user" }
-  | { provider: "lovable"; apiKey: string; model: string; source: "fallback" };
+  | { provider: "google_gemini"; apiKey: string; model: string; source: "user" };
 
 const DEFAULT_MODEL: Record<string, string> = {
   openai: "gpt-4o-mini",
   anthropic: "claude-3-5-sonnet-latest",
   google_gemini: "gemini-2.5-flash",
-  lovable: "google/gemini-3.5-flash",
 };
 
 /**
  * Reads the "Configurações → APIs" table and picks the most recently updated,
- * enabled AI integration for this company. Falls back to Lovable AI Gateway
- * when nothing is configured.
+ * enabled AI integration for this company. Falls back to environment variables
+ * (OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY).
  */
 export async function resolveActiveAIProvider(
   supabase: any,
@@ -46,9 +44,39 @@ export async function resolveActiveAIProvider(
       };
     }
   }
-  const lov = process.env.LOVABLE_API_KEY;
-  if (!lov) throw new Error("Nenhum provedor de IA configurado e LOVABLE_API_KEY ausente.");
-  return { provider: "lovable", apiKey: lov, model: DEFAULT_MODEL.lovable, source: "fallback" };
+
+  // Fallback para variáveis de ambiente próprias do usuário
+  if (process.env.OPENAI_API_KEY) {
+    return {
+      provider: "openai",
+      apiKey: process.env.OPENAI_API_KEY,
+      model: DEFAULT_MODEL.openai,
+      source: "user",
+    };
+  }
+
+  if (process.env.ANTHROPIC_API_KEY) {
+    return {
+      provider: "anthropic",
+      apiKey: process.env.ANTHROPIC_API_KEY,
+      model: DEFAULT_MODEL.anthropic,
+      source: "user",
+    };
+  }
+
+  const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+  if (geminiKey) {
+    return {
+      provider: "google_gemini",
+      apiKey: geminiKey,
+      model: DEFAULT_MODEL.google_gemini,
+      source: "user",
+    };
+  }
+
+  throw new Error(
+    "Nenhum provedor de IA (OpenAI, Anthropic ou Gemini) foi configurado no sistema. Por favor, cadastre sua API Key em Configurações → Integrações."
+  );
 }
 
 /**
@@ -58,50 +86,42 @@ export async function resolveActiveAIProvider(
 export async function buildGuardianModel(
   supabase: any,
   companyId: string,
+  requestedModel?: string,
 ): Promise<{ model: LanguageModel; label: string; providerId: ResolvedAIProvider["provider"]; usingFallback: boolean; modelId: string }> {
   const resolved = await resolveActiveAIProvider(supabase, companyId);
+  const modelToUse = requestedModel || resolved.model;
 
   if (resolved.provider === "openai") {
     const { createOpenAI } = await import("@ai-sdk/openai");
     const p = createOpenAI({ apiKey: resolved.apiKey });
     return {
-      model: p(resolved.model) as unknown as LanguageModel,
-      label: `OpenAI · ${resolved.model}`,
+      model: p(modelToUse) as unknown as LanguageModel,
+      label: `OpenAI · ${modelToUse}`,
       providerId: "openai",
       usingFallback: false,
-      modelId: resolved.model,
+      modelId: modelToUse,
     };
   }
+
   if (resolved.provider === "anthropic") {
     const { createAnthropic } = await import("@ai-sdk/anthropic");
     const p = createAnthropic({ apiKey: resolved.apiKey });
     return {
-      model: p(resolved.model) as unknown as LanguageModel,
-      label: `Anthropic · ${resolved.model}`,
+      model: p(modelToUse) as unknown as LanguageModel,
+      label: `Anthropic · ${modelToUse}`,
       providerId: "anthropic",
       usingFallback: false,
-      modelId: resolved.model,
-    };
-  }
-  if (resolved.provider === "google_gemini") {
-    const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
-    const p = createGoogleGenerativeAI({ apiKey: resolved.apiKey });
-    return {
-      model: p(resolved.model) as unknown as LanguageModel,
-      label: `Google Gemini · ${resolved.model}`,
-      providerId: "google_gemini",
-      usingFallback: false,
-      modelId: resolved.model,
+      modelId: modelToUse,
     };
   }
 
-  const { createLovableAiGatewayProvider } = await import("@/lib/ai-gateway.server");
-  const gw = createLovableAiGatewayProvider(resolved.apiKey);
+  const { createGoogleGenerativeAI } = await import("@ai-sdk/google");
+  const p = createGoogleGenerativeAI({ apiKey: resolved.apiKey });
   return {
-    model: gw(resolved.model) as unknown as LanguageModel,
-    label: `Lovable AI · ${resolved.model} (fallback)`,
-    providerId: "lovable",
-    usingFallback: true,
-    modelId: resolved.model,
+    model: p(modelToUse) as unknown as LanguageModel,
+    label: `Google Gemini · ${modelToUse}`,
+    providerId: "google_gemini",
+    usingFallback: false,
+    modelId: modelToUse,
   };
 }

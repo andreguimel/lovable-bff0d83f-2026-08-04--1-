@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { generateText } from "ai";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { createLovableAiGatewayProvider } from "@/lib/ai-gateway.server";
+import { buildGuardianModel } from "@/lib/ai-provider.server";
 import { DEFAULT_AGENT_MODEL } from "@/lib/agents.constants";
 import { requireAdmin } from "@/lib/rbac/guard";
 
@@ -238,12 +238,8 @@ export const runPlaygroundMessage = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     if (!agent) throw new Error("Agente não encontrado.");
 
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada.");
-
     const modelId = data.model || (agent.model as string) || DEFAULT_AGENT_MODEL;
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway(modelId);
+    const { model } = await buildGuardianModel(sb, agent.company_id, modelId);
 
     const system = [
       `Você é ${agent.name}${agent.role ? `, ${agent.role}` : ""}.`,
@@ -314,11 +310,14 @@ export const runCopilotAction = createServerFn({ method: "POST" })
       })
       .parse(input),
   )
-  .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("LOVABLE_API_KEY não configurada.");
-    const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
+  .handler(async ({ data, context }) => {
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", context.userId)
+      .maybeSingle();
+    const companyId = profile?.company_id ?? "";
+    const { model } = await buildGuardianModel(context.supabase, companyId);
 
     const brief = {
       improve:
