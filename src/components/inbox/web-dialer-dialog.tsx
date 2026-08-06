@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Copy, Volume2, Grid3x3, ShieldCheck } from "lucide-react";
+import { Phone, PhoneOff, Mic, MicOff, Copy, Volume2, Grid3x3, ShieldCheck, MessageCircle, HelpCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -53,17 +53,34 @@ export function WebDialerDialog({
     }
   };
 
-  const handleStartCall = () => {
+  const handleWaCall = () => {
     const raw = dialed.replace(/[^0-9]/g, "");
     if (raw.length < 8) {
       toast.error("Digite um número de telefone válido");
       return;
     }
+    toast.info(`Iniciando chamada para +${raw} no WhatsApp...`);
+    window.open(`https://wa.me/${raw}`, "_blank");
+  };
 
+  const handleSipCall = () => {
+    const raw = dialed.replace(/[^0-9]/g, "");
+    if (raw.length < 8) {
+      toast.error("Digite um número de telefone válido");
+      return;
+    }
     setCalling(true);
-    toast.info(`Iniciando chamada para +${raw} via Stevo Voice...`);
-    // Abre a conexão SIP / Softphone nativa via handler de protocolo SIP
+    toast.info(`Discar +${raw} no Softphone (MicroSIP / Zoiper)...`);
     window.open(`sip:+${raw}`, "_self");
+  };
+
+  const handleTelCall = () => {
+    const raw = dialed.replace(/[^0-9]/g, "");
+    if (raw.length < 8) {
+      toast.error("Digite um número de telefone válido");
+      return;
+    }
+    window.open(`tel:+${raw}`, "_self");
   };
 
   const handleEndCall = () => {
@@ -82,7 +99,7 @@ export function WebDialerDialog({
           </div>
           <DialogTitle className="text-lg">Stevo Voice — Discador Web</DialogTitle>
           <DialogDescription className="text-xs">
-            {contactName ? `Chamada para ${contactName}` : "Ligue pelo WhatsApp usando ramal SIP"}
+            {contactName ? `Chamada para ${contactName}` : "Ligue pelo WhatsApp ou ramal SIP"}
           </DialogDescription>
         </DialogHeader>
 
@@ -94,7 +111,7 @@ export function WebDialerDialog({
               className={cn("text-xs font-normal", calling && "animate-pulse bg-emerald-600 text-white")}
             >
               <ShieldCheck className="mr-1 h-3.5 w-3.5" />
-              {calling ? "Em Chamada (SIP / WhatsApp)" : "SIP Pronto"}
+              {calling ? "Em Chamada (SIP / WhatsApp)" : "Stevo Voice Pronto"}
             </Badge>
           </div>
 
@@ -125,23 +142,23 @@ export function WebDialerDialog({
                 type="button"
                 variant="outline"
                 onClick={() => handleDigit(k)}
-                className="h-12 text-lg font-semibold hover:bg-primary/10 hover:text-primary active:scale-95"
+                className="h-11 text-lg font-semibold hover:bg-primary/10 hover:text-primary active:scale-95"
               >
                 {k}
               </Button>
             ))}
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-center gap-3 pt-2">
+          {/* Call Options */}
+          <div className="space-y-2 pt-1">
             {calling ? (
-              <>
+              <div className="flex items-center gap-2">
                 <Button
                   type="button"
                   variant={muted ? "destructive" : "outline"}
                   size="icon"
                   onClick={() => setMuted(!muted)}
-                  className="h-12 w-12 rounded-full"
+                  className="h-11 w-11 rounded-full"
                 >
                   {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 </Button>
@@ -151,29 +168,42 @@ export function WebDialerDialog({
                   variant="destructive"
                   size="lg"
                   onClick={handleEndCall}
-                  className="h-12 flex-1 rounded-full text-base font-semibold"
+                  className="h-11 flex-1 rounded-full text-sm font-semibold"
                 >
-                  <PhoneOff className="mr-2 h-5 w-5" />
-                  Encerrar
+                  <PhoneOff className="mr-2 h-4 w-4" />
+                  Encerrar Chamada
                 </Button>
-              </>
+              </div>
             ) : (
-              <Button
-                type="button"
-                size="lg"
-                onClick={handleStartCall}
-                className="h-12 w-full rounded-full bg-emerald-600 text-base font-semibold hover:bg-emerald-700 text-white"
-              >
-                <Phone className="mr-2 h-5 w-5" />
-                Chamar via Stevo Voice
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleWaCall}
+                  className="h-11 rounded-xl bg-emerald-600 text-xs font-semibold hover:bg-emerald-700 text-white"
+                >
+                  <MessageCircle className="mr-1.5 h-4 w-4" />
+                  Voz no WhatsApp
+                </Button>
+
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={handleSipCall}
+                  className="h-11 rounded-xl border-border/80 text-xs font-semibold"
+                >
+                  <Phone className="mr-1.5 h-4 w-4 text-sky-500" />
+                  Softphone (SIP)
+                </Button>
+              </div>
             )}
           </div>
 
           {/* Softphone Credentials Info Footer */}
           <div className="rounded-xl border border-dashed bg-muted/30 p-3 text-[11px] text-muted-foreground">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-foreground">Ramal SIP / Softphone</span>
+              <span className="font-semibold text-foreground">Ramal SIP (MicroSIP / Zoiper)</span>
               <button
                 type="button"
                 onClick={handleCopySip}
@@ -185,6 +215,10 @@ export function WebDialerDialog({
             </div>
             <p className="mt-1 font-mono text-[10px] truncate">Servidor: {sipServer}</p>
             {sipUsername && <p className="font-mono text-[10px] truncate">Usuário: {sipUsername}</p>}
+            <p className="mt-2 text-[10px] text-muted-foreground/80 flex items-start gap-1">
+              <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
+              <span>Dica: Se o Windows abrir o Teams ao clicar em SIP, instale o app gratuito MicroSIP ou Zoiper para discagem em 1 clique.</span>
+            </p>
           </div>
         </div>
       </DialogContent>
