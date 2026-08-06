@@ -1116,6 +1116,73 @@ async function runAssignAgent(node: NodeRow, ctx: ExecutionContext): Promise<Act
   };
 }
 
+async function runStevoCall(node: NodeRow, ctx: ExecutionContext): Promise<NodeResult> {
+  const phone = ctx.contact?.phone;
+  if (!ctx.conversation.id || !phone) {
+    return { status: "skipped", message: "Contato ou telefone ausente para efetuar chamada" };
+  }
+  if (ctx.dryRun) {
+    return { status: "ok", output: { action: "stevo_call", phone, dry_run: true } };
+  }
+
+  let channelId = ctx.channel?.id ?? ctx.conversation.channelId ?? null;
+  type ChRow = { id: string; provider_type: string | null; credentials: unknown; company_id: string };
+  let channel: ChRow | null = null;
+
+  if (channelId) {
+    const { data: ch } = await ctx.supabase
+      .from("channels")
+      .select("id, provider_type, credentials, company_id")
+      .eq("id", channelId)
+      .maybeSingle();
+    if (ch && (ch as ChRow).provider_type === "stevo") {
+      channel = ch as ChRow;
+    }
+  }
+
+  if (!channel) {
+    const { data: chs } = await ctx.supabase
+      .from("channels")
+      .select("id, provider_type, credentials, company_id")
+      .eq("company_id", ctx.companyId)
+      .eq("provider_type", "stevo")
+      .eq("status", "connected")
+      .limit(1);
+    channel = (chs ?? [])[0] as ChRow | null;
+  }
+
+  if (!channel) {
+    return { status: "failed", message: "Nenhum canal Stevo conectado para disparar a chamada" };
+  }
+
+  const { stevoMakeCall } = await import("./wa-providers/stevo.server");
+  const res = await stevoMakeCall(
+    {
+      ...((channel.credentials as Record<string, unknown>) ?? {}),
+      instance_id: (channel.credentials as any)?.instance_id,
+      company_id: ctx.companyId,
+    },
+    phone,
+  );
+
+  await ctx.supabase.from("channel_events").insert({
+    company_id: ctx.companyId,
+    channel_id: channel.id,
+    conversation_id: ctx.conversation.id,
+    event_type: "message_sent" as never,
+    payload: { action: "stevo_voice_flow_action", phone, flow_run_id: ctx.runId, result: res },
+  });
+
+  if (!res.ok) {
+    return { status: "failed", message: res.error || "Falha ao disparar chamada Stevo Voice" };
+  }
+
+  return {
+    status: "ok",
+    output: { action: "stevo_call", phone, result: res },
+  };
+}
+
 const actionNode: NodeExecutor = {
   async execute(node, ctx) {
     const actionType = String(node.data.action_type ?? "").trim();
@@ -1127,6 +1194,11 @@ const actionNode: NodeExecutor = {
         return runRemoveTag(node, ctx);
       case "assign_agent":
         return runAssignAgent(node, ctx);
+      case "stevo_call":
+      case "make_call":
+      case "call":
+      case "stevo_voice":
+        return runStevoCall(node, ctx);
       default:
         return { status: "skipped", message: `Ação não suportada: ${actionType}` };
     }

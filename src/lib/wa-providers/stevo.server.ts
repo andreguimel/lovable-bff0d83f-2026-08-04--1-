@@ -793,10 +793,13 @@ export async function stevoMakeCall(
   }
 
   const cleanPhone = phone.replace(/[^0-9]/g, "");
+  const jid = `${cleanPhone}@s.whatsapp.net`;
   const body = {
     phone: cleanPhone,
     number: cleanPhone,
     to: cleanPhone,
+    jid,
+    callType: "offer",
     sip_server: (creds as any).sip_server ?? null,
     sip_username: (creds as any).sip_username ?? null,
     sip_password: (creds as any).sip_password ?? null,
@@ -828,7 +831,7 @@ export async function stevoMakeCall(
     if (!r.ok) {
       const ready = await ensureStevoServerReady(creds);
       if (ready.ok) {
-        const payload = { number: cleanPhone, to: cleanPhone, callType: "offer" };
+        const payload = { number: cleanPhone, to: cleanPhone, jid, callType: "offer" };
         const directOffer = await fetch(`${ready.serverUrl}/call/offer`, {
           method: "POST",
           headers: { apikey: ready.token, "Content-Type": "application/json" },
@@ -844,6 +847,14 @@ export async function stevoMakeCall(
         }).catch(() => null);
 
         if (directCall?.ok) return { ok: true, message: "Chamada iniciada via Stevo Voice" };
+
+        const instCall = await fetch(`${ready.serverUrl}/instance/call/offer`, {
+          method: "POST",
+          headers: { apikey: ready.token, "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }).catch(() => null);
+
+        if (instCall?.ok) return { ok: true, message: "Chamada iniciada via Stevo Voice" };
       }
     }
 

@@ -1126,6 +1126,9 @@ const BLOCKS: BlockSpec[] = [
         const agent = s(d.agent_user_label);
         return agent ? `Atribuir atendente: ${agent}` : "Atribuir atendente";
       }
+      if (t === "stevo_call") {
+        return "Disparar chamada Stevo Voice";
+      }
       return null;
     },
     validate: (d) => {
@@ -1155,6 +1158,7 @@ const BLOCKS: BlockSpec[] = [
           { value: "add_tag", label: "Adicionar etiqueta ao contato" },
           { value: "remove_tag", label: "Remover etiqueta do contato" },
           { value: "assign_agent", label: "Atribuir atendente à conversa" },
+          { value: "stevo_call", label: "Disparar chamada Stevo Voice" },
         ],
         help: "Cada ação exibirá abaixo apenas os campos necessários.",
       },
@@ -1193,6 +1197,7 @@ const BLOCKS: BlockSpec[] = [
         if (t === "add_tag") return `Adiciona a etiqueta ${s(d.tag_label) ?? "selecionada"} ao contato.`;
         if (t === "remove_tag") return `Remove a etiqueta ${s(d.tag_label) ?? "selecionada"} do contato.`;
         if (t === "assign_agent") return `Atribui a conversa a ${s(d.agent_user_label) ?? "um atendente"}.`;
+        if (t === "stevo_call") return "Dispara uma chamada telefônica de voz via Stevo ao contato.";
         return "Executa uma ação automática no contato ou atendimento.";
       },
     },
