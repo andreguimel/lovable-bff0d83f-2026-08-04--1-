@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Phone, PhoneOff, Mic, MicOff, Copy, Volume2, Grid3x3, ShieldCheck, MessageCircle, HelpCircle } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { Phone, PhoneOff, Mic, MicOff, Copy, ShieldCheck, Loader2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -13,10 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { startStevoCall } from "@/lib/inbox.functions";
 
 interface WebDialerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  conversationId?: string;
   phone?: string | null;
   contactName?: string | null;
   sipServer?: string;
@@ -26,6 +30,7 @@ interface WebDialerDialogProps {
 export function WebDialerDialog({
   open,
   onOpenChange,
+  conversationId,
   phone = "",
   contactName = "",
   sipServer = "sm-grilo.stevo.chat:5060",
@@ -34,6 +39,23 @@ export function WebDialerDialog({
   const [dialed, setDialed] = useState(phone?.replace(/[^0-9+]/g, "") ?? "");
   const [calling, setCalling] = useState(false);
   const [muted, setMuted] = useState(false);
+
+  const callStevoFn = useServerFn(startStevoCall);
+
+  const stevoMutation = useMutation({
+    mutationFn: async () => {
+      const raw = dialed.replace(/[^0-9]/g, "");
+      if (raw.length < 8) throw new Error("Digite um número de telefone válido");
+      return await callStevoFn({ data: { conversationId, phone: raw } });
+    },
+    onSuccess: (res) => {
+      setCalling(true);
+      toast.success(res.message || "Chamada enviada ao Stevo Voice!");
+    },
+    onError: (e: Error) => {
+      toast.error(e.message || "Falha ao disparar ligação no Stevo Voice");
+    },
+  });
 
   const handleDigit = (digit: string) => {
     setDialed((prev) => prev + digit);
@@ -53,39 +75,19 @@ export function WebDialerDialog({
     }
   };
 
-  const handleWaCall = () => {
+  const handleWaFallbackCall = () => {
     const raw = dialed.replace(/[^0-9]/g, "");
     if (raw.length < 8) {
       toast.error("Digite um número de telefone válido");
       return;
     }
-    toast.info(`Iniciando chamada para +${raw} no WhatsApp...`);
+    toast.info(`Abrindo WhatsApp para +${raw}...`);
     window.open(`https://wa.me/${raw}`, "_blank");
-  };
-
-  const handleSipCall = () => {
-    const raw = dialed.replace(/[^0-9]/g, "");
-    if (raw.length < 8) {
-      toast.error("Digite um número de telefone válido");
-      return;
-    }
-    setCalling(true);
-    toast.info(`Discar +${raw} no Softphone (MicroSIP / Zoiper)...`);
-    window.open(`sip:+${raw}`, "_self");
-  };
-
-  const handleTelCall = () => {
-    const raw = dialed.replace(/[^0-9]/g, "");
-    if (raw.length < 8) {
-      toast.error("Digite um número de telefone válido");
-      return;
-    }
-    window.open(`tel:+${raw}`, "_self");
   };
 
   const handleEndCall = () => {
     setCalling(false);
-    toast.success("Chamada encerrada");
+    toast.success("Chamada finalizada");
   };
 
   const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#"];
@@ -99,7 +101,7 @@ export function WebDialerDialog({
           </div>
           <DialogTitle className="text-lg">Stevo Voice — Discador Web</DialogTitle>
           <DialogDescription className="text-xs">
-            {contactName ? `Chamada para ${contactName}` : "Ligue pelo WhatsApp ou ramal SIP"}
+            {contactName ? `Chamada via Stevo para ${contactName}` : "Ligação direta via instância Stevo Voice"}
           </DialogDescription>
         </DialogHeader>
 
@@ -111,7 +113,7 @@ export function WebDialerDialog({
               className={cn("text-xs font-normal", calling && "animate-pulse bg-emerald-600 text-white")}
             >
               <ShieldCheck className="mr-1 h-3.5 w-3.5" />
-              {calling ? "Em Chamada (SIP / WhatsApp)" : "Stevo Voice Pronto"}
+              {calling ? "Em Chamada (Stevo Voice)" : "Stevo Voice Pronto"}
             </Badge>
           </div>
 
@@ -158,7 +160,7 @@ export function WebDialerDialog({
                   variant={muted ? "destructive" : "outline"}
                   size="icon"
                   onClick={() => setMuted(!muted)}
-                  className="h-11 w-11 rounded-full"
+                  className="h-12 w-12 rounded-full"
                 >
                   {muted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                 </Button>
@@ -168,33 +170,43 @@ export function WebDialerDialog({
                   variant="destructive"
                   size="lg"
                   onClick={handleEndCall}
-                  className="h-11 flex-1 rounded-full text-sm font-semibold"
+                  className="h-12 flex-1 rounded-full text-sm font-semibold"
                 >
                   <PhoneOff className="mr-2 h-4 w-4" />
                   Encerrar Chamada
                 </Button>
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 <Button
                   type="button"
-                  size="sm"
-                  onClick={handleWaCall}
-                  className="h-11 rounded-xl bg-emerald-600 text-xs font-semibold hover:bg-emerald-700 text-white"
+                  size="lg"
+                  disabled={stevoMutation.isPending}
+                  onClick={() => stevoMutation.mutate()}
+                  className="h-12 w-full rounded-full bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 shadow-md"
                 >
-                  <MessageCircle className="mr-1.5 h-4 w-4" />
-                  Voz no WhatsApp
+                  {stevoMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Iniciando Stevo Voice...
+                    </>
+                  ) : (
+                    <>
+                      <Phone className="mr-2 h-4 w-4" />
+                      Ligar via Stevo Voice
+                    </>
+                  )}
                 </Button>
 
                 <Button
                   type="button"
                   size="sm"
-                  variant="outline"
-                  onClick={handleSipCall}
-                  className="h-11 rounded-xl border-border/80 text-xs font-semibold"
+                  variant="ghost"
+                  onClick={handleWaFallbackCall}
+                  className="h-9 w-full text-xs text-muted-foreground hover:text-foreground"
                 >
-                  <Phone className="mr-1.5 h-4 w-4 text-sky-500" />
-                  Softphone (SIP)
+                  <MessageCircle className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
+                  Ou abrir chamada no WhatsApp Web
                 </Button>
               </div>
             )}
@@ -203,7 +215,7 @@ export function WebDialerDialog({
           {/* Softphone Credentials Info Footer */}
           <div className="rounded-xl border border-dashed bg-muted/30 p-3 text-[11px] text-muted-foreground">
             <div className="flex items-center justify-between">
-              <span className="font-semibold text-foreground">Ramal SIP (MicroSIP / Zoiper)</span>
+              <span className="font-semibold text-foreground">Ramal SIP de Apoio</span>
               <button
                 type="button"
                 onClick={handleCopySip}
@@ -215,10 +227,6 @@ export function WebDialerDialog({
             </div>
             <p className="mt-1 font-mono text-[10px] truncate">Servidor: {sipServer}</p>
             {sipUsername && <p className="font-mono text-[10px] truncate">Usuário: {sipUsername}</p>}
-            <p className="mt-2 text-[10px] text-muted-foreground/80 flex items-start gap-1">
-              <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
-              <span>Dica: Se o Windows abrir o Teams ao clicar em SIP, instale o app gratuito MicroSIP ou Zoiper para discagem em 1 clique.</span>
-            </p>
           </div>
         </div>
       </DialogContent>

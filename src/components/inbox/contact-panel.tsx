@@ -142,7 +142,7 @@ export function ContactPanel({
               </div>
             </div>
             <div className="flex shrink-0 items-center gap-1">
-              <CallButton phone={contact.phone} contactName={contact.name} />
+              <CallButton conversationId={conversationId} phone={contact.phone} contactName={contact.name} />
               <Button
                 variant="ghost"
                 size="icon"

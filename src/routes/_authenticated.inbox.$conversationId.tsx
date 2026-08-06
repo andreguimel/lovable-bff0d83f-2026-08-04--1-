@@ -503,6 +503,7 @@ function ConversationView() {
 
         ) : (
           <MobileConversationHeader
+            conversationId={conv.id}
             contactName={conv.contact.name}
             contactPhone={conv.contact.phone}
             channelName={conv.channel.name}
@@ -833,7 +834,7 @@ function ConversationView() {
           </div>
 
 
-          <CallButton phone={conv.contact.phone} contactName={conv.contact.name} variant="button" />
+          <CallButton conversationId={conv.id} phone={conv.contact.phone} contactName={conv.contact.name} variant="button" />
 
           <Popover open={assignOpen} onOpenChange={setAssignOpen}>
             <PopoverTrigger asChild>

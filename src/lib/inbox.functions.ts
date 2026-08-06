@@ -1833,3 +1833,79 @@ export const toggleConversationMute = createServerFn({ method: "POST" })
     return { ok: true, muted_until: mutedUntil };
   });
 
+export const startStevoCall = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { conversationId?: string; phone?: string }) =>
+    z.object({ conversationId: z.string().uuid().optional(), phone: z.string().optional() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    let phone = data.phone;
+    let companyId: string | null = null;
+    let channelId: string | null = null;
+
+    if (data.conversationId) {
+      const { data: conv } = await context.supabase
+        .from("conversations")
+        .select("id, company_id, channel_id, contact:contacts(phone)")
+        .eq("id", data.conversationId)
+        .maybeSingle();
+      if (conv) {
+        companyId = conv.company_id;
+        channelId = conv.channel_id;
+        if (!phone) phone = (conv.contact as { phone?: string } | null)?.phone ?? undefined;
+      }
+    }
+
+    if (!companyId) {
+      const { data: profile } = await context.supabase
+        .from("profiles")
+        .select("company_id")
+        .eq("id", context.userId)
+        .maybeSingle();
+      companyId = profile?.company_id ?? null;
+    }
+
+    if (!companyId) throw new Error("Empresa não encontrada para o usuário");
+
+    if (!phone) throw new Error("Telefone para chamada não informado");
+
+    // Encontra canal Stevo ativo da empresa
+    const query = context.supabase
+      .from("channels")
+      .select("id, provider_type, credentials, company_id")
+      .eq("company_id", companyId)
+      .eq("provider_type", "stevo")
+      .eq("status", "connected");
+
+    const { data: channels } = channelId ? await query.eq("id", channelId) : await query;
+    const channel = (channels ?? [])[0];
+
+    if (!channel) {
+      throw new Error("Nenhum canal Stevo ativo encontrado para efetuar a ligação");
+    }
+
+    const { stevoMakeCall } = await import("@/lib/wa-providers/stevo.server");
+    const res = await stevoMakeCall(
+      {
+        instance_id: (channel.credentials as any)?.instance_id,
+        company_id: companyId,
+      },
+      phone,
+    );
+
+    // Registra o evento de disparo de chamada
+    await context.supabase.from("channel_events").insert({
+      company_id: companyId,
+      channel_id: channel.id,
+      conversation_id: data.conversationId ?? null,
+      event_type: "message_sent" as never,
+      payload: { action: "stevo_voice_call", phone, result: res },
+    });
+
+    if (!res.ok) {
+      throw new Error(res.error || "Falha ao disparar chamada via Stevo Voice");
+    }
+
+    return { ok: true, message: "Chamada Stevo Voice iniciada com sucesso!" };
+  });
+

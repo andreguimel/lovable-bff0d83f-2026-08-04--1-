@@ -27,6 +27,7 @@ function formatPhone(raw: string): string {
 }
 
 interface CallButtonProps {
+  conversationId?: string;
   phone: string | null | undefined;
   contactName?: string;
   /** `icon` para header compacto, `button` para rótulo visível. */
@@ -35,15 +36,15 @@ interface CallButtonProps {
 }
 
 /**
- * Ligação para o contato do inbox via Stevo Voice (SIP), discador web e app de voz.
+ * Ligação para o contato do inbox via Stevo Voice.
  */
-export function CallButton({ phone, contactName, variant = "icon", className }: CallButtonProps) {
+export function CallButton({ conversationId, phone, contactName, variant = "icon", className }: CallButtonProps) {
   const [dialerOpen, setDialerOpen] = useState(false);
   const digits = phone ? normalizePhone(phone) : "";
   const disabled = digits.length < 8;
 
   const open = (url: string) => {
-    window.open(url, "_self");
+    window.open(url, "_blank");
   };
 
   const copy = async () => {
@@ -93,24 +94,14 @@ export function CallButton({ phone, contactName, variant = "icon", className }: 
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem onSelect={() => open(`sip:+${digits}`)}>
-            <PhoneCall className="mr-2 h-4 w-4 text-emerald-600" />
-            Ligar via Stevo Voice (SIP)
-          </DropdownMenuItem>
-
           <DropdownMenuItem onSelect={() => setDialerOpen(true)}>
-            <Grid3x3 className="mr-2 h-4 w-4 text-primary" />
-            Discador Web Zenda
+            <PhoneCall className="mr-2 h-4 w-4 text-emerald-600" />
+            Discador Stevo Voice
           </DropdownMenuItem>
 
           <DropdownMenuItem onSelect={() => open(`https://wa.me/${digits}`)}>
             <MessageCircle className="mr-2 h-4 w-4 text-sky-500" />
             Chamada de voz no WhatsApp
-          </DropdownMenuItem>
-
-          <DropdownMenuItem onSelect={() => open(`tel:+${digits}`)}>
-            <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
-            Telefone do dispositivo
           </DropdownMenuItem>
 
           <DropdownMenuSeparator />
@@ -125,6 +116,7 @@ export function CallButton({ phone, contactName, variant = "icon", className }: 
       <WebDialerDialog
         open={dialerOpen}
         onOpenChange={setDialerOpen}
+        conversationId={conversationId}
         phone={digits}
         contactName={contactName}
       />

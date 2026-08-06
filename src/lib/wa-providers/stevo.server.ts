@@ -779,3 +779,63 @@ export async function setStevoWebhook(
     return { ok: false, code: "NETWORK_ERROR", message: "Falha de rede ao configurar o webhook." };
   }
 }
+
+/** Dispara chamada de voz via Stevo Voice (proxy `/v1/instances/{id}/calls` ou `/v1/instances/{id}/voice`). */
+export async function stevoMakeCall(
+  creds: StevoCreds,
+  phone: string,
+): Promise<{ ok: boolean; message?: string; error?: string }> {
+  const apiKey = await resolveStevoApiKey(creds);
+  const instanceId = creds.instance_id?.trim();
+  if (!apiKey || !instanceId) {
+    return { ok: false, error: "Credenciais da Stevo não configuradas" };
+  }
+
+  const cleanPhone = phone.replace(/[^0-9]/g, "");
+  const body = {
+    phone: cleanPhone,
+    number: cleanPhone,
+    to: cleanPhone,
+  };
+
+  try {
+    let r = await stevoFetch(`/v1/instances/${encodeURIComponent(instanceId)}/calls`, apiKey, {
+      method: "POST",
+      body: JSON.stringify(body),
+      creds,
+    });
+
+    if (!r.ok) {
+      r = await stevoFetch(`/v1/instances/${encodeURIComponent(instanceId)}/voice`, apiKey, {
+        method: "POST",
+        body: JSON.stringify(body),
+        creds,
+      });
+    }
+
+    if (!r.ok) {
+      const ready = await ensureStevoServerReady(creds);
+      if (ready.ok) {
+        const direct = await fetch(`${ready.serverUrl}/call/offer`, {
+          method: "POST",
+          headers: { apikey: ready.token, "Content-Type": "application/json" },
+          body: JSON.stringify({ number: cleanPhone, to: cleanPhone }),
+        });
+        if (direct.ok) return { ok: true, message: "Chamada iniciada com sucesso" };
+      }
+
+      const err = (r.json as { error?: { message?: string }; message?: string }) ?? {};
+      return {
+        ok: false,
+        error: err.error?.message ?? err.message ?? `Stevo respondeu ${r.status}`,
+      };
+    }
+
+    return { ok: true, message: "Chamada iniciada via Stevo Voice" };
+  } catch (e) {
+    return {
+      ok: false,
+      error: e instanceof Error ? e.message : String(e),
+    };
+  }
+}

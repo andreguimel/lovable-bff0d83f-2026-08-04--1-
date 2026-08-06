@@ -12,10 +12,11 @@ import {
 import { CallButton } from "@/components/inbox/call-button";
 import { cn } from "@/lib/utils";
 
-interface Props {
+export interface Props {
+  conversationId?: string;
   contactName: string;
   contactPhone?: string | null;
-  channelName?: string;
+  channelName?: string | null;
   status: "open" | "pending" | "resolved";
   onOpenContact: () => void;
   onOpenAssign: () => void;
@@ -28,6 +29,7 @@ interface Props {
  * so no business logic changes.
  */
 export function MobileConversationHeader({
+  conversationId,
   contactName,
   contactPhone,
   channelName,
@@ -43,16 +45,13 @@ export function MobileConversationHeader({
     status === "open" ? "bg-success" : status === "pending" ? "bg-warning" : "bg-muted-foreground";
 
   return (
-    <header
-      className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-1 border-b border-border/60 bg-background/95 px-1 backdrop-blur"
-      style={{ paddingTop: "env(safe-area-inset-top)" }}
-    >
+    <header className="flex h-14 w-full items-center justify-between border-b bg-card px-2 shadow-xs sm:hidden">
       <Button
         variant="ghost"
         size="icon"
-        aria-label="Voltar"
-        className="h-11 w-11 rounded-full"
         onClick={() => navigate({ to: "/inbox" })}
+        className="h-11 w-11 shrink-0 rounded-full"
+        aria-label="Voltar para conversas"
       >
         <ArrowLeft className="h-5 w-5" />
       </Button>
@@ -60,7 +59,7 @@ export function MobileConversationHeader({
       <button
         type="button"
         onClick={onOpenContact}
-        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl px-1 py-1 text-left active:bg-accent/60"
+        className="flex min-w-0 flex-1 items-center gap-2 px-1 text-left active:opacity-70"
       >
         <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-primary text-[13px] font-semibold text-primary-foreground ring-1 ring-border/40">
           {initial}
@@ -74,7 +73,7 @@ export function MobileConversationHeader({
         </div>
       </button>
 
-      <CallButton phone={contactPhone} contactName={contactName} className="h-11 w-11 rounded-full" />
+      <CallButton conversationId={conversationId} phone={contactPhone} contactName={contactName} className="h-11 w-11 rounded-full" />
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
