@@ -169,7 +169,7 @@ export const listMessages = createServerFn({ method: "GET" })
     const { data: rows, error } = await context.supabase
       .from("messages")
       .select(
-        "id, direction, type, body, media_url, media_metadata, status, created_at, reply_to_id, deleted_at, deleted_scope, deleted_by, deleted_reason, channel_id, channel:channels!channel_id(id, name, phone_number)",
+        "id, direction, type, body, media_url, media_metadata, status, provider_message_id, created_at, reply_to_id, deleted_at, deleted_scope, deleted_by, deleted_reason, channel_id, channel:channels!channel_id(id, name, phone_number)",
       )
       .eq("conversation_id", data.conversationId)
       .order("created_at", { ascending: true })
@@ -367,15 +367,16 @@ export const sendMessage = createServerFn({ method: "POST" })
       ...(sendError ? { send_error: sendError } : {}),
     };
 
-    // 3. Atualiza o registro prévio com o provider_message_id e status final
+    // 3. Atualiza o registro prévio com o provider_message_id e status final usando supabaseAdmin para evitar restrições de RLS
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const finalStatus = sendError ? "failed" : "sent";
     let updatedMsg: typeof initialMsg | null = null;
-    let updateError: { message?: string } | null = null;
 
-    const { data: uMsg, error: uErr } = await context.supabase
+    const { data: uMsg, error: uErr } = await supabaseAdmin
       .from("messages")
       .update({
         provider_message_id: providerMessageId ?? null,
-        status: sendError ? "failed" : "sent",
+        status: finalStatus,
         media_metadata: Object.keys(mergedMeta).length ? (mergedMeta as never) : null,
       })
       .eq("id", initialMsg.id)
@@ -383,24 +384,35 @@ export const sendMessage = createServerFn({ method: "POST" })
       .single();
 
     updatedMsg = uMsg;
-    updateError = uErr;
 
     // Trata colisão se o webhook registrou o provider_message_id primeiro em outra linha
-    if (updateError && providerMessageId) {
-      const { data: existing } = await context.supabase
+    if (uErr && providerMessageId) {
+      const { data: existing } = await supabaseAdmin
         .from("messages")
         .select("*")
         .eq("conversation_id", data.conversationId)
         .eq("provider_message_id", providerMessageId)
         .maybeSingle();
       if (existing) {
-        await context.supabase.from("messages").delete().eq("id", initialMsg.id);
-        updatedMsg = existing;
-        updateError = null;
+        await supabaseAdmin.from("messages").delete().eq("id", initialMsg.id);
+        await supabaseAdmin.from("messages").update({ status: finalStatus }).eq("id", existing.id);
+        updatedMsg = { ...existing, status: finalStatus };
       }
     }
 
-    const msg = updatedMsg ?? initialMsg;
+    if (!updatedMsg) {
+      await supabaseAdmin
+        .from("messages")
+        .update({ status: finalStatus, provider_message_id: providerMessageId ?? null })
+        .eq("id", initialMsg.id);
+      updatedMsg = {
+        ...initialMsg,
+        status: finalStatus,
+        provider_message_id: providerMessageId ?? null,
+      };
+    }
+
+    const msg = updatedMsg;
 
     if (sendError && channel?.id) {
       await context.supabase.from("channel_events").insert({

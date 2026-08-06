@@ -87,13 +87,21 @@ function MessageStatusIcon({
   status,
   isOutbound,
   isDeleted,
+  createdAt,
+  providerMessageId,
 }: {
   status?: string | null;
   isOutbound: boolean;
   isDeleted: boolean;
+  createdAt?: string;
+  providerMessageId?: string | null;
 }) {
   if (!isOutbound || isDeleted) return null;
-  if (status === "sending" || status === "pending") {
+  const isStaleSending =
+    (status === "sending" || status === "pending") &&
+    (!!providerMessageId || (!!createdAt && Date.now() - new Date(createdAt).getTime() > 10000));
+
+  if ((status === "sending" || status === "pending") && !isStaleSending) {
     return (
       <span title="Enviando...">
         <Clock className="h-3 w-3 animate-spin opacity-70" />
@@ -694,7 +702,13 @@ function ConversationView() {
                                       </span>
                                     )}
                                     <ClientTime iso={m.created_at} />
-                                    <MessageStatusIcon status={(m as { status?: string | null }).status} isOutbound={cluster.outbound} isDeleted={isDeleted} />
+                                    <MessageStatusIcon
+                                      status={(m as { status?: string | null }).status}
+                                      isOutbound={cluster.outbound}
+                                      isDeleted={isDeleted}
+                                      createdAt={m.created_at}
+                                      providerMessageId={(m as { provider_message_id?: string | null }).provider_message_id}
+                                    />
                                   </div>
                                 )}
                               </div>
@@ -1115,7 +1129,13 @@ function ConversationView() {
                                   )}
                                 >
                                   <ClientTime iso={m.created_at} />
-                                  <MessageStatusIcon status={(m as { status?: string | null }).status} isOutbound={cluster.outbound} isDeleted={isDeleted} />
+                                  <MessageStatusIcon
+                                    status={(m as { status?: string | null }).status}
+                                    isOutbound={cluster.outbound}
+                                    isDeleted={isDeleted}
+                                    createdAt={m.created_at}
+                                    providerMessageId={(m as { provider_message_id?: string | null }).provider_message_id}
+                                  />
                                 </div>
                               )}
                             </div>
