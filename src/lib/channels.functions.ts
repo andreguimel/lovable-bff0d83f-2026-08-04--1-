@@ -328,18 +328,20 @@ async function ensureStevoWebhook(
 
   ch: { id: string; company_id: string; credentials: unknown; webhook_verify_token?: string | null },
 ) {
-  const configuredBase = (process.env["PUBLIC_APP_URL"] ?? "").replace(/\/+$/, "");
-  const { getRequest } = await import("@tanstack/react-start/server");
-  const requestUrl = new URL(getRequest().url);
-  // Sempre preferir a URL estável de PRODUÇÃO: o build de preview/dev é
-  // recriado a cada edição e pode ficar sem as variáveis de ambiente do
-  // Supabase, derrubando o webhook silenciosamente depois de um tempo.
-  const hostMatch = requestUrl.hostname.match(
-    /^(?:id-preview--|project--)([0-9a-f-]{36})(?:-dev)?\.lovable\.app$/i,
-  );
-  const requestOrigin = hostMatch?.[1]
-    ? `https://project--${hostMatch[1]}-dev.lovable.app`
-    : requestUrl.origin;
+  const configuredBase = (process.env["PUBLIC_APP_URL"] ?? process.env["VITE_PUBLIC_APP_URL"] ?? "").replace(/\/+$/, "");
+  let requestOrigin = "";
+  try {
+    const { getRequest } = await import("@tanstack/react-start/server");
+    const req = getRequest();
+    if (req) {
+      const urlObj = new URL(req.url);
+      const hostHeader = req.headers.get("x-forwarded-host") || req.headers.get("host") || urlObj.host;
+      const protoHeader = req.headers.get("x-forwarded-proto") || "https";
+      requestOrigin = `${protoHeader}://${hostHeader}`;
+    }
+  } catch {
+    requestOrigin = "";
+  }
   const base = configuredBase || requestOrigin;
 
   let token = ch.webhook_verify_token ?? null;

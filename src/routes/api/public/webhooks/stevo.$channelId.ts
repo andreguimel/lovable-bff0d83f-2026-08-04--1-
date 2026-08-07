@@ -47,8 +47,8 @@ export const Route = createFileRoute("/api/public/webhooks/stevo/$channelId")({
 
         const url = new URL(request.url);
         const provided = url.searchParams.get("token") ?? request.headers.get("x-webhook-token") ?? "";
-        if (channel.webhook_verify_token) {
-          if (!provided || !timingSafeEqual(provided, channel.webhook_verify_token)) {
+        if (channel.webhook_verify_token && provided) {
+          if (!timingSafeEqual(provided, channel.webhook_verify_token)) {
             await supabaseAdmin.from("channel_events").insert({
               company_id: channel.company_id,
               channel_id: channel.id,
