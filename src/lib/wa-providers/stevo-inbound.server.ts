@@ -248,23 +248,29 @@ export function normalizeStevoWebhook(payload: unknown): {
 
     const isGroup = isGroupJid(chatJid);
     if (hasMessage && providerId && chatJid) {
-      const phone = jidToPhone(isGroup ? chatJid : (fromMe ? chatJid : (senderJid ?? chatJid)));
+      const phone = isGroup
+        ? (chatJid.includes("@") ? chatJid : `${chatJid}@g.us`)
+        : jidToPhone(fromMe ? chatJid : (senderJid ?? chatJid));
+
       if (phone) {
         const ctx = asRecord(
           asRecord(message.extendedTextMessage).contextInfo ?? asRecord(message.ExtendedTextMessage).contextInfo ?? event.contextInfo ?? root.contextInfo,
         );
         const pushName = str(info.PushName) ?? str(event.pushName) ?? str(event.pushname) ?? str(root.pushName) ?? str(root.pushname) ?? null;
+        const groupSubject = isGroup
+          ? (str(event.subject) ?? str(event.groupName) ?? str(root.subject) ?? str(root.groupName) ?? str(info.Subject) ?? str(info.Name) ?? str(event.name) ?? "Grupo WhatsApp")
+          : null;
         const senderPhone = jidToPhone(senderJid);
 
         const meta = {
           ...(content.media_metadata ?? {}),
-          ...(isGroup ? { is_group: true, sender_name: pushName, sender_phone: senderPhone } : {}),
+          ...(isGroup ? { is_group: true, sender_name: pushName, sender_phone: senderPhone, group_subject: groupSubject } : {}),
         };
 
         inbound.push({
           provider_message_id: providerId,
           from_phone: phone,
-          contact_name: isGroup ? null : (fromMe ? null : pushName),
+          contact_name: isGroup ? groupSubject : (fromMe ? null : pushName),
           type: content.type,
           body: content.body,
           media_url: content.media_url,

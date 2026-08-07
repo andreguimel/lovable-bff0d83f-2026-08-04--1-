@@ -664,7 +664,10 @@ export async function testStevoInstance(creds: StevoCreds | null): Promise<
 }
 
 function toStevoBody(payload: SendPayload): Record<string, unknown> {
-  const to = payload.to.replace(/[^0-9]/g, "");
+  const isGroup = payload.to.includes("g.us");
+  const to = isGroup
+    ? (payload.to.includes("@") ? payload.to : `${payload.to.replace(/[^0-9]/g, "")}@g.us`)
+    : payload.to.replace(/[^0-9]/g, "");
   if (payload.type === "text") return { to, text: payload.body };
   if (payload.type === "reaction") return { to, reaction: { messageId: payload.targetProviderId, emoji: payload.emoji } };
   const mediaType =

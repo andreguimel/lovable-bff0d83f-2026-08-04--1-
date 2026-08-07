@@ -84,7 +84,9 @@ export const Route = createFileRoute("/api/public/webhooks/stevo/$channelId")({
         });
 
         for (const msg of inbound) {
-          const rawPhone = msg.from_phone.startsWith("+") ? msg.from_phone : `+${msg.from_phone}`;
+          const rawPhone = msg.is_group || msg.from_phone.includes("@g.us")
+            ? msg.from_phone
+            : (msg.from_phone.startsWith("+") ? msg.from_phone : `+${msg.from_phone}`);
 
           let contactId: string;
           let isNewContact = false;

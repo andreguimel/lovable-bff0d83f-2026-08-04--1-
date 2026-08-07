@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { Loader2, FileIcon, Play, ZoomIn, ImageOff } from "lucide-react";
+import { Loader2, FileIcon, Play, ZoomIn, ImageOff, Download } from "lucide-react";
+import { toast } from "sonner";
 
 import { getMediaUrl } from "@/lib/inbox.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -23,7 +24,9 @@ function useMediaUrl(path: string, messageId?: string) {
     setFailed(false);
     get({ data: { path, messageId } })
       .then((res) => {
-        if (!cancelled) setUrl(res.url);
+        if (cancelled) return;
+        if (res?.url) setUrl(res.url);
+        else setFailed(true);
       })
       .catch(() => {
         if (!cancelled) setFailed(true);
@@ -38,40 +41,44 @@ function useMediaUrl(path: string, messageId?: string) {
 
 export function MediaImage({ path, messageId, alt = "" }: Props) {
   const { url, failed } = useMediaUrl(path, messageId);
-  const [open, setOpen] = useState(false);
-  const [broken, setBroken] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
 
-  if (failed || broken) {
+  if (failed) {
     return (
-      <div className="flex h-24 w-64 flex-col items-center justify-center gap-1 rounded-xl border border-border/50 bg-muted/40 text-xs text-muted-foreground">
-        <ImageOff className="h-4 w-4" />
-        <span>Não foi possível carregar a imagem</span>
+      <div className="flex h-32 w-48 flex-col items-center justify-center gap-1 rounded-xl border border-border/50 bg-muted/40 text-muted-foreground">
+        <ImageOff className="h-5 w-5" />
+        <span className="text-[11px]">Imagem indisponível</span>
       </div>
     );
   }
-  if (!url) return <div className="h-44 w-64 animate-pulse rounded-xl bg-muted/60" />;
+
+  if (!url) {
+    return <div className="h-44 w-60 animate-pulse rounded-xl bg-muted/60" />;
+  }
+
   return (
     <>
-      <button
-        onClick={() => setOpen(true)}
-        className="group relative block overflow-hidden rounded-xl ring-1 ring-border/40 transition-transform hover:scale-[1.01]"
+      <div
+        onClick={() => setModalOpen(true)}
+        className="group relative cursor-pointer overflow-hidden rounded-xl border border-border/40 bg-muted/30"
       >
         <img
           src={url}
           alt={alt}
-          onError={() => setBroken(true)}
-          className="max-h-72 max-w-[320px] object-cover"
+          className="max-h-80 max-w-[320px] object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+          loading="lazy"
         />
-        <span className="pointer-events-none absolute inset-0 grid place-items-center bg-black/0 text-white opacity-0 transition-all group-hover:bg-black/25 group-hover:opacity-100">
-          <ZoomIn className="h-6 w-6 drop-shadow" />
-        </span>
-      </button>
-      {open && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
+          <ZoomIn className="h-6 w-6 text-white" />
+        </div>
+      </div>
+
+      {modalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur"
-          onClick={() => setOpen(false)}
+          onClick={() => setModalOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
         >
-          <img src={url} alt={alt} className="max-h-full max-w-full rounded-lg shadow-2xl" />
+          <img src={url} alt={alt} className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain shadow-2xl" />
         </div>
       )}
     </>
@@ -126,30 +133,98 @@ export function MediaFile({
   size?: number;
 }) {
   const { url } = useMediaUrl(path, messageId);
-  const sizeLabel = size ? `${(size / 1024).toFixed(size > 1024 * 1024 ? 1 : 0)} ${size > 1024 * 1024 ? "MB" : "KB"}` : null;
+  const [downloading, setDownloading] = useState(false);
+
+  let fileName = name || "";
+  if (!fileName && path) {
+    const raw = path.split("/").pop()?.split("?")[0] || "";
+    fileName = raw;
+  }
+  if (!fileName) fileName = "Arquivo";
+
+  let ext = "";
+  if (fileName.includes(".")) {
+    ext = fileName.split(".").pop()?.toUpperCase() || "";
+  } else if (path.includes(".")) {
+    const cleanPath = path.split("?")[0];
+    ext = cleanPath.split(".").pop()?.toUpperCase() || "";
+  }
+  if (ext.length > 6 || /^[0-9a-f]{8,}$/i.test(ext)) {
+    ext = "DOC";
+  }
+  const displayExt = ext ? ext : "DOC";
+
+  const sizeLabel = size
+    ? `${(size / 1024).toFixed(size > 1024 * 1024 ? 1 : 0)} ${size > 1024 * 1024 ? "MB" : "KB"}`
+    : null;
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!url) return;
+    setDownloading(true);
+    toast.info(`Baixando ${fileName}...`);
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+      toast.success("Download concluído!");
+    } catch {
+      window.open(url, "_blank");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   if (!url) {
     return (
       <div className="inline-flex items-center gap-2 rounded-xl border border-border/50 bg-background/70 px-3 py-2 text-sm text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        <span className="max-w-[180px] truncate">{name ?? "Arquivo"}</span>
+        <span className="max-w-[180px] truncate">{fileName}</span>
+        <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase">{displayExt}</span>
       </div>
     );
   }
+
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      download={name}
-      className="inline-flex items-center gap-3 rounded-xl border border-border/50 bg-background/70 px-3 py-2.5 text-sm transition-all hover:border-primary/40 hover:bg-accent"
+    <div
+      onClick={handleDownload}
+      role="button"
+      tabIndex={0}
+      title={`Clique para baixar ${fileName}`}
+      className="group inline-flex cursor-pointer items-center gap-3 rounded-xl border border-border/50 bg-background/90 px-3.5 py-2.5 text-sm transition-all hover:border-primary/50 hover:bg-accent/80 hover:shadow-sm"
     >
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
-        <FileIcon className="h-4 w-4" />
-      </span>
-      <span className="flex min-w-0 flex-col items-start">
-        <span className="max-w-[200px] truncate font-medium">{name ?? "Arquivo"}</span>
-        {sizeLabel && <span className="text-[10px] text-muted-foreground">{sizeLabel}</span>}
-      </span>
-    </a>
+      <div className="relative flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 text-primary font-bold text-[10px] tracking-wider uppercase">
+        <FileIcon className="h-4 w-4 mb-0.5 opacity-80" />
+        <span className="leading-none text-[8.5px] font-extrabold">{displayExt}</span>
+      </div>
+
+      <div className="flex min-w-0 flex-1 flex-col items-start">
+        <span className="max-w-[190px] truncate font-medium text-foreground group-hover:text-primary transition-colors">
+          {fileName}
+        </span>
+        <div className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground">
+          <span className="rounded bg-primary/10 px-1.5 py-0.2 font-semibold text-primary uppercase text-[9.5px]">
+            .{displayExt.toLowerCase()}
+          </span>
+          {sizeLabel && <span>· {sizeLabel}</span>}
+        </div>
+      </div>
+
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted/60 text-muted-foreground group-hover:bg-primary group-hover:text-primary-foreground transition-all">
+        {downloading ? (
+          <Loader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <Download className="h-4 w-4" />
+        )}
+      </div>
+    </div>
   );
 }
