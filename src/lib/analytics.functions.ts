@@ -290,9 +290,54 @@ Mantenha o tom profissional, direto e acionável. Evite textos muito longos.`;
       prompt,
     });
 
+    const summaryText = result.text.trim();
+    const generatedAtISO = new Date().toISOString();
+
+    if (companyId) {
+      await context.supabase.from("channel_events").insert({
+        company_id: companyId,
+        event_type: "ai_daily_summary" as never,
+        payload: { summary: summaryText, generated_at: generatedAtISO },
+      });
+    }
+
     return {
-      summary: result.text.trim(),
-      generatedAt: new Date().toISOString(),
+      summary: summaryText,
+      generatedAt: generatedAtISO,
+    };
+  });
+
+export const getLatestDailySummary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: userData } = await context.supabase.auth.getUser();
+    const userId = userData.user?.id;
+    if (!userId) return null;
+
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (!profile?.company_id) return null;
+
+    const { data: event } = await context.supabase
+      .from("channel_events")
+      .select("payload, created_at")
+      .eq("company_id", profile.company_id)
+      .eq("event_type", "ai_daily_summary" as never)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!event) return null;
+    const payload = event.payload as { summary?: string; generated_at?: string } | null;
+    if (!payload?.summary) return null;
+
+    return {
+      summary: payload.summary,
+      generatedAt: payload.generated_at ?? event.created_at,
     };
   });
 
