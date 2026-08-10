@@ -1,30 +1,31 @@
-import { useState } from "react";
 import { Sparkles } from "lucide-react";
 
 import { QuickActions } from "@/components/dashboard/commands/quick-actions";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import {
+  useDashboardRange,
+  RANGES,
+  type DashboardRange,
+} from "./dashboard-range-context";
 
-const RANGES = [
-  { key: "today", label: "Hoje" },
-  { key: "7d", label: "7 dias" },
-  { key: "30d", label: "30 dias" },
-  { key: "qtd", label: "Trimestre" },
-] as const;
-
-export type DashboardRange = (typeof RANGES)[number]["key"];
+export { RANGES, type DashboardRange, useDashboardRange, DashboardRangeProvider } from "./dashboard-range-context";
 
 export function DashboardHeader({
   greeting,
-  range,
-  onRangeChange,
+  range: propRange,
+  onRangeChange: propOnRangeChange,
   className,
 }: {
   greeting: string;
-  range: DashboardRange;
-  onRangeChange: (r: DashboardRange) => void;
+  range?: DashboardRange;
+  onRangeChange?: (r: DashboardRange) => void;
   className?: string;
 }) {
+  const context = useDashboardRange();
+  const activeRange = propRange ?? context.range;
+  const handleRangeChange = propOnRangeChange ?? context.setRange;
+
   return (
     <header
       className={cn(
@@ -43,7 +44,7 @@ export function DashboardHeader({
               {greeting}
             </h1>
           </div>
-          <Tabs value={range} onValueChange={(v) => onRangeChange(v as DashboardRange)}>
+          <Tabs value={activeRange} onValueChange={(v) => handleRangeChange(v as DashboardRange)}>
             <TabsList className="h-8 rounded-full border border-border/60 bg-background/70 p-0.5">
               {RANGES.map((r) => (
                 <TabsTrigger

@@ -47,6 +47,7 @@ const RANGES: Array<{ key: DashboardRange; label: string; days: number }> = [
   { key: "7d", label: "7d", days: 7 },
   { key: "30d", label: "30d", days: 30 },
   { key: "qtd", label: "Trim.", days: 90 },
+  { key: "all", label: "Tudo", days: 365 },
 ];
 
 const QUICK_ACTIONS = [

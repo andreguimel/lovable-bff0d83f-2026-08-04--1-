@@ -3,7 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 import { DashboardShell, DashboardScroll } from "@/components/dashboard/shell/dashboard-shell";
-import { DashboardHeader, greetingByHour, type DashboardRange } from "@/components/dashboard/shell/dashboard-header";
+import { DashboardHeader, greetingByHour, DashboardRangeProvider } from "@/components/dashboard/shell/dashboard-header";
 import { WidgetFrame } from "@/components/dashboard/shell/widget-frame";
 import { CommandPalette } from "@/components/dashboard/commands/command-palette";
 import { bootstrapWidgets } from "@/components/dashboard/widgets";
@@ -55,7 +55,6 @@ function heightClass(w: WidgetDefinition): string {
 }
 
 function Dashboard() {
-  const [range, setRange] = useState<DashboardRange>("30d");
   const [displayName, setDisplayName] = useState<string>("");
   const widgets = useMemo(() => listWidgets().filter((w) => !w.hidden), []);
 
@@ -77,23 +76,25 @@ function Dashboard() {
   const greeting = `${greetingByHour()}${displayName ? `, ${displayName}` : ""} 👋`;
 
   return (
-    <DashboardShell>
-      <DashboardHeader greeting={greeting} range={range} onRangeChange={setRange} />
-      <DashboardScroll>
-        <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-4 p-4 sm:p-6 md:grid-cols-2 xl:grid-cols-4">
-          {widgets.map((w) => {
-            const WidgetBody = w.component;
-            return (
-              <div key={w.id} className={`${buildGridClasses(w)} ${heightClass(w)} flex`}>
-                <WidgetFrame widget={w} className="w-full">
-                  <WidgetBody />
-                </WidgetFrame>
-              </div>
-            );
-          })}
-        </div>
-      </DashboardScroll>
-      <CommandPalette />
-    </DashboardShell>
+    <DashboardRangeProvider>
+      <DashboardShell>
+        <DashboardHeader greeting={greeting} />
+        <DashboardScroll>
+          <div className="mx-auto grid w-full max-w-[1600px] grid-cols-1 gap-4 p-4 sm:p-6 md:grid-cols-2 xl:grid-cols-4">
+            {widgets.map((w) => {
+              const WidgetBody = w.component;
+              return (
+                <div key={w.id} className={`${buildGridClasses(w)} ${heightClass(w)} flex`}>
+                  <WidgetFrame widget={w} className="w-full">
+                    <WidgetBody />
+                  </WidgetFrame>
+                </div>
+              );
+            })}
+          </div>
+        </DashboardScroll>
+        <CommandPalette />
+      </DashboardShell>
+    </DashboardRangeProvider>
   );
 }

@@ -4,6 +4,7 @@ import { MessagesSquare, Users, Bot, Zap } from "lucide-react";
 import { motion } from "framer-motion";
 
 import { getDashboardKpis } from "@/lib/analytics.functions";
+import { useDashboardRange } from "@/components/dashboard/shell/dashboard-header";
 import { WidgetSkeleton } from "@/components/dashboard/shell/widget-skeleton";
 import { WidgetError } from "@/components/dashboard/shell/widget-error";
 import { Sparkline } from "@/components/dashboard/charts/sparkline";
@@ -35,10 +36,11 @@ const TONE_MAP: Record<KpiTone, { color: string; bg: string; ring: string }> = {
 };
 
 export default function KpiRowWidget() {
+  const { days, range } = useDashboardRange();
   const fetchKpis = useServerFn(getDashboardKpis);
   const q = useQuery({
-    queryKey: ["dashboard", "kpis", 30],
-    queryFn: () => fetchKpis({ data: { days: 30 } }),
+    queryKey: ["dashboard", "kpis", days],
+    queryFn: () => fetchKpis({ data: { days } }),
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
@@ -60,6 +62,17 @@ export default function KpiRowWidget() {
     return ((recent - prior) / prior) * 100;
   };
 
+  const periodHint =
+    range === "today"
+      ? "hoje"
+      : range === "7d"
+        ? "últimos 7 dias"
+        : range === "30d"
+          ? "últimos 30 dias"
+          : range === "qtd"
+            ? "últimos 90 dias"
+            : "todo o período";
+
   const items: Array<{
     label: string;
     value: string;
@@ -72,7 +85,7 @@ export default function KpiRowWidget() {
     {
       label: "Conversas abertas",
       value: fmt(d.conversationsOpen),
-      hint: "vs. últimos 3 dias",
+      hint: "em aberto / pendentes",
       icon: MessagesSquare,
       tone: "sky",
       series: totalSeries,
@@ -81,7 +94,7 @@ export default function KpiRowWidget() {
     {
       label: "Novos contatos",
       value: fmt(d.contactsNew),
-      hint: "últimos 30 dias",
+      hint: periodHint,
       icon: Users,
       tone: "violet",
       series: inboundSeries,
