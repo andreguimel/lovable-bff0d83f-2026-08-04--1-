@@ -44,9 +44,10 @@ export function BlockLibrary({ onAdd }: Props) {
     const term = q.toLowerCase();
     return Object.values(BLOCKS).filter(
       (b) =>
-        b.label.toLowerCase().includes(term) ||
-        b.short.toLowerCase().includes(term) ||
-        b.category.toLowerCase().includes(term),
+        !b.hidden &&
+        (b.label.toLowerCase().includes(term) ||
+          b.short.toLowerCase().includes(term) ||
+          b.category.toLowerCase().includes(term)),
     );
   }, [q]);
 
@@ -109,7 +110,7 @@ export function BlockLibrary({ onAdd }: Props) {
             {favs.size > 0 && (
               <BlockGroup
                 title="Favoritos"
-                blocks={Object.values(BLOCKS).filter((b) => favs.has(b.kind))}
+                blocks={Object.values(BLOCKS).filter((b) => !b.hidden && favs.has(b.kind))}
                 onAdd={handleAdd}
                 onDragStart={onDragStart}
                 favs={favs}
@@ -121,7 +122,7 @@ export function BlockLibrary({ onAdd }: Props) {
                 title="Recentes"
                 blocks={recent
                   .map((k) => BLOCKS[k as NodeKind])
-                  .filter((b): b is BlockMeta => Boolean(b))}
+                  .filter((b): b is BlockMeta => Boolean(b) && !b.hidden)}
                 onAdd={handleAdd}
                 onDragStart={onDragStart}
                 favs={favs}
@@ -129,7 +130,7 @@ export function BlockLibrary({ onAdd }: Props) {
               />
             )}
             {CATEGORIES.map((cat) => {
-              const blocks = Object.values(BLOCKS).filter((b) => b.category === cat.id);
+              const blocks = Object.values(BLOCKS).filter((b) => !b.hidden && b.category === cat.id);
               if (blocks.length === 0) return null;
               const Icon = cat.icon;
               const isCollapsed = collapsed.has(cat.id);

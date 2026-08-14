@@ -57,6 +57,7 @@ export interface BlockMeta {
   /** number of outgoing handles: 1 default, 2 for conditions */
   outputs?: 0 | 1 | 2;
   inputs?: 0 | 1;
+  hidden?: boolean;
 }
 
 export const BLOCKS: Record<NodeKind, BlockMeta> = {
@@ -85,6 +86,7 @@ export const BLOCKS: Record<NodeKind, BlockMeta> = {
     icon: ImageIcon,
     category: "channels",
     accent: "oklch(0.72 0.18 200)",
+    hidden: true,
   },
   send_audio: {
     kind: "send_audio",
@@ -93,6 +95,7 @@ export const BLOCKS: Record<NodeKind, BlockMeta> = {
     icon: FileAudio,
     category: "channels",
     accent: "oklch(0.7 0.18 300)",
+    hidden: true,
   },
   send_video: {
     kind: "send_video",
@@ -101,6 +104,7 @@ export const BLOCKS: Record<NodeKind, BlockMeta> = {
     icon: FileVideo,
     category: "channels",
     accent: "oklch(0.68 0.2 20)",
+    hidden: true,
   },
   send_document: {
     kind: "send_document",
@@ -109,6 +113,7 @@ export const BLOCKS: Record<NodeKind, BlockMeta> = {
     icon: FileText,
     category: "channels",
     accent: "oklch(0.72 0.14 60)",
+    hidden: true,
   },
   question: {
     kind: "question",

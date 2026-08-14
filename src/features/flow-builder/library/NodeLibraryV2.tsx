@@ -43,10 +43,12 @@ export function NodeLibraryV2() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  const HIDDEN_KINDS = useMemo(() => new Set(["send_image", "send_audio", "send_video", "send_document"]), []);
+
   const allItems = useMemo<LibraryItem[]>(
-    () => blockRegistry.list().map(toLibraryItem),
+    () => blockRegistry.list().filter((d) => !HIDDEN_KINDS.has(d.kind)).map(toLibraryItem),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
+    [HIDDEN_KINDS],
   );
 
   const filtered = useMemo(() => {
