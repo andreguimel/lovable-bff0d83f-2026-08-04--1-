@@ -622,249 +622,182 @@ export function PropertiesPanel({
 
             {kind === "condition" && (
               <div className="space-y-4">
-                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                  Defina as condições e regra lógica para que o fluxo continue pela saída <b>Sim</b> deste bloco:
+                <p className="text-[12px] text-muted-foreground leading-relaxed">
+                  Defina as condições e regra lógica para que o fluxo continue pela saída superior deste bloco:
                 </p>
 
                 {/* SELEÇÃO DE LÓGICA: TODAS (E) / QUALQUER (OU) */}
-                <div className="space-y-1.5 rounded-lg border border-border/60 bg-card/40 p-2.5">
-                  <Label className="text-[11px] font-semibold text-foreground">Regra de Combinação Lógica</Label>
-                  <div className="grid gap-1.5 pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-                      <input
-                        type="radio"
-                        name="condition_logic"
-                        checked={(data.logic || "ALL") === "ALL"}
-                        onChange={() => onChange({ logic: "ALL" })}
-                        className="text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span>Contato corresponde a <b>TODAS</b> condições (Lógica E)</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
-                      <input
-                        type="radio"
-                        name="condition_logic"
-                        checked={data.logic === "ANY"}
-                        onChange={() => onChange({ logic: "ANY" })}
-                        className="text-primary focus:ring-primary h-3.5 w-3.5"
-                      />
-                      <span>Contato corresponde a <b>QUALQUER</b> condição (Lógica OU)</span>
-                    </label>
-                  </div>
+                <div className="space-y-2.5">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="condition_logic"
+                      checked={(data.logic || "ALL") === "ALL"}
+                      onChange={() => onChange({ logic: "ALL" })}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Contato corresponde a <b>TODAS</b> condições</span>
+                  </label>
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs font-medium text-foreground">
+                    <input
+                      type="radio"
+                      name="condition_logic"
+                      checked={data.logic === "ANY"}
+                      onChange={() => onChange({ logic: "ANY" })}
+                      className="text-primary focus:ring-primary h-4 w-4"
+                    />
+                    <span>Contato corresponde a <b>QUALQUER</b> condição</span>
+                  </label>
                 </div>
 
-                {/* LISTA DE REGRAS ATIVAS */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-[11px] font-semibold text-foreground">
-                      Condições Configuradas ({Array.isArray(data.conditions) ? data.conditions.length : 0})
-                    </Label>
+                {/* LÓGICA ATIVA SUBTITLE (ESTILO BOTCONVERSA) */}
+                <div className="text-xs font-bold text-foreground pt-1">
+                  {(data.logic || "ALL") === "ALL" ? "Lógica E" : "Lógica OU"}
+                </div>
 
-                    {/* DROP DOWN + ADICIONAR CONDIÇÃO (BIBLIOTECA) */}
-                    <Select
-                      onValueChange={(val) => {
-                        const cur = Array.isArray(data.conditions) ? data.conditions : [];
-                        const type = val as any;
-                        const newRule: any = {
-                          id: String(Date.now() + Math.random()),
-                          type,
-                          tag_operator: "has",
-                          business_hours_operator: "open",
-                          start_time: "08:00",
-                          end_time: "18:00",
-                          weekdays: [1, 2, 3, 4, 5],
-                          field: "contact.name",
-                          operator: "equals",
-                          value: "",
-                        };
-                        onChange({ conditions: [...cur, newRule] });
-                      }}
-                    >
-                      <SelectTrigger className="h-7 text-[11px] px-2.5 w-auto gap-1">
-                        <Plus className="h-3 w-3" />
-                        <span>Adicionar Condição</span>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="tag">🏷️ Etiqueta</SelectItem>
-                        <SelectItem value="weekday">📅 Dia da Semana ao passar por aqui</SelectItem>
-                        <SelectItem value="business_hours">🕒 Horário de Atendimento</SelectItem>
-                        <SelectItem value="time_window">⏰ Hora ao passar por aqui</SelectItem>
-                        <SelectItem value="assigned_agent">👤 Atendimento atribuído a atendente</SelectItem>
-                        <SelectItem value="custom_field">⚙️ Variável / Campo do Contato</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                {/* CARDS DE CONDIÇÕES CONFIGURADAS */}
+                {Array.isArray(data.conditions) && data.conditions.length > 0 && (
+                  <div className="space-y-2.5">
+                    {data.conditions.map((c: any, cIdx: number) => {
+                      const updateRule = (patch: Record<string, any>) => {
+                        const cur = [...(data.conditions as any[])];
+                        cur[cIdx] = { ...cur[cIdx], ...patch };
+                        onChange({ conditions: cur });
+                      };
 
-                  {Array.isArray(data.conditions) && data.conditions.length > 0 ? (
-                    <div className="space-y-2 mt-2">
-                      {data.conditions.map((c: any, cIdx: number) => {
-                        const updateRule = (patch: Record<string, any>) => {
-                          const cur = [...(data.conditions as any[])];
-                          cur[cIdx] = { ...cur[cIdx], ...patch };
-                          onChange({ conditions: cur });
-                        };
+                      const removeRule = () => {
+                        const cur = (data.conditions as any[]).filter((_, i) => i !== cIdx);
+                        onChange({ conditions: cur });
+                      };
 
-                        const removeRule = () => {
-                          const cur = (data.conditions as any[]).filter((_, i) => i !== cIdx);
-                          onChange({ conditions: cur });
-                        };
-
-                        return (
-                          <div
-                            key={c.id || cIdx}
-                            className="rounded-lg border border-border/70 bg-card/60 p-3 space-y-2 text-xs"
+                      return (
+                        <div
+                          key={c.id || cIdx}
+                          className="rounded-xl border border-primary/30 bg-primary/5 dark:bg-card/80 p-3.5 space-y-1.5 text-xs relative"
+                        >
+                          <button
+                            type="button"
+                            onClick={removeRule}
+                            className="absolute top-2.5 right-2.5 p-1 text-muted-foreground hover:text-destructive rounded"
+                            title="Remover condição"
                           >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-primary text-[11px]">
-                                {c.type === "tag" && "🏷️ Etiqueta"}
-                                {c.type === "weekday" && "📅 Dia da Semana"}
-                                {c.type === "business_hours" && "🕒 Horário de Atendimento"}
-                                {c.type === "time_window" && "⏰ Hora ao passar por aqui"}
-                                {c.type === "assigned_agent" && "👤 Atendimento Atribuído"}
-                                {c.type === "custom_field" && "⚙️ Campo do Contato / Variável"}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={removeRule}
-                                className="p-1 text-destructive hover:bg-destructive/10 rounded"
-                                title="Remover condição"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
 
-                            {/* CONFIGURAÇÃO ESPECÍFICA POR TIPO */}
+                          <div className="font-semibold text-foreground text-xs pr-6">
+                            {c.type === "tag" && "Etiqueta"}
+                            {c.type === "weekday" && "Dia da Semana ao passar por aqui"}
+                            {c.type === "business_hours" && "In opening hours when passing by here"}
+                            {c.type === "time_window" && "Hora ao passar por aqui"}
+                            {c.type === "assigned_agent" && "Atendimento está atribuído para um atendente"}
+                            {c.type === "custom_field" && (c.field || "Campo do contato ou variável")}
+                          </div>
+
+                          <div className="text-[11px] font-medium text-muted-foreground uppercase">
+                            {c.type === "tag" ? (c.tag_operator === "has_not" ? "NÃO É" : "É") : "É"}
+                          </div>
+
+                          <div className="font-semibold text-foreground text-xs pt-0.5">
+                            {c.type === "business_hours" && (
+                              <Select
+                                value={c.business_hours_operator || "open"}
+                                onValueChange={(v) => updateRule({ business_hours_operator: v })}
+                              >
+                                <SelectTrigger className="h-7 text-xs bg-background">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="open">Aberto</SelectItem>
+                                  <SelectItem value="closed">Fechado</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+
                             {c.type === "tag" && (
-                              <div className="grid gap-1.5">
-                                <div className="flex gap-2">
-                                  <Select
-                                    value={c.tag_operator || "has"}
-                                    onValueChange={(v) => updateRule({ tag_operator: v })}
-                                  >
-                                    <SelectTrigger className="h-7 text-xs w-[110px]">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="has">Possui</SelectItem>
-                                      <SelectItem value="has_not">NÃO possui</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                  <Input
-                                    value={c.tag_name || ""}
-                                    onChange={(e) => updateRule({ tag_name: e.target.value })}
-                                    placeholder="Nome da etiqueta (ex: VIP)"
-                                    className="h-7 text-xs flex-1"
-                                  />
-                                </div>
-                              </div>
+                              <Input
+                                value={c.tag_name || ""}
+                                onChange={(e) => updateRule({ tag_name: e.target.value })}
+                                placeholder="Nome da etiqueta (ex: VIP)"
+                                className="h-7 text-xs bg-background"
+                              />
                             )}
 
                             {c.type === "weekday" && (
-                              <div className="grid gap-1.5">
-                                <Label className="text-[10px] text-muted-foreground">Dias válidos</Label>
-                                <div className="flex flex-wrap gap-1">
-                                  {[
-                                    { id: 1, label: "Seg" },
-                                    { id: 2, label: "Ter" },
-                                    { id: 3, label: "Qua" },
-                                    { id: 4, label: "Qui" },
-                                    { id: 5, label: "Sex" },
-                                    { id: 6, label: "Sáb" },
-                                    { id: 0, label: "Dom" },
-                                  ].map((day) => {
-                                    const active = (c.weekdays || []).includes(day.id);
-                                    return (
-                                      <button
-                                        key={day.id}
-                                        type="button"
-                                        onClick={() => {
-                                          const curDays = c.weekdays || [];
-                                          const nextDays = active
-                                            ? curDays.filter((d: number) => d !== day.id)
-                                            : [...curDays, day.id];
-                                          updateRule({ weekdays: nextDays });
-                                        }}
-                                        className={`px-2 py-0.5 text-[10px] rounded font-medium border ${
-                                          active
-                                            ? "bg-primary text-primary-foreground border-primary"
-                                            : "bg-muted text-muted-foreground border-border/50"
-                                        }`}
-                                      >
-                                        {day.label}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            )}
-
-                            {c.type === "business_hours" && (
-                              <div className="grid gap-1.5">
-                                <Label className="text-[10px] text-muted-foreground">Status do Atendimento</Label>
-                                <Select
-                                  value={c.business_hours_operator || "open"}
-                                  onValueChange={(v) => updateRule({ business_hours_operator: v })}
-                                >
-                                  <SelectTrigger className="h-7 text-xs">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectItem value="open">🟢 Dentro do Horário (Aberto)</SelectItem>
-                                    <SelectItem value="closed">🔴 Fora do Horário (Fechado)</SelectItem>
-                                  </SelectContent>
-                                </Select>
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {[
+                                  { id: 1, label: "Seg" },
+                                  { id: 2, label: "Ter" },
+                                  { id: 3, label: "Qua" },
+                                  { id: 4, label: "Qui" },
+                                  { id: 5, label: "Sex" },
+                                  { id: 6, label: "Sáb" },
+                                  { id: 0, label: "Dom" },
+                                ].map((day) => {
+                                  const active = (c.weekdays || []).includes(day.id);
+                                  return (
+                                    <button
+                                      key={day.id}
+                                      type="button"
+                                      onClick={() => {
+                                        const curDays = c.weekdays || [];
+                                        const nextDays = active
+                                          ? curDays.filter((d: number) => d !== day.id)
+                                          : [...curDays, day.id];
+                                        updateRule({ weekdays: nextDays });
+                                      }}
+                                      className={`px-2 py-0.5 text-[10px] rounded font-medium border ${
+                                        active
+                                          ? "bg-primary text-primary-foreground border-primary"
+                                          : "bg-background text-muted-foreground border-border/50"
+                                      }`}
+                                    >
+                                      {day.label}
+                                    </button>
+                                  );
+                                })}
                               </div>
                             )}
 
                             {c.type === "time_window" && (
                               <div className="grid grid-cols-2 gap-2">
-                                <div className="grid gap-1">
-                                  <Label className="text-[10px] text-muted-foreground">Horário Inicial</Label>
-                                  <Input
-                                    type="time"
-                                    value={c.start_time || "08:00"}
-                                    onChange={(e) => updateRule({ start_time: e.target.value })}
-                                    className="h-7 text-xs"
-                                  />
-                                </div>
-                                <div className="grid gap-1">
-                                  <Label className="text-[10px] text-muted-foreground">Horário Final</Label>
-                                  <Input
-                                    type="time"
-                                    value={c.end_time || "18:00"}
-                                    onChange={(e) => updateRule({ end_time: e.target.value })}
-                                    className="h-7 text-xs"
-                                  />
-                                </div>
+                                <Input
+                                  type="time"
+                                  value={c.start_time || "08:00"}
+                                  onChange={(e) => updateRule({ start_time: e.target.value })}
+                                  className="h-7 text-xs bg-background"
+                                />
+                                <Input
+                                  type="time"
+                                  value={c.end_time || "18:00"}
+                                  onChange={(e) => updateRule({ end_time: e.target.value })}
+                                  className="h-7 text-xs bg-background"
+                                />
                               </div>
                             )}
 
                             {c.type === "assigned_agent" && (
-                              <div className="grid gap-1.5">
-                                <Label className="text-[10px] text-muted-foreground">Atendente</Label>
-                                <Select
-                                  value={c.agent_user_id || ""}
-                                  onValueChange={(v) => {
-                                    const ag = agents.find((a) => a.id === v);
-                                    updateRule({ agent_user_id: v, agent_user_name: ag?.name || "" });
-                                  }}
-                                >
-                                  <SelectTrigger className="h-7 text-xs">
-                                    <SelectValue placeholder="Selecione um atendente..." />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {agents.map((a) => (
-                                      <SelectItem key={a.id} value={a.id}>
-                                        {a.name}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              <Select
+                                value={c.agent_user_id || ""}
+                                onValueChange={(v) => {
+                                  const ag = agents.find((a) => a.id === v);
+                                  updateRule({ agent_user_id: v, agent_user_name: ag?.name || "" });
+                                }}
+                              >
+                                <SelectTrigger className="h-7 text-xs bg-background">
+                                  <SelectValue placeholder="Selecione um atendente..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {agents.map((a) => (
+                                    <SelectItem key={a.id} value={a.id}>
+                                      {a.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                             )}
 
                             {c.type === "custom_field" && (
-                              <div className="space-y-1.5">
+                              <div className="space-y-1.5 pt-1">
                                 <VariableSelect
                                   value={c.field || ""}
                                   onChange={(v) => updateRule({ field: v })}
@@ -874,7 +807,7 @@ export function PropertiesPanel({
                                     value={c.operator || "equals"}
                                     onValueChange={(v) => updateRule({ operator: v })}
                                   >
-                                    <SelectTrigger className="h-7 text-xs">
+                                    <SelectTrigger className="h-7 text-xs bg-background">
                                       <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -889,20 +822,56 @@ export function PropertiesPanel({
                                     value={c.value || ""}
                                     onChange={(e) => updateRule({ value: e.target.value })}
                                     placeholder="Valor..."
-                                    className="h-7 text-xs"
+                                    className="h-7 text-xs bg-background"
                                   />
                                 </div>
                               </div>
                             )}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed border-border/60 p-3 text-center text-xs text-muted-foreground">
-                      Nenhuma condição configurada. Escolha uma na biblioteca acima.
-                    </div>
-                  )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* DROPDOWN "Selecionar Condição" (ESTILO BOTCONVERSA) */}
+                <div className="pt-1">
+                  <Select
+                    onValueChange={(val) => {
+                      const cur = Array.isArray(data.conditions) ? data.conditions : [];
+                      const type = val as any;
+                      const newRule: any = {
+                        id: String(Date.now() + Math.random()),
+                        type,
+                        tag_operator: "has",
+                        business_hours_operator: "open",
+                        start_time: "08:00",
+                        end_time: "18:00",
+                        weekdays: [1, 2, 3, 4, 5],
+                        field: "contact.name",
+                        operator: "equals",
+                        value: "",
+                      };
+                      onChange({ conditions: [...cur, newRule] });
+                    }}
+                  >
+                    <SelectTrigger className="h-10 text-xs w-full justify-between border-primary/40 bg-background text-foreground font-medium rounded-lg shadow-sm">
+                      <SelectValue placeholder="Selecionar Condição" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 py-1.5">
+                          OPERAÇÕES MAIS USADAS
+                        </SelectLabel>
+                        <SelectItem value="tag" className="text-xs">Etiqueta</SelectItem>
+                        <SelectItem value="weekday" className="text-xs">Dia da Semana ao passar por aqui</SelectItem>
+                        <SelectItem value="business_hours" className="text-xs">Horário de Atendimento</SelectItem>
+                        <SelectItem value="time_window" className="text-xs">Hora ao passar por aqui</SelectItem>
+                        <SelectItem value="assigned_agent" className="text-xs">Atendimento está atribuído para um atendente</SelectItem>
+                        <SelectItem value="custom_field" className="text-xs">Campo do contato ou variável</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             )}
