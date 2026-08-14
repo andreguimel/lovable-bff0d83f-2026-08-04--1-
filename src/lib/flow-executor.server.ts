@@ -658,9 +658,84 @@ function evalConditionOp(left: unknown, op: string, right: string): boolean {
   }
 }
 
+function evalConditionRule(rule: any, ctx: ExecutionContext): boolean {
+  switch (rule.type) {
+    case "tag": {
+      const tags = (ctx.variables.contact as { tags?: string[] } | undefined)?.tags ?? [];
+      const tagName = String(rule.tag_name || "").trim().toLowerCase();
+      const has = tags.some((t) => String(t).toLowerCase() === tagName);
+      return rule.tag_operator === "has_not" ? !has : has;
+    }
+    case "weekday": {
+      const now = new Date();
+      const localDay = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" })).getDay();
+      const validDays: number[] = Array.isArray(rule.weekdays) ? rule.weekdays : [];
+      return validDays.includes(localDay);
+    }
+    case "business_hours": {
+      if (typeof (ctx.variables as any).__is_open === "boolean") {
+        const isOpen = !!(ctx.variables as any).__is_open;
+        return rule.business_hours_operator === "closed" ? !isOpen : isOpen;
+      }
+      const now = new Date();
+      const brDate = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+      const day = brDate.getDay();
+      const hours = brDate.getHours();
+      const isOpen = day >= 1 && day <= 5 && hours >= 8 && hours < 18;
+      return rule.business_hours_operator === "closed" ? !isOpen : isOpen;
+    }
+    case "time_window": {
+      const now = new Date();
+      const brDate = new Date(now.toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+      const curMins = brDate.getHours() * 60 + brDate.getMinutes();
+      const [startH, startM] = (rule.start_time || "08:00").split(":").map(Number);
+      const [endH, endM] = (rule.end_time || "18:00").split(":").map(Number);
+      const startMins = (startH || 0) * 60 + (startM || 0);
+      const endMins = (endH || 0) * 60 + (endM || 0);
+      return curMins >= startMins && curMins <= endMins;
+    }
+    case "assigned_agent": {
+      const assigned = String(
+        (ctx.variables.conversation as { assigned_user_id?: string; agent_id?: string } | undefined)?.assigned_user_id ||
+        (ctx.variables.conversation as { assigned_user_id?: string; agent_id?: string } | undefined)?.agent_id ||
+        ""
+      );
+      return assigned === String(rule.agent_user_id || "");
+    }
+    case "custom_field":
+    default: {
+      const field = String(rule.field || "").trim();
+      const operator = String(rule.operator || "equals").trim();
+      const rawVal = String(rule.value || "");
+      const resolvedVal = resolveVars(rawVal, ctx.variables);
+      const leftVal = getByPath(ctx.variables, field);
+      return evalConditionOp(leftVal, operator, resolvedVal);
+    }
+  }
+}
+
 const conditionNode: NodeExecutor = {
   async execute(node, ctx) {
     const nd = node.data;
+
+    // Multi-condition evaluation (BotConversa style)
+    const conditions = Array.isArray(nd.conditions) ? nd.conditions : [];
+    if (conditions.length > 0) {
+      const logic = nd.logic === "ANY" ? "ANY" : "ALL";
+      const results = conditions.map((rule) => evalConditionRule(rule, ctx));
+      const pass = logic === "ANY" ? results.some(Boolean) : results.every(Boolean);
+      return {
+        status: "ok",
+        output: {
+          mode: "multi_condition",
+          logic,
+          results,
+          pass,
+        },
+        nextHandle: pass ? "true" : "false",
+      };
+    }
+
     const field = typeof nd.field === "string" ? nd.field.trim() : "";
     const operator = typeof nd.operator === "string" ? nd.operator.trim() : "";
 

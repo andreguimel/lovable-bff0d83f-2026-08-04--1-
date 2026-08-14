@@ -520,20 +520,291 @@ export function PropertiesPanel({
             )}
 
             {kind === "condition" && (
-              <div className="grid gap-1.5">
-                <Label htmlFor="expression" className="text-[11px] text-muted-foreground">
-                  Expressão
-                </Label>
-                <Input
-                  id="expression"
-                  value={typeof data.expression === "string" ? data.expression : ""}
-                  onChange={(e) => onChange({ expression: e.target.value })}
-                  placeholder="ex: contact.tags contains 'VIP'"
-                  className="h-8 font-mono text-xs"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  Saída <b>sim</b> quando verdadeira, <b>não</b> caso contrário.
+              <div className="space-y-4">
+                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                  Defina as condições e regra lógica para que o fluxo continue pela saída <b>Sim</b> deste bloco:
                 </p>
+
+                {/* SELEÇÃO DE LÓGICA: TODAS (E) / QUALQUER (OU) */}
+                <div className="space-y-1.5 rounded-lg border border-border/60 bg-card/40 p-2.5">
+                  <Label className="text-[11px] font-semibold text-foreground">Regra de Combinação Lógica</Label>
+                  <div className="grid gap-1.5 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="condition_logic"
+                        checked={(data.logic || "ALL") === "ALL"}
+                        onChange={() => onChange({ logic: "ALL" })}
+                        className="text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span>Contato corresponde a <b>TODAS</b> condições (Lógica E)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="condition_logic"
+                        checked={data.logic === "ANY"}
+                        onChange={() => onChange({ logic: "ANY" })}
+                        className="text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span>Contato corresponde a <b>QUALQUER</b> condição (Lógica OU)</span>
+                    </label>
+                  </div>
+                </div>
+
+                {/* LISTA DE REGRAS ATIVAS */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px] font-semibold text-foreground">
+                      Condições Configuradas ({Array.isArray(data.conditions) ? data.conditions.length : 0})
+                    </Label>
+
+                    {/* DROP DOWN + ADICIONAR CONDIÇÃO (BIBLIOTECA) */}
+                    <Select
+                      onValueChange={(val) => {
+                        const cur = Array.isArray(data.conditions) ? data.conditions : [];
+                        const type = val as any;
+                        const newRule: any = {
+                          id: String(Date.now() + Math.random()),
+                          type,
+                          tag_operator: "has",
+                          business_hours_operator: "open",
+                          start_time: "08:00",
+                          end_time: "18:00",
+                          weekdays: [1, 2, 3, 4, 5],
+                          field: "contact.name",
+                          operator: "equals",
+                          value: "",
+                        };
+                        onChange({ conditions: [...cur, newRule] });
+                      }}
+                    >
+                      <SelectTrigger className="h-7 text-[11px] px-2.5 w-auto gap-1">
+                        <Plus className="h-3 w-3" />
+                        <span>Adicionar Condição</span>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tag">🏷️ Etiqueta</SelectItem>
+                        <SelectItem value="weekday">📅 Dia da Semana ao passar por aqui</SelectItem>
+                        <SelectItem value="business_hours">🕒 Horário de Atendimento</SelectItem>
+                        <SelectItem value="time_window">⏰ Hora ao passar por aqui</SelectItem>
+                        <SelectItem value="assigned_agent">👤 Atendimento atribuído a atendente</SelectItem>
+                        <SelectItem value="custom_field">⚙️ Variável / Campo do Contato</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {Array.isArray(data.conditions) && data.conditions.length > 0 ? (
+                    <div className="space-y-2 mt-2">
+                      {data.conditions.map((c: any, cIdx: number) => {
+                        const updateRule = (patch: Record<string, any>) => {
+                          const cur = [...(data.conditions as any[])];
+                          cur[cIdx] = { ...cur[cIdx], ...patch };
+                          onChange({ conditions: cur });
+                        };
+
+                        const removeRule = () => {
+                          const cur = (data.conditions as any[]).filter((_, i) => i !== cIdx);
+                          onChange({ conditions: cur });
+                        };
+
+                        return (
+                          <div
+                            key={c.id || cIdx}
+                            className="rounded-lg border border-border/70 bg-card/60 p-3 space-y-2 text-xs"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-primary text-[11px]">
+                                {c.type === "tag" && "🏷️ Etiqueta"}
+                                {c.type === "weekday" && "📅 Dia da Semana"}
+                                {c.type === "business_hours" && "🕒 Horário de Atendimento"}
+                                {c.type === "time_window" && "⏰ Hora ao passar por aqui"}
+                                {c.type === "assigned_agent" && "👤 Atendimento Atribuído"}
+                                {c.type === "custom_field" && "⚙️ Campo do Contato / Variável"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={removeRule}
+                                className="p-1 text-destructive hover:bg-destructive/10 rounded"
+                                title="Remover condição"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+
+                            {/* CONFIGURAÇÃO ESPECÍFICA POR TIPO */}
+                            {c.type === "tag" && (
+                              <div className="grid gap-1.5">
+                                <div className="flex gap-2">
+                                  <Select
+                                    value={c.tag_operator || "has"}
+                                    onValueChange={(v) => updateRule({ tag_operator: v })}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs w-[110px]">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="has">Possui</SelectItem>
+                                      <SelectItem value="has_not">NÃO possui</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input
+                                    value={c.tag_name || ""}
+                                    onChange={(e) => updateRule({ tag_name: e.target.value })}
+                                    placeholder="Nome da etiqueta (ex: VIP)"
+                                    className="h-7 text-xs flex-1"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {c.type === "weekday" && (
+                              <div className="grid gap-1.5">
+                                <Label className="text-[10px] text-muted-foreground">Dias válidos</Label>
+                                <div className="flex flex-wrap gap-1">
+                                  {[
+                                    { id: 1, label: "Seg" },
+                                    { id: 2, label: "Ter" },
+                                    { id: 3, label: "Qua" },
+                                    { id: 4, label: "Qui" },
+                                    { id: 5, label: "Sex" },
+                                    { id: 6, label: "Sáb" },
+                                    { id: 0, label: "Dom" },
+                                  ].map((day) => {
+                                    const active = (c.weekdays || []).includes(day.id);
+                                    return (
+                                      <button
+                                        key={day.id}
+                                        type="button"
+                                        onClick={() => {
+                                          const curDays = c.weekdays || [];
+                                          const nextDays = active
+                                            ? curDays.filter((d: number) => d !== day.id)
+                                            : [...curDays, day.id];
+                                          updateRule({ weekdays: nextDays });
+                                        }}
+                                        className={`px-2 py-0.5 text-[10px] rounded font-medium border ${
+                                          active
+                                            ? "bg-primary text-primary-foreground border-primary"
+                                            : "bg-muted text-muted-foreground border-border/50"
+                                        }`}
+                                      >
+                                        {day.label}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
+                            {c.type === "business_hours" && (
+                              <div className="grid gap-1.5">
+                                <Label className="text-[10px] text-muted-foreground">Status do Atendimento</Label>
+                                <Select
+                                  value={c.business_hours_operator || "open"}
+                                  onValueChange={(v) => updateRule({ business_hours_operator: v })}
+                                >
+                                  <SelectTrigger className="h-7 text-xs">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="open">🟢 Dentro do Horário (Aberto)</SelectItem>
+                                    <SelectItem value="closed">🔴 Fora do Horário (Fechado)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            {c.type === "time_window" && (
+                              <div className="grid grid-cols-2 gap-2">
+                                <div className="grid gap-1">
+                                  <Label className="text-[10px] text-muted-foreground">Horário Inicial</Label>
+                                  <Input
+                                    type="time"
+                                    value={c.start_time || "08:00"}
+                                    onChange={(e) => updateRule({ start_time: e.target.value })}
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                                <div className="grid gap-1">
+                                  <Label className="text-[10px] text-muted-foreground">Horário Final</Label>
+                                  <Input
+                                    type="time"
+                                    value={c.end_time || "18:00"}
+                                    onChange={(e) => updateRule({ end_time: e.target.value })}
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {c.type === "assigned_agent" && (
+                              <div className="grid gap-1.5">
+                                <Label className="text-[10px] text-muted-foreground">Atendente</Label>
+                                <Select
+                                  value={c.agent_user_id || ""}
+                                  onValueChange={(v) => {
+                                    const ag = agents.find((a) => a.id === v);
+                                    updateRule({ agent_user_id: v, agent_user_name: ag?.name || "" });
+                                  }}
+                                >
+                                  <SelectTrigger className="h-7 text-xs">
+                                    <SelectValue placeholder="Selecione um atendente..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {agents.map((a) => (
+                                      <SelectItem key={a.id} value={a.id}>
+                                        {a.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+
+                            {c.type === "custom_field" && (
+                              <div className="space-y-1.5">
+                                <Input
+                                  value={c.field || ""}
+                                  onChange={(e) => updateRule({ field: e.target.value })}
+                                  placeholder="Campo/Variável (ex: contact.name)"
+                                  className="h-7 text-xs font-mono"
+                                />
+                                <div className="grid grid-cols-2 gap-1.5">
+                                  <Select
+                                    value={c.operator || "equals"}
+                                    onValueChange={(v) => updateRule({ operator: v })}
+                                  >
+                                    <SelectTrigger className="h-7 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="equals">é igual a</SelectItem>
+                                      <SelectItem value="not_equals">é diferente de</SelectItem>
+                                      <SelectItem value="contains">contém</SelectItem>
+                                      <SelectItem value="not_contains">não contém</SelectItem>
+                                      <SelectItem value="exists">existe</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                  <Input
+                                    value={c.value || ""}
+                                    onChange={(e) => updateRule({ value: e.target.value })}
+                                    placeholder="Valor..."
+                                    className="h-7 text-xs"
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-lg border border-dashed border-border/60 p-3 text-center text-xs text-muted-foreground">
+                      Nenhuma condição configurada. Escolha uma na biblioteca acima.
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 

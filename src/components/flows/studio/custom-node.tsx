@@ -8,6 +8,31 @@ export interface ButtonItem {
   label: string;
 }
 
+export type ConditionType =
+  | "tag"
+  | "weekday"
+  | "business_hours"
+  | "time_window"
+  | "assigned_agent"
+  | "custom_field";
+
+export interface ConditionRule {
+  id: string;
+  type: ConditionType;
+  label?: string;
+  tag_name?: string;
+  tag_operator?: "has" | "has_not";
+  weekdays?: number[];
+  business_hours_operator?: "open" | "closed";
+  start_time?: string;
+  end_time?: string;
+  agent_user_id?: string;
+  agent_user_name?: string;
+  field?: string;
+  operator?: string;
+  value?: string;
+}
+
 export interface ActionItem {
   id: string;
   kind: NodeKind;
@@ -45,11 +70,31 @@ export interface FlowNodeData extends Record<string, unknown> {
   media_size?: number;
   is_voice?: boolean;
   is_typing?: boolean;
+  logic?: "ALL" | "ANY";
+  conditions?: ConditionRule[];
   actions?: ActionItem[];
   buttons?: ButtonItem[];
   __selected?: boolean;
   __invalid?: boolean;
   __running?: boolean;
+}
+
+export function previewRule(rule: ConditionRule): string {
+  switch (rule.type) {
+    case "tag":
+      return `Etiqueta ${rule.tag_operator === "has_not" ? "NÃO é" : "É"} #${rule.tag_name || "..."}`;
+    case "weekday":
+      return `Dia da Semana ao passar por aqui`;
+    case "business_hours":
+      return `Horário de Atendimento É ${rule.business_hours_operator === "closed" ? "Fechado" : "Aberto"}`;
+    case "time_window":
+      return `Hora entre ${rule.start_time || "08:00"} e ${rule.end_time || "18:00"}`;
+    case "assigned_agent":
+      return `Atendimento atribuído a ${rule.agent_user_name || "Atendente"}`;
+    case "custom_field":
+    default:
+      return `${rule.field || "Campo"} ${rule.operator || "é igual a"} ${rule.value || ""}`;
+  }
 }
 
 function preview(kind: NodeKind, data: Record<string, unknown>): string | null {
@@ -88,6 +133,10 @@ function preview(kind: NodeKind, data: Record<string, unknown>): string | null {
         ? `Aguardar ${data.seconds}s${data.is_typing ? " (digitando...)" : ""}`
         : "sem tempo";
     case "condition":
+      if (Array.isArray(data.conditions) && data.conditions.length > 0) {
+        const mode = data.logic === "ANY" ? "QUALQUER (OU)" : "TODAS (E)";
+        return `Lógica ${mode} · ${data.conditions.length} condição(ões)`;
+      }
       return typeof data.expression === "string" && data.expression
         ? data.expression
         : "sem expressão";
@@ -184,6 +233,19 @@ function FlowNodeInner(props: NodeProps) {
           </button>
         )}
       </div>
+
+      {kind === "condition" && Array.isArray(data.conditions) && data.conditions.length > 0 && (
+        <div className="mt-2 flex flex-col gap-1 border-t border-border/40 pt-2 text-[10.5px]">
+          <div className="flex items-center justify-between text-[9.5px] font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+            <span>Lógica {data.logic === "ANY" ? "QUALQUER (OU)" : "TODAS (E)"}</span>
+          </div>
+          {data.conditions.map((c, i) => (
+            <div key={c.id || i} className="p-1.5 rounded bg-background/60 border border-border/30 text-[10.5px] text-foreground font-medium truncate">
+              • {previewRule(c)}
+            </div>
+          ))}
+        </div>
+      )}
 
       {hasMultipleActions ? (
         expanded ? (
