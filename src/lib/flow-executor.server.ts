@@ -1072,14 +1072,37 @@ const tagNode: NodeExecutor = {
 
 const transferNode: NodeExecutor = {
   async execute(node, ctx) {
-    const userId = (node.data.user_id as string | undefined) ?? null;
+    const strOrNull = (v: unknown): string | null => (typeof v === "string" && v.trim() ? v.trim() : null);
+    const targetType = strOrNull(node.data.target_type) ?? "queue";
+    const userId = targetType === "agent" ? (strOrNull(node.data.agent_id) ?? strOrNull(node.data.user_id)) : null;
+    const department = targetType === "department" ? strOrNull(node.data.department) : null;
+    const message = strOrNull(node.data.transfer_message);
+
     if (!ctx.dryRun && ctx.conversation.id) {
+      const updateData: Record<string, any> = {
+        assigned_user_id: userId,
+        assigned_agent_id: null,
+      };
+      if (department) {
+        updateData.department = department;
+      }
       await ctx.supabase
         .from("conversations")
-        .update({ assigned_user_id: userId, assigned_agent_id: null })
+        .update(updateData)
         .eq("id", ctx.conversation.id);
+
+      if (message) {
+        await ctx.supabase.from("conversation_transfers").insert({
+          conversation_id: ctx.conversation.id,
+          company_id: (ctx.conversation as any).company_id ?? (ctx as any).companyId,
+          transferred_by: null,
+          to_user_id: userId,
+          note: message,
+          event_type: "conversation_transferred",
+        });
+      }
     }
-    return { status: "ok", output: { transferred_to: userId } };
+    return { status: "ok", output: { target_type: targetType, transferred_to: userId, department } };
   },
 };
 

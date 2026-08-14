@@ -146,6 +146,12 @@ function preview(kind: NodeKind, data: Record<string, unknown>): string | null {
       return typeof data.url === "string" ? data.url : "sem URL";
     case "tag":
       return typeof data.tag === "string" ? `Tag #${data.tag}` : "sem tag";
+    case "transfer": {
+      const t = (data.target_type as string) ?? "queue";
+      if (t === "agent" && data.agent_label) return `Atribuir a: ${data.agent_label}`;
+      if (t === "department" && data.department) return `Equipe: ${data.department}`;
+      return "Fila Geral (Inbox)";
+    }
     default:
       return null;
   }

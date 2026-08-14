@@ -695,12 +695,59 @@ const BLOCKS: BlockSpec[] = [
         "Encerra a automação e leva a conversa ao Inbox para um operador humano continuar.",
       examples: ["Encaminhar para atendimento humano após identificar objeção."],
     },
-    preview: () => "Encaminhar ao Inbox humano",
+    preview: (d) => {
+      const t = s(d.target_type) ?? "queue";
+      if (t === "agent" && s(d.agent_label)) return `Transferir para: ${d.agent_label}`;
+      if (t === "department" && s(d.department)) return `Transferir para Equipe: ${d.department}`;
+      return "Transferir para Fila Geral (Inbox)";
+    },
     fields: [
       {
-        type: "info",
-        text:
-          "A partir daqui a conversa sai da automação e aparece no Inbox para atendimento humano.",
+        type: "radio",
+        key: "target_type",
+        label: "Modo de Atribuição",
+        options: [
+          { value: "queue", label: "Fila Geral (Inbox sem operador fixo)" },
+          { value: "agent", label: "Atendente / Membro Específico" },
+          { value: "department", label: "Equipe / Departamento" },
+        ],
+      },
+      {
+        type: "select",
+        key: "agent_id",
+        label: "Atendente responsável",
+        placeholder: "Selecione um atendente…",
+        emptyMessage: "Nenhum atendente cadastrado.",
+        persistLabelKey: "agent_label",
+        required: true,
+        options: (ctx) =>
+          (ctx.members && ctx.members.length > 0 ? ctx.members : ctx.agents).map((a) => ({
+            value: a.id,
+            label: a.name,
+          })),
+        visible: (d) => (s(d.target_type) ?? "queue") === "agent",
+      },
+      {
+        type: "select",
+        key: "department",
+        label: "Equipe / Departamento",
+        placeholder: "Selecione o departamento…",
+        required: true,
+        options: [
+          { value: "Vendas", label: "💼 Vendas / Comercial" },
+          { value: "Suporte", label: "🎧 Suporte Técnico" },
+          { value: "Financeiro", label: "💰 Financeiro / Cobrança" },
+          { value: "Atendimento", label: "💬 Atendimento Geral" },
+        ],
+        visible: (d) => (s(d.target_type) ?? "queue") === "department",
+      },
+      {
+        type: "textarea",
+        key: "transfer_message",
+        label: "Nota / Instrução de Transferência (opcional)",
+        placeholder: "Ex: Cliente qualificado no bot com interesse no plano PRO…",
+        rows: 3,
+        help: "Nota interna para o operador responsável no Inbox.",
       },
     ],
   },

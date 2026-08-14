@@ -903,6 +903,101 @@ export function PropertiesPanel({
               </div>
             )}
 
+            {kind === "transfer" && (
+              <div className="space-y-3">
+                <div className="grid gap-1.5">
+                  <Label className="text-[11px] font-semibold text-foreground">Modo de Atribuição</Label>
+                  <div className="grid gap-1.5 pt-1">
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="transfer_target_type"
+                        checked={(data.target_type || "queue") === "queue"}
+                        onChange={() => onChange({ target_type: "queue" })}
+                        className="text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span>Fila Geral (Inbox sem operador fixo)</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="transfer_target_type"
+                        checked={data.target_type === "agent"}
+                        onChange={() => onChange({ target_type: "agent" })}
+                        className="text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span>Atendente / Membro Específico</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-foreground">
+                      <input
+                        type="radio"
+                        name="transfer_target_type"
+                        checked={data.target_type === "department"}
+                        onChange={() => onChange({ target_type: "department" })}
+                        className="text-primary focus:ring-primary h-3.5 w-3.5"
+                      />
+                      <span>Equipe / Departamento</span>
+                    </label>
+                  </div>
+                </div>
+
+                {data.target_type === "agent" && (
+                  <div className="grid gap-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Atendente Responsável</Label>
+                    <Select
+                      value={typeof data.agent_id === "string" ? data.agent_id : ""}
+                      onValueChange={(v) => {
+                        const ag = agents.find((a) => a.id === v);
+                        onChange({ agent_id: v, agent_label: ag?.name || "" });
+                      }}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="Selecione um atendente…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {agents.map((a) => (
+                          <SelectItem key={a.id} value={a.id}>
+                            {a.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {data.target_type === "department" && (
+                  <div className="grid gap-1.5">
+                    <Label className="text-[11px] text-muted-foreground">Equipe / Departamento</Label>
+                    <Select
+                      value={typeof data.department === "string" ? data.department : "Vendas"}
+                      onValueChange={(v) => onChange({ department: v })}
+                    >
+                      <SelectTrigger className="h-8">
+                        <SelectValue placeholder="Selecione o departamento…" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Vendas">💼 Vendas / Comercial</SelectItem>
+                        <SelectItem value="Suporte">🎧 Suporte Técnico</SelectItem>
+                        <SelectItem value="Financeiro">💰 Financeiro / Cobrança</SelectItem>
+                        <SelectItem value="Atendimento">💬 Atendimento Geral</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="grid gap-1.5">
+                  <Label className="text-[11px] text-muted-foreground">Nota / Instrução (opcional)</Label>
+                  <Textarea
+                    value={typeof data.transfer_message === "string" ? data.transfer_message : ""}
+                    onChange={(e) => onChange({ transfer_message: e.target.value })}
+                    placeholder="Ex: Cliente qualificado com interesse no plano PRO..."
+                    rows={3}
+                    className="resize-none text-xs"
+                  />
+                </div>
+              </div>
+            )}
+
             {kind === "assign_agent" && (
               <div className="grid gap-1.5">
                 <Label className="text-[11px] text-muted-foreground">Agente responsável</Label>
