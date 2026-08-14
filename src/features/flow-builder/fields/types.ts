@@ -166,6 +166,10 @@ export interface DurationFieldSpec extends FieldBase {
   clearable?: boolean;
 }
 
+export interface ConditionBuilderFieldSpec extends FieldBase {
+  type: "condition_builder";
+}
+
 export type FieldSpec =
   | TextFieldSpec
   | TextAreaFieldSpec
@@ -177,7 +181,8 @@ export type FieldSpec =
   | InfoFieldSpec
   | MenuOptionsFieldSpec
   | RandomizerRoutesFieldSpec
-  | DurationFieldSpec;
+  | DurationFieldSpec
+  | ConditionBuilderFieldSpec;
 
 
 

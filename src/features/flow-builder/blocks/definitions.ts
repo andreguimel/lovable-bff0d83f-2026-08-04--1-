@@ -595,6 +595,9 @@ const BLOCKS: BlockSpec[] = [
       ],
     },
     preview: (d) => {
+      if (Array.isArray(d.conditions) && d.conditions.length > 0) {
+        return `Lógica ${d.logic === "ANY" ? "QUALQUER (OU)" : "TODAS (E)"} (${d.conditions.length} regras)`;
+      }
       const field = s(d.field);
       const op = s(d.operator);
       if (field && op) {
@@ -606,6 +609,7 @@ const BLOCKS: BlockSpec[] = [
       return s(d.expression) ? `Se ${clip(String(d.expression).trim(), 70)}` : null;
     },
     validate: (d) => {
+      if (Array.isArray(d.conditions) && d.conditions.length > 0) return ok();
       const field = s(d.field);
       const op = s(d.operator);
       // Modo estruturado (FB-10.5).
@@ -623,41 +627,7 @@ const BLOCKS: BlockSpec[] = [
     },
     fields: [
       {
-        type: "text",
-        key: "field",
-        label: "Campo ou variável",
-        placeholder: "ex: contact.name, ai.output, http.status, last_message",
-        mono: true,
-        help: "Use notação com ponto. Variáveis disponíveis: contact.*, ai.output, http.*, last_message.",
-      },
-      {
-        type: "select",
-        key: "operator",
-        label: "Operador",
-        options: [
-          { value: "equals", label: "é igual a" },
-          { value: "not_equals", label: "é diferente de" },
-          { value: "contains", label: "contém" },
-          { value: "not_contains", label: "não contém" },
-          { value: "gt", label: "maior que" },
-          { value: "gte", label: "maior ou igual a" },
-          { value: "lt", label: "menor que" },
-          { value: "lte", label: "menor ou igual a" },
-          { value: "exists", label: "existe (não vazio)" },
-          { value: "not_exists", label: "não existe / vazio" },
-        ],
-      },
-      {
-        type: "text",
-        key: "value",
-        label: "Valor de comparação",
-        placeholder: "ex: VIP, 200, {{ai.output}}",
-        mono: true,
-        help: "Aceita variáveis {{...}}.",
-        visible: (d) => {
-          const op = typeof d.operator === "string" ? d.operator : "";
-          return op !== "exists" && op !== "not_exists";
-        },
+        type: "condition_builder",
       },
     ],
   },
