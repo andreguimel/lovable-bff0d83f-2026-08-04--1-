@@ -412,7 +412,8 @@ export function PropertiesPanel({
                   );
                 })}
               </div>
-            ) : (
+            ) : null}
+
             {/* GERENCIADOR DE BOTÕES INTERATIVOS (PADRÃO BOTCONVERSA) */}
             <div className="space-y-2 border-t border-border/60 pt-3">
               <div className="flex items-center justify-between">
