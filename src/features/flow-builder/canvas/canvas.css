@@ -91,9 +91,9 @@
   border-radius: 9px;
   border: 1px solid transparent;
   background: transparent;
-  color: var(--color-muted-foreground);
+  color: var(--color-foreground) !important;
   font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -101,9 +101,9 @@
   transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
 }
 .fbv2-canvas .fbv2-layout-btn:hover {
-  background: color-mix(in oklab, var(--color-primary) 12%, transparent);
-  color: var(--color-foreground);
-  border-color: color-mix(in oklab, var(--color-primary) 30%, transparent);
+  background: color-mix(in oklab, var(--color-foreground) 10%, transparent);
+  color: var(--color-foreground) !important;
+  border-color: var(--color-border);
 }
 .fbv2-canvas .fbv2-layout-btn:active { transform: translateY(1px); }
 .fbv2-canvas .fbv2-layout-btn[disabled] { opacity: 0.4; cursor: not-allowed; }
