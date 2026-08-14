@@ -4,6 +4,7 @@
  * Painel discreto de atalhos do canvas. Aparece quando `open` é true.
  * Estética Cyber-Industrial: fundo blur, borda LED, tipografia mono.
  */
+import { useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -26,6 +27,18 @@ export function ShortcutsOverlay({
   open: boolean;
   onClose: () => void;
 }) {
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onClose]);
+
   return (
     <AnimatePresence>
       {open && (
