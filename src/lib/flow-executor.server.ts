@@ -331,11 +331,12 @@ const mediaNode: NodeExecutor = {
 const waitNode: NodeExecutor = {
   async execute(node) {
     const seconds = Number(node.data.seconds ?? 0);
-    if (seconds <= 0) return { status: "ok", output: { waited: 0 } };
+    const isTyping = !!node.data.is_typing;
+    if (seconds <= 0) return { status: "ok", output: { waited: 0, is_typing: isTyping } };
     const resumeAt = new Date(Date.now() + seconds * 1000).toISOString();
     return {
       status: "ok",
-      output: { wait_seconds: seconds, resume_at: resumeAt },
+      output: { wait_seconds: seconds, resume_at: resumeAt, is_typing: isTyping },
       wait: { state: "WAITING_DELAY", resumeAt },
     };
   },

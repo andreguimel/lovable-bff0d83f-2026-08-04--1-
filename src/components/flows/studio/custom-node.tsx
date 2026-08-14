@@ -3,6 +3,11 @@ import { Handle, Position, type NodeProps } from "@xyflow/react";
 import { ChevronDown, ChevronUp, Layers, Plus } from "lucide-react";
 import { BLOCKS, type NodeKind } from "./blocks";
 
+export interface ButtonItem {
+  id: string;
+  label: string;
+}
+
 export interface ActionItem {
   id: string;
   kind: NodeKind;
@@ -19,6 +24,8 @@ export interface ActionItem {
   media_mime?: string;
   media_size?: number;
   is_voice?: boolean;
+  is_typing?: boolean;
+  buttons?: ButtonItem[];
 }
 
 export interface FlowNodeData extends Record<string, unknown> {
@@ -37,7 +44,9 @@ export interface FlowNodeData extends Record<string, unknown> {
   media_mime?: string;
   media_size?: number;
   is_voice?: boolean;
+  is_typing?: boolean;
   actions?: ActionItem[];
+  buttons?: ButtonItem[];
   __selected?: boolean;
   __invalid?: boolean;
   __running?: boolean;
@@ -76,7 +85,7 @@ function preview(kind: NodeKind, data: Record<string, unknown>): string | null {
           : "Nenhum arquivo selecionado";
     case "wait":
       return typeof data.seconds === "number" && data.seconds > 0
-        ? `Aguardar ${data.seconds}s`
+        ? `Aguardar ${data.seconds}s${data.is_typing ? " (digitando...)" : ""}`
         : "sem tempo";
     case "condition":
       return typeof data.expression === "string" && data.expression
@@ -125,6 +134,7 @@ function FlowNodeInner(props: NodeProps) {
   const invalid = data.__invalid ?? isInvalid(kind, data);
   const isRunning = data.__running;
   const actions = Array.isArray(data.actions) ? data.actions : [];
+  const buttons = Array.isArray(data.buttons) ? data.buttons : [];
   const hasMultipleActions = actions.length > 0;
   const [expanded, setExpanded] = useState(true);
 
@@ -220,6 +230,23 @@ function FlowNodeInner(props: NodeProps) {
         )
       )}
 
+      {/* RENDERIZAÇÃO DE BOTÕES DE RESPOSTA (BOTCONVERSA STYLE) */}
+      {buttons.length > 0 && (
+        <div className="mt-2.5 flex flex-col gap-1 border-t border-border/40 pt-2">
+          <p className="text-[9.5px] font-semibold text-muted-foreground uppercase tracking-wider">
+            Botões de Resposta ({buttons.length})
+          </p>
+          {buttons.map((btn, bIdx) => (
+            <div
+              key={btn.id || bIdx}
+              className="flex items-center justify-between px-2 py-1 rounded bg-primary/10 border border-primary/30 text-[11px] font-medium text-primary"
+            >
+              <span className="truncate">🔘 {btn.label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {invalid && !isRunning && (
         <span className="flow-node__badge flow-node__badge--warn">
           <span className="flow-node__badge-dot" />
@@ -251,6 +278,29 @@ function FlowNodeInner(props: NodeProps) {
           />
           <span className="flow-node__hlabel flow-node__hlabel--yes">sim</span>
           <span className="flow-node__hlabel flow-node__hlabel--no">não</span>
+        </>
+      ) : buttons.length > 0 ? (
+        <>
+          {buttons.map((btn, idx) => {
+            const topPct = 50 + idx * 25;
+            return (
+              <div key={btn.id || idx}>
+                <Handle
+                  type="source"
+                  id={`btn_${btn.id}`}
+                  position={Position.Right}
+                  className="flow-handle"
+                  style={{ top: `${topPct}%` }}
+                />
+                <span
+                  className="flow-node__hlabel text-[9px] font-medium text-primary"
+                  style={{ top: `calc(${topPct}% - 8px)` }}
+                >
+                  {btn.label}
+                </span>
+              </div>
+            );
+          })}
         </>
       ) : meta.outputs === 0 ? null : (
         <Handle type="source" position={Position.Right} className="flow-handle" />

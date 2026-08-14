@@ -212,6 +212,19 @@ const BLOCKS: BlockSpec[] = [
         help: VARS_HELP,
       },
     ],
+    getHandles: (d) => {
+      const buttons = Array.isArray(d.buttons) ? d.buttons : [];
+      if (buttons.length > 0) {
+        return {
+          in: 1,
+          out: buttons.map((b) => ({
+            id: `btn_${(b as { id: string }).id}`,
+            label: (b as { label: string }).label || "Botão",
+          })),
+        };
+      }
+      return { in: 1, out: [{ id: "default" }] };
+    },
     aiAssist: {
       generateLabel: "Gerar com IA",
       explain: (d) =>

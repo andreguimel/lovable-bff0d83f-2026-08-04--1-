@@ -298,15 +298,24 @@ export function PropertiesPanel({
                           )}
 
                           {act.kind === "wait" && (
-                            <div className="grid gap-1.5">
-                              <Label className="text-[10px] text-muted-foreground">Aguardar (segundos)</Label>
-                              <Input
-                                type="number"
-                                min={1}
-                                value={act.seconds || 5}
-                                onChange={(e) => updateAction(idx, { seconds: Number(e.target.value) || 1 })}
-                                className="h-7 text-xs"
-                              />
+                            <div className="space-y-2">
+                              <div className="grid gap-1.5">
+                                <Label className="text-[10px] text-muted-foreground">Aguardar (segundos)</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  value={act.seconds || 5}
+                                  onChange={(e) => updateAction(idx, { seconds: Number(e.target.value) || 1 })}
+                                  className="h-7 text-xs"
+                                />
+                              </div>
+                              <div className="flex items-center justify-between rounded border border-border/50 bg-card/30 px-2.5 py-1.5">
+                                <span className="text-[11px] text-foreground font-medium">Simular "digitando..."</span>
+                                <Switch
+                                  checked={!!act.is_typing}
+                                  onCheckedChange={(v) => updateAction(idx, { is_typing: v })}
+                                />
+                              </div>
                             </div>
                           )}
 
@@ -404,10 +413,70 @@ export function PropertiesPanel({
                 })}
               </div>
             ) : (
-              <p className="text-[11px] text-muted-foreground italic px-1 py-2">
-                Nenhuma sub-função configurada. Clique em "Adicionar Função" acima para criar.
-              </p>
-            )}
+            {/* GERENCIADOR DE BOTÕES INTERATIVOS (PADRÃO BOTCONVERSA) */}
+            <div className="space-y-2 border-t border-border/60 pt-3">
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                  🔘 Botões de Resposta ({Array.isArray(data.buttons) ? data.buttons.length : 0}/3)
+                </span>
+                {(!Array.isArray(data.buttons) || data.buttons.length < 3) && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-6 text-[11px] px-2 gap-1"
+                    onClick={() => {
+                      const cur = Array.isArray(data.buttons) ? data.buttons : [];
+                      const next = [...cur, { id: String(cur.length + 1), label: `Opção ${cur.length + 1}` }];
+                      onChange({ buttons: next });
+                    }}
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Botão</span>
+                  </Button>
+                )}
+              </div>
+              {Array.isArray(data.buttons) && data.buttons.length > 0 ? (
+                <div className="space-y-1.5 mt-2">
+                  {data.buttons.map((btn, bIdx) => (
+                    <div key={btn.id || bIdx} className="flex items-center gap-1.5">
+                      <span className="text-[11px] font-mono text-muted-foreground w-4">
+                        {bIdx + 1}.
+                      </span>
+                      <Input
+                        value={btn.label}
+                        onChange={(e) => {
+                          const cur = [...(data.buttons || [])];
+                          cur[bIdx] = { ...cur[bIdx], label: e.target.value };
+                          onChange({ buttons: cur });
+                        }}
+                        placeholder="Rótulo do botão..."
+                        className="h-7 text-xs flex-1"
+                        maxLength={20}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const cur = (data.buttons || []).filter((_, i) => i !== bIdx);
+                          onChange({ buttons: cur });
+                        }}
+                        className="p-1 text-destructive hover:bg-destructive/10 rounded"
+                        title="Remover botão"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                  <p className="text-[10px] text-muted-foreground italic">
+                    Cada botão cria uma porta de saída própria no canvas para ramificar a conversa.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-muted-foreground italic px-1 py-1">
+                  Nenhum botão de resposta adicionado. Adicione até 3 botões por mensagem.
+                </p>
+              )}
+            </div>
           </div>
         )}
 
