@@ -19,13 +19,114 @@ import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { MediaPicker, type MediaKind } from "@/components/flows/media-picker";
 import { BLOCKS, type NodeKind } from "./blocks";
 import type { ActionItem, FlowNodeData } from "./custom-node";
+
+const PRESET_VARIABLES = [
+  {
+    group: "Dados do Contato",
+    items: [
+      { value: "contact.name", label: "👤 Nome do Contato (contact.name)" },
+      { value: "contact.phone", label: "📱 Telefone (contact.phone)" },
+      { value: "contact.email", label: "✉️ E-mail (contact.email)" },
+      { value: "contact.tags", label: "🏷️ Etiquetas (contact.tags)" },
+    ],
+  },
+  {
+    group: "Mensagens & Respostas",
+    items: [
+      { value: "last_message", label: "💬 Última Mensagem do Contato (last_message)" },
+      { value: "reply", label: "✏️ Resposta da Pergunta Anterior (reply)" },
+      { value: "ai.output", label: "🤖 Resposta do Agente IA (ai.output)" },
+    ],
+  },
+  {
+    group: "Integrações & Webhooks",
+    items: [
+      { value: "http.status", label: "🌐 Status HTTP (http.status)" },
+      { value: "http.body", label: "📦 Resposta do Webhook (http.body)" },
+    ],
+  },
+];
+
+function VariableSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const isPreset = PRESET_VARIABLES.some((g) =>
+    g.items.some((i) => i.value === value)
+  );
+  const [isCustom, setIsCustom] = useState(!isPreset && value !== "");
+
+  return (
+    <div className="space-y-1">
+      <Label className="text-[10px] text-muted-foreground">Campo ou Variável</Label>
+      {!isCustom ? (
+        <Select
+          value={isPreset ? value : ""}
+          onValueChange={(val) => {
+            if (val === "__custom__") {
+              setIsCustom(true);
+            } else {
+              onChange(val);
+            }
+          }}
+        >
+          <SelectTrigger className="h-7 text-xs">
+            <SelectValue placeholder="Selecione uma variável disponível..." />
+          </SelectTrigger>
+          <SelectContent>
+            {PRESET_VARIABLES.map((group) => (
+              <SelectGroup key={group.group}>
+                <SelectLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold px-2 py-1">
+                  {group.group}
+                </SelectLabel>
+                {group.items.map((item) => (
+                  <SelectItem key={item.value} value={item.value} className="text-xs">
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))}
+            <SelectGroup>
+              <SelectItem value="__custom__" className="text-xs text-primary font-medium">
+                ✍️ Digitar variável personalizada...
+              </SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      ) : (
+        <div className="flex gap-1.5">
+          <Input
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder="ex: contact.cpf, http.body.user.id"
+            className="h-7 text-xs font-mono flex-1"
+          />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-[10px]"
+            onClick={() => setIsCustom(false)}
+          >
+            Lista
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface Props {
   nodeId: string;
@@ -764,11 +865,9 @@ export function PropertiesPanel({
 
                             {c.type === "custom_field" && (
                               <div className="space-y-1.5">
-                                <Input
+                                <VariableSelect
                                   value={c.field || ""}
-                                  onChange={(e) => updateRule({ field: e.target.value })}
-                                  placeholder="Campo/Variável (ex: contact.name)"
-                                  className="h-7 text-xs font-mono"
+                                  onChange={(v) => updateRule({ field: v })}
                                 />
                                 <div className="grid grid-cols-2 gap-1.5">
                                   <Select
