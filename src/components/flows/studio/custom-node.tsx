@@ -1,6 +1,25 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position, type NodeProps } from "@xyflow/react";
+import { ChevronDown, ChevronUp, Layers, Plus } from "lucide-react";
 import { BLOCKS, type NodeKind } from "./blocks";
+
+export interface ActionItem {
+  id: string;
+  kind: NodeKind;
+  label?: string;
+  body?: string;
+  caption?: string;
+  seconds?: number;
+  agent_id?: string;
+  tag?: string;
+  url?: string;
+  method?: string;
+  media_url?: string;
+  media_filename?: string;
+  media_mime?: string;
+  media_size?: number;
+  is_voice?: boolean;
+}
 
 export interface FlowNodeData extends Record<string, unknown> {
   __kind: NodeKind;
@@ -18,28 +37,46 @@ export interface FlowNodeData extends Record<string, unknown> {
   media_mime?: string;
   media_size?: number;
   is_voice?: boolean;
+  actions?: ActionItem[];
   __selected?: boolean;
   __invalid?: boolean;
   __running?: boolean;
 }
 
-function preview(kind: NodeKind, data: FlowNodeData): string | null {
+function preview(kind: NodeKind, data: Record<string, unknown>): string | null {
   switch (kind) {
     case "message":
     case "question":
       return typeof data.body === "string" && data.body ? data.body.slice(0, 90) : null;
     case "send_image":
+      return typeof data.media_filename === "string"
+        ? `Imagem: ${data.media_filename}`
+        : data.media_url
+          ? "Imagem anexada"
+          : "Nenhuma imagem selecionada";
     case "send_audio":
+      return typeof data.media_filename === "string"
+        ? `Áudio: ${data.media_filename}`
+        : data.media_url
+          ? data.is_voice
+            ? "Áudio de voz (PTT)"
+            : "Áudio anexado"
+          : "Nenhum áudio selecionado";
     case "send_video":
+      return typeof data.media_filename === "string"
+        ? `Vídeo: ${data.media_filename}`
+        : data.media_url
+          ? "Vídeo anexado"
+          : "Nenhum vídeo selecionado";
     case "send_document":
       return typeof data.media_filename === "string"
-        ? data.media_filename
+        ? `Arquivo: ${data.media_filename}`
         : data.media_url
-          ? "Mídia anexada"
-          : "Nenhuma mídia";
+          ? "Arquivo anexado"
+          : "Nenhum arquivo selecionado";
     case "wait":
       return typeof data.seconds === "number" && data.seconds > 0
-        ? `${data.seconds}s`
+        ? `Aguardar ${data.seconds}s`
         : "sem tempo";
     case "condition":
       return typeof data.expression === "string" && data.expression
@@ -50,13 +87,13 @@ function preview(kind: NodeKind, data: FlowNodeData): string | null {
     case "webhook":
       return typeof data.url === "string" ? data.url : "sem URL";
     case "tag":
-      return typeof data.tag === "string" ? `#${data.tag}` : "sem tag";
+      return typeof data.tag === "string" ? `Tag #${data.tag}` : "sem tag";
     default:
       return null;
   }
 }
 
-function isInvalid(kind: NodeKind, data: FlowNodeData): boolean {
+function isInvalid(kind: NodeKind, data: Record<string, unknown>): boolean {
   switch (kind) {
     case "message":
     case "question":
@@ -87,6 +124,9 @@ function FlowNodeInner(props: NodeProps) {
   const p = preview(kind, data);
   const invalid = data.__invalid ?? isInvalid(kind, data);
   const isRunning = data.__running;
+  const actions = Array.isArray(data.actions) ? data.actions : [];
+  const hasMultipleActions = actions.length > 0;
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <div
@@ -105,20 +145,79 @@ function FlowNodeInner(props: NodeProps) {
         />
       )}
 
-      <div className="flow-node__header">
-        <span className="flow-node__icon">
-          <Icon className="h-3.5 w-3.5" />
-        </span>
-        <div className="flow-node__titles">
-          <p className="flow-node__title">{data.label || meta.label}</p>
-          <p className="flow-node__kind">{meta.label}</p>
+      <div className="flow-node__header flex items-center justify-between">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="flow-node__icon">
+            {hasMultipleActions ? <Layers className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+          </span>
+          <div className="flow-node__titles">
+            <p className="flow-node__title">
+              {data.label || (hasMultipleActions ? `Bloco (${actions.length} ações)` : meta.label)}
+            </p>
+            <p className="flow-node__kind">
+              {hasMultipleActions ? `${actions.length} funções sequenciais` : meta.label}
+            </p>
+          </div>
         </div>
+
+        {hasMultipleActions && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setExpanded(!expanded);
+            }}
+            className="p-1 rounded text-muted-foreground hover:bg-muted/50"
+            title={expanded ? "Recolher ações" : "Expandir ações"}
+          >
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+        )}
       </div>
 
-      {p && (
-        <p className="flow-node__body" title={p}>
-          {p}
-        </p>
+      {hasMultipleActions ? (
+        expanded ? (
+          <div className="mt-2.5 flex flex-col gap-1.5 border-t border-border/40 pt-2">
+            {actions.map((act, idx) => {
+              const actMeta = BLOCKS[act.kind] ?? BLOCKS.message;
+              const ActIcon = actMeta.icon;
+              const actPreview = preview(act.kind, act as unknown as Record<string, unknown>);
+              return (
+                <div
+                  key={act.id || idx}
+                  className="flex items-start gap-2 p-1.5 rounded bg-background/60 border border-border/30 text-[11px]"
+                >
+                  <span className="mt-0.5 text-xs text-muted-foreground font-mono">
+                    {idx + 1}.
+                  </span>
+                  <span className="mt-0.5 text-primary">
+                    <ActIcon className="h-3 w-3" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground truncate">
+                      {act.label || actMeta.label}
+                    </p>
+                    {actPreview && (
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        {actPreview}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="flow-node__body text-[10px] text-muted-foreground cursor-pointer">
+            {actions.length} ações recolhidas. Clique para expandir.
+          </p>
+        )
+      ) : (
+        p && (
+          <p className="flow-node__body" title={p}>
+            {p}
+          </p>
+        )
       )}
 
       {invalid && !isRunning && (
@@ -161,3 +260,4 @@ function FlowNodeInner(props: NodeProps) {
 }
 
 export const FlowNode = memo(FlowNodeInner);
+

@@ -72,8 +72,8 @@ export const BLOCKS: Record<NodeKind, BlockMeta> = {
   },
   message: {
     kind: "message",
-    label: "Enviar mensagem",
-    short: "Texto simples com variáveis",
+    label: "Conteúdo",
+    short: "Envie mensagens, mídias e conteúdos em um único bloco",
     icon: MessageSquare,
     category: "channels",
     accent: "oklch(0.72 0.16 160)",

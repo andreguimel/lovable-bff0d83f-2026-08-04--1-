@@ -1758,7 +1758,17 @@ const NODE_PLUGINS: Record<string, NodeExecutor> = {
 
 
 export function getPlugin(nodeType: string): NodeExecutor | null {
-  return NODE_PLUGINS[nodeType] ?? null;
+  const basePlugin = NODE_PLUGINS[nodeType] ?? null;
+  if (!basePlugin) return null;
+  return {
+    ...basePlugin,
+    async execute(node, ctx) {
+      if (Array.isArray(node.data?.actions) && node.data.actions.length > 0) {
+        return executeMultiActionNode(node, ctx);
+      }
+      return basePlugin.execute(node, ctx);
+    },
+  };
 }
 
 // ---- Graph integrity ---------------------------------------------------
@@ -2187,6 +2197,53 @@ async function resolvePublishedFlowVersion(
   return { version, rowsReturned: rows.length, sql, reason };
 }
 
+async function executeMultiActionNode(node: NodeRow, ctx: ExecutionContext): Promise<NodeResult> {
+  const rawActions = node.data?.actions;
+  if (!Array.isArray(rawActions) || rawActions.length === 0) {
+    const plugin = getPlugin(node.node_type);
+    if (!plugin) return { status: "skipped", message: `Tipo ${node.node_type} não implementado` };
+    return plugin.execute(node, ctx);
+  }
+
+  const actions = rawActions as Array<Record<string, unknown> & { kind?: string; id?: string }>;
+  const varKey = `__action_index_${node.id}`;
+  const startIndex = Number(ctx.variables[varKey]) || 0;
+  let lastResult: NodeResult = { status: "ok", output: { completed: true } };
+
+  for (let i = startIndex; i < actions.length; i++) {
+    const act = actions[i];
+    const actKind = String(act.kind || "message");
+    const actPlugin = getPlugin(actKind);
+    if (!actPlugin) continue;
+
+    const subNode: NodeRow = {
+      id: `${node.id}:${act.id || i}`,
+      node_type: actKind,
+      data: act,
+    };
+
+    ctx.variables[varKey] = i;
+    const res = await actPlugin.execute(subNode, ctx);
+    lastResult = res;
+
+    if (res.messagesSent) {
+      ctx.variables.__messagesSent = (Number(ctx.variables.__messagesSent) || 0) + res.messagesSent;
+    }
+
+    if (res.status === "failed") {
+      delete ctx.variables[varKey];
+      return res;
+    }
+
+    if (res.wait) {
+      return res;
+    }
+  }
+
+  delete ctx.variables[varKey];
+  return lastResult;
+}
+
 export async function executeRun({ supabase, runId, maxSteps = 200 }: ExecuteOptions): Promise<{
   state: FlowState;
   messagesSent: number;
@@ -2346,7 +2403,7 @@ export async function executeRun({ supabase, runId, maxSteps = 200 }: ExecuteOpt
 
       while (attempt <= policy.max) {
         try {
-          result = await plugin.execute(node, ctx);
+          result = await executeMultiActionNode(node, ctx);
           lastError = null;
           break;
         } catch (err) {
