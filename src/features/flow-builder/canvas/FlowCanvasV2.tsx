@@ -399,6 +399,7 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
       <button
         type="button"
         className="fbv3-help-fab"
+        style={{ bottom: "82px", right: "24px" }}
         onClick={() => setShortcutsOpen(true)}
         title="Atalhos do canvas (?)"
         aria-label="Atalhos do canvas"

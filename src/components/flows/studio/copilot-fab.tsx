@@ -93,8 +93,10 @@ export function CopilotFab({ flowId, onApply, contextSummary }: Props) {
       <button
         type="button"
         className="copilot-fab"
+        style={{ bottom: "20px", right: "20px" }}
         onClick={() => setOpen(true)}
         aria-label="Copiloto IA"
+        title="Copiloto IA — Criar e otimizar fluxos"
       >
         <Sparkles className="h-5 w-5" />
       </button>
