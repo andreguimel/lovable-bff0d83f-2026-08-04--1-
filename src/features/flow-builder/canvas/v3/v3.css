@@ -119,13 +119,24 @@
     0 8px 24px -12px rgba(0, 0, 0, 0.6),
     0 0 0 1px transparent;
   transition:
-    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1),
     box-shadow 180ms ease,
     border-color 160ms ease;
   overflow: visible;
   color: var(--fbv3-text-hi);
   font-family: "Geist", inherit;
   animation: fbv3-node-in 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+/* FB-10.3.1 — Arraste sem latência em tempo real (60fps / 120fps) */
+.react-flow__node.dragging,
+.react-flow__node.dragging *,
+.react-flow__node:active,
+.react-flow__node:active *,
+.fbv3-node.dragging,
+.fbv3-node:active {
+  transition: none !important;
+  will-change: transform !important;
 }
 
 @keyframes fbv3-node-in {

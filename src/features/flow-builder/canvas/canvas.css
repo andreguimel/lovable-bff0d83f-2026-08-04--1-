@@ -129,12 +129,19 @@
     );
   box-shadow: 0 6px 18px -10px
     color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 45%, transparent);
-  transition: transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
   font-family: inherit;
   will-change: transform;
 }
+.react-flow__node.dragging .fbv2-node,
+.react-flow__node:active .fbv2-node,
+.fbv2-node.dragging,
+.fbv2-node:active {
+  transition: none !important;
+  transform: none !important;
+  will-change: transform !important;
+}
 .fbv2-node:hover {
-  transform: translateY(-1px);
   box-shadow: 0 12px 26px -10px
     color-mix(in oklab, var(--fbv2-accent, var(--color-primary)) 60%, transparent);
   border-color: color-mix(
