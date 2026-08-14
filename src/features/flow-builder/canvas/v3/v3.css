@@ -1337,27 +1337,25 @@
  * Shortcuts overlay (FB-13.3)
  * ============================================================ */
 .fbv3-shortcuts-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 90;
   display: grid;
   place-items: center;
-  background: color-mix(in oklab, #05050a 55%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: color-mix(in oklab, #000000 65%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .fbv3-shortcuts {
-  width: min(460px, calc(100vw - 32px));
+  width: min(480px, calc(100vw - 32px));
   border-radius: 18px;
-  padding: 18px 20px 16px;
-  background:
-    linear-gradient(180deg, rgba(24, 24, 32, 0.96), rgba(14, 14, 20, 0.96));
-  border: 1px solid color-mix(in oklab, oklch(0.72 0.19 262) 28%, color-mix(in oklab, var(--color-foreground) 8%, transparent));
+  padding: 20px 22px 18px;
+  background: var(--color-card, #ffffff);
+  border: 1px solid var(--color-border);
   box-shadow:
-    0 0 0 1px color-mix(in oklab, var(--color-foreground) 4%, transparent) inset,
-    0 30px 80px -20px rgba(0, 0, 0, 0.6),
-    0 0 60px -10px color-mix(in oklab, oklch(0.72 0.19 262) 25%, transparent);
-  color: color-mix(in oklab, var(--color-foreground) 92%, transparent);
+    0 24px 60px -15px rgba(0, 0, 0, 0.4),
+    0 0 0 1px color-mix(in oklab, var(--color-foreground) 4%, transparent) inset;
+  color: var(--color-foreground);
 }
 .fbv3-shortcuts__head {
   display: grid;
@@ -1370,37 +1368,37 @@
   grid-column: 1;
   font-family: "Geist Mono", ui-monospace, monospace;
   font-size: 10px;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: oklch(0.78 0.16 262);
+  color: var(--color-primary);
 }
 .fbv3-shortcuts__title {
   grid-column: 1;
   font-family: "Geist", inherit;
-  font-size: 17px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 700;
   letter-spacing: -0.01em;
-  color: color-mix(in oklab, var(--color-foreground) 96%, transparent);
+  color: var(--color-foreground);
 }
 .fbv3-shortcuts__close {
   grid-column: 2;
   grid-row: 1 / span 2;
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  border: 1px solid color-mix(in oklab, var(--color-foreground) 8%, transparent);
-  background: color-mix(in oklab, var(--color-foreground) 3%, transparent);
-  color: color-mix(in oklab, var(--color-foreground) 70%, transparent);
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  background: color-mix(in oklab, var(--color-foreground) 5%, transparent);
+  color: var(--color-foreground);
   cursor: pointer;
   transition: background 120ms, color 120ms, border-color 120ms;
 }
 .fbv3-shortcuts__close:hover {
-  background: color-mix(in oklab, var(--color-foreground) 8%, transparent);
-  color: #fff;
-  border-color: color-mix(in oklab, var(--color-foreground) 16%, transparent);
+  background: color-mix(in oklab, var(--color-foreground) 12%, transparent);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
 }
 .fbv3-shortcuts__list {
   list-style: none;
@@ -1408,20 +1406,21 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
 }
 .fbv3-shortcuts__row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 9px 12px;
   border-radius: 10px;
-  font-size: 13px;
-  color: color-mix(in oklab, var(--color-foreground) 78%, transparent);
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--color-foreground);
   transition: background 120ms;
 }
 .fbv3-shortcuts__row:hover {
-  background: color-mix(in oklab, var(--color-foreground) 4%, transparent);
+  background: color-mix(in oklab, var(--color-foreground) 6%, transparent);
 }
 .fbv3-shortcuts__keys {
   display: inline-flex;
@@ -1432,27 +1431,28 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 22px;
-  height: 22px;
-  padding: 0 6px;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
   border-radius: 6px;
   font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 11px;
-  font-weight: 600;
-  color: color-mix(in oklab, var(--color-foreground) 90%, transparent);
-  background: linear-gradient(180deg, color-mix(in oklab, var(--color-foreground) 9%, transparent), color-mix(in oklab, var(--color-foreground) 4%, transparent));
-  border: 1px solid color-mix(in oklab, var(--color-foreground) 12%, transparent);
-  box-shadow: 0 1px 0 color-mix(in oklab, var(--color-foreground) 6%, transparent) inset, 0 1px 2px rgba(0,0,0,0.4);
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--color-foreground);
+  background: color-mix(in oklab, var(--color-foreground) 8%, var(--color-card));
+  border: 1px solid var(--color-border);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
 .fbv3-shortcuts__foot {
   margin-top: 14px;
   padding-top: 12px;
-  border-top: 1px dashed color-mix(in oklab, var(--color-foreground) 8%, transparent);
+  border-top: 1px dashed var(--color-border);
   font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 10.5px;
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: color-mix(in oklab, var(--color-foreground) 45%, transparent);
+  color: var(--color-muted-foreground);
   text-align: center;
 }
 
