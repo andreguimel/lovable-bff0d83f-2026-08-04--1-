@@ -70,6 +70,8 @@ const UpsertSchema = z.object({
   id: z.string().uuid().optional(),
   name: z.string().min(1, "Nome obrigatório"),
   role: z.string().nullish(),
+  department: z.string().nullish(),
+  specialty: z.string().nullish(),
   prompt: z.string().nullish(),
   personality: z.string().nullish(),
   greeting: z.string().nullish(),
@@ -81,6 +83,12 @@ const UpsertSchema = z.object({
   max_turns: z.number().int().min(1).max(20).default(6),
   is_active: z.boolean().default(true),
   avatar_url: z.string().url().nullish(),
+  top_p: z.number().min(0).max(1).nullish(),
+  max_tokens: z.number().int().positive().nullish(),
+  frequency_penalty: z.number().min(-2).max(2).nullish(),
+  presence_penalty: z.number().min(-2).max(2).nullish(),
+  status: z.string().nullish(),
+  version: z.number().int().nullish(),
 });
 
 export const upsertAgent = createServerFn({ method: "POST" })
@@ -99,10 +107,18 @@ export const upsertAgent = createServerFn({ method: "POST" })
       ...data,
       company_id: profile.company_id,
       role: data.role ?? null,
+      department: data.department ?? null,
+      specialty: data.specialty ?? null,
       prompt: data.prompt ?? null,
       personality: data.personality ?? null,
       greeting: data.greeting ?? null,
       avatar_url: data.avatar_url ?? null,
+      top_p: data.top_p ?? null,
+      max_tokens: data.max_tokens ?? null,
+      frequency_penalty: data.frequency_penalty ?? null,
+      presence_penalty: data.presence_penalty ?? null,
+      status: data.status ?? null,
+      version: data.version ?? null,
     };
 
     if (data.id) {
