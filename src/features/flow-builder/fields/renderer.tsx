@@ -6,7 +6,7 @@
  * visual, foco no autofill e um único ponto para futuras evoluções
  * (busca de propriedades, comandos, IA sugerindo valores etc.).
  */
-import { AlertTriangle, Info, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, Info, Plus, Trash2, ArrowUp, ArrowDown, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,7 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useState } from "react";
-import { MediaPicker } from "@/components/flows/media-picker";
+import { MediaPicker, type MediaKind } from "@/components/flows/media-picker";
+import { BLOCKS, type NodeKind } from "@/components/flows/studio/blocks";
+import type { ActionItem, ButtonItem } from "@/components/flows/studio/custom-node";
 import { isEmpty, type FieldSpec, type SidebarCtx } from "./types";
 export { makeErrorLookup } from "./validation";
 
@@ -615,6 +617,16 @@ export function FieldRenderer({ field, data, ctx, errorFor, onChange }: Props) {
         />
       );
     }
+
+    case "content_builder": {
+      return (
+        <ContentBuilderField
+          data={data}
+          ctx={ctx}
+          onChange={onChange}
+        />
+      );
+    }
   }
 }
 
@@ -932,6 +944,307 @@ function FieldWrap({
       ) : help ? (
         <p className="text-[10px] text-muted-foreground">{help}</p>
       ) : null}
+    </div>
+  );
+}
+
+function ContentBuilderField({
+  data,
+  ctx,
+  onChange,
+}: {
+  data: Record<string, unknown>;
+  ctx: SidebarCtx;
+  onChange: (patch: Record<string, unknown>) => void;
+}) {
+  const actions: ActionItem[] = Array.isArray(data.actions) ? (data.actions as any[]) : [];
+  const buttons: ButtonItem[] = Array.isArray(data.buttons) ? (data.buttons as any[]) : [];
+  const [openActionIndex, setOpenActionIndex] = useState<number | null>(actions.length > 0 ? 0 : null);
+
+  const addAction = (kind: NodeKind) => {
+    const actMeta = BLOCKS[kind] ?? BLOCKS.message;
+    const newAct: ActionItem = {
+      id: String(Date.now() + Math.random()),
+      kind,
+      label: actMeta.label,
+      body: kind === "message" ? "" : undefined,
+      seconds: kind === "wait" ? 5 : undefined,
+    };
+    onChange({ actions: [...actions, newAct] });
+    setOpenActionIndex(actions.length);
+  };
+
+  const updateAction = (index: number, patch: Partial<ActionItem>) => {
+    const nextActions = [...actions];
+    nextActions[index] = { ...nextActions[index], ...patch };
+    onChange({ actions: nextActions });
+  };
+
+  const moveAction = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= actions.length) return;
+    const nextActions = [...actions];
+    const temp = nextActions[index];
+    nextActions[index] = nextActions[targetIndex];
+    nextActions[targetIndex] = temp;
+    onChange({ actions: nextActions });
+    setOpenActionIndex(targetIndex);
+  };
+
+  const removeAction = (index: number) => {
+    const nextActions = actions.filter((_, i) => i !== index);
+    onChange({ actions: nextActions });
+    setOpenActionIndex(null);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* SUB-AÇÕES EMPILHADAS (BOTCONVERSA STYLE) */}
+      <div className="space-y-2 border-t border-border/60 pt-3">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <Layers className="h-3.5 w-3.5 text-primary" />
+            Funções do Bloco ({actions.length})
+          </span>
+          <Select onValueChange={(val) => addAction(val as NodeKind)}>
+            <SelectTrigger className="h-7 text-[11px] px-2 w-auto gap-1">
+              <Plus className="h-3 w-3" />
+              <span>Adicionar Função</span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="message">💬 Enviar mensagem (Texto)</SelectItem>
+              <SelectItem value="send_image">🖼️ Enviar imagem</SelectItem>
+              <SelectItem value="send_audio">🎵 Enviar áudio</SelectItem>
+              <SelectItem value="send_video">🎥 Enviar vídeo</SelectItem>
+              <SelectItem value="send_document">📄 Enviar arquivo</SelectItem>
+              <SelectItem value="tag">🏷️ Aplicar tag</SelectItem>
+              <SelectItem value="assign_agent">👤 Atribuir atendente</SelectItem>
+              <SelectItem value="wait">⏱️ Aguardar tempo (Delay)</SelectItem>
+              <SelectItem value="webhook">🔔 Disparar Webhook</SelectItem>
+              <SelectItem value="http_request">🌐 Requisição HTTP</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {actions.length > 0 ? (
+          <div className="space-y-2 mt-2">
+            {actions.map((act, idx) => {
+              const actMeta = BLOCKS[act.kind] ?? BLOCKS.message;
+              const ActIcon = actMeta.icon;
+              const isOpen = openActionIndex === idx;
+              const actMediaKind: MediaKind | null =
+                act.kind === "send_image"
+                  ? "image"
+                  : act.kind === "send_audio"
+                    ? "audio"
+                    : act.kind === "send_video"
+                      ? "video"
+                      : act.kind === "send_document"
+                        ? "document"
+                        : null;
+
+              return (
+                <div
+                  key={act.id || idx}
+                  className="rounded-lg border border-border/70 bg-card/60 overflow-hidden text-xs"
+                >
+                  <div
+                    className="flex items-center justify-between px-3 py-2 bg-muted/40 cursor-pointer select-none hover:bg-muted/70"
+                    onClick={() => setOpenActionIndex(isOpen ? null : idx)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <span className="font-mono text-[10px] text-muted-foreground">{idx + 1}.</span>
+                      <ActIcon className="h-3.5 w-3.5 text-primary shrink-0" />
+                      <span className="font-medium truncate text-foreground">{act.label || actMeta.label}</span>
+                    </div>
+
+                    <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        disabled={idx === 0}
+                        onClick={() => moveAction(idx, "up")}
+                        className="p-1 rounded text-muted-foreground hover:bg-background disabled:opacity-30"
+                      >
+                        <ArrowUp className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={idx === actions.length - 1}
+                        onClick={() => moveAction(idx, "down")}
+                        className="p-1 rounded text-muted-foreground hover:bg-background disabled:opacity-30"
+                      >
+                        <ArrowDown className="h-3 w-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeAction(idx)}
+                        className="p-1 rounded text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {isOpen && (
+                    <div className="p-3 space-y-3 bg-background/40 border-t border-border/40">
+                      {act.kind === "message" && (
+                        <div className="grid gap-1.5">
+                          <Label className="text-[10px] text-muted-foreground">Mensagem de Texto</Label>
+                          <Textarea
+                            rows={3}
+                            value={act.body || ""}
+                            onChange={(e) => updateAction(idx, { body: e.target.value })}
+                            placeholder="Texto da mensagem…"
+                            className="resize-none text-xs"
+                          />
+                        </div>
+                      )}
+
+                      {actMediaKind && (
+                        <div className="space-y-2">
+                          <MediaPicker
+                            kind={actMediaKind}
+                            flowId={ctx.flowId}
+                            value={{
+                              url: act.media_url,
+                              filename: act.media_filename,
+                              mime_type: act.media_mime,
+                              size: act.media_size,
+                            }}
+                            onChange={(v) =>
+                              updateAction(idx, {
+                                media_url: v.url,
+                                media_filename: v.filename,
+                                media_mime: v.mime_type,
+                                media_size: v.size,
+                              })
+                            }
+                          />
+                          {(act.kind === "send_image" || act.kind === "send_video" || act.kind === "send_document") && (
+                            <div className="grid gap-1">
+                              <Label className="text-[10px] text-muted-foreground">Legenda (opcional)</Label>
+                              <Input
+                                value={act.caption || ""}
+                                onChange={(e) => updateAction(idx, { caption: e.target.value })}
+                                placeholder="Legenda da mídia..."
+                                className="h-7 text-xs"
+                              />
+                            </div>
+                          )}
+                          {act.kind === "send_audio" && (
+                            <div className="flex items-center justify-between rounded border border-border/50 bg-card/30 px-2.5 py-1.5">
+                              <span className="text-[11px] text-foreground font-medium">Voz (PTT WhatsApp)</span>
+                              <Switch
+                                checked={!!act.is_voice}
+                                onCheckedChange={(v) => updateAction(idx, { is_voice: v })}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {act.kind === "wait" && (
+                        <div className="space-y-2">
+                          <div className="grid gap-1.5">
+                            <Label className="text-[10px] text-muted-foreground">Aguardar (segundos)</Label>
+                            <Input
+                              type="number"
+                              min={1}
+                              value={act.seconds || 5}
+                              onChange={(e) => updateAction(idx, { seconds: Number(e.target.value) || 1 })}
+                              className="h-7 text-xs"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between rounded border border-border/50 bg-card/30 px-2.5 py-1.5">
+                            <span className="text-[11px] text-foreground font-medium">Simular "digitando..."</span>
+                            <Switch
+                              checked={!!act.is_typing}
+                              onCheckedChange={(v) => updateAction(idx, { is_typing: v })}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="grid gap-1.5">
+            <Label className="text-[11px] text-muted-foreground">Mensagem Principal</Label>
+            <Textarea
+              rows={4}
+              value={typeof data.body === "string" ? data.body : ""}
+              onChange={(e) => onChange({ body: e.target.value })}
+              placeholder="Escreva a mensagem enviada ao contato…"
+              className="resize-none text-xs"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* GERENCIADOR DE BOTÕES INTERATIVOS (PADRÃO BOTCONVERSA) */}
+      <div className="space-y-2 border-t border-border/60 pt-3">
+        <div className="flex items-center justify-between">
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            🔘 Botões de Resposta ({buttons.length}/3)
+          </span>
+          {buttons.length < 3 && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-6 text-[11px] px-2 gap-1"
+              onClick={() => {
+                const next = [...buttons, { id: String(buttons.length + 1), label: `Opção ${buttons.length + 1}` }];
+                onChange({ buttons: next });
+              }}
+            >
+              <Plus className="h-3 w-3" />
+              <span>Botão</span>
+            </Button>
+          )}
+        </div>
+        {buttons.length > 0 ? (
+          <div className="space-y-1.5 mt-2">
+            {buttons.map((btn, bIdx) => (
+              <div key={btn.id || bIdx} className="flex items-center gap-1.5">
+                <span className="text-[11px] font-mono text-muted-foreground w-4">{bIdx + 1}.</span>
+                <Input
+                  value={btn.label}
+                  onChange={(e) => {
+                    const next = [...buttons];
+                    next[bIdx] = { ...next[bIdx], label: e.target.value };
+                    onChange({ buttons: next });
+                  }}
+                  placeholder="Rótulo do botão..."
+                  className="h-7 text-xs flex-1"
+                  maxLength={20}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = buttons.filter((_, i) => i !== bIdx);
+                    onChange({ buttons: next });
+                  }}
+                  className="p-1 text-destructive hover:bg-destructive/10 rounded"
+                  title="Remover botão"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+            <p className="text-[10px] text-muted-foreground italic">
+              Cada botão cria uma porta de saída própria no canvas para ramificar a conversa.
+            </p>
+          </div>
+        ) : (
+          <p className="text-[10px] text-muted-foreground italic px-1 py-1">
+            Nenhum botão de resposta adicionado. Adicione até 3 botões por mensagem.
+          </p>
+        )}
+      </div>
     </div>
   );
 }

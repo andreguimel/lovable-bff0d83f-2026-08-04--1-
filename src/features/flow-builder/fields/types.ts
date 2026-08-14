@@ -170,6 +170,10 @@ export interface ConditionBuilderFieldSpec extends FieldBase {
   type: "condition_builder";
 }
 
+export interface ContentBuilderFieldSpec extends FieldBase {
+  type: "content_builder";
+}
+
 export type FieldSpec =
   | TextFieldSpec
   | TextAreaFieldSpec
@@ -182,7 +186,8 @@ export type FieldSpec =
   | MenuOptionsFieldSpec
   | RandomizerRoutesFieldSpec
   | DurationFieldSpec
-  | ConditionBuilderFieldSpec;
+  | ConditionBuilderFieldSpec
+  | ContentBuilderFieldSpec;
 
 
 

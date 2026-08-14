@@ -198,18 +198,19 @@ const BLOCKS: BlockSpec[] = [
         "Recebemos seu comprovante, muito obrigado!",
       ],
     },
-    preview: (d) => (s(d.body) ? `“${clip(String(d.body).trim())}”` : null),
-    validate: (d) =>
-      s(d.body) ? ok() : err("body", "Escreva a mensagem que será enviada ao contato."),
+    preview: (d) => {
+      if (Array.isArray(d.actions) && d.actions.length > 0) {
+        return `${d.actions.length} funções empilhadas`;
+      }
+      return s(d.body) ? `“${clip(String(d.body).trim())}”` : null;
+    },
+    validate: (d) => {
+      if (Array.isArray(d.actions) && d.actions.length > 0) return ok();
+      return s(d.body) ? ok() : err("body", "Escreva a mensagem que será enviada ao contato.");
+    },
     fields: [
       {
-        type: "textarea",
-        key: "body",
-        label: "Mensagem",
-        placeholder: "Escreva aqui o texto que o contato receberá…",
-        rows: 5,
-        required: true,
-        help: VARS_HELP,
+        type: "content_builder",
       },
     ],
     getHandles: (d) => {
@@ -520,7 +521,7 @@ const BLOCKS: BlockSpec[] = [
     preview: (d) => {
       const sec = n(d.seconds);
       if (sec === null || sec <= 0) return null;
-      return `Aguardar ${humanSeconds(sec)}`;
+      return `Aguardar ${humanSeconds(sec)}${d.is_typing ? " (digitando...)" : ""}`;
     },
     validate: (d) => {
       const sec = n(d.seconds);
@@ -537,6 +538,12 @@ const BLOCKS: BlockSpec[] = [
         suffix: "seg",
         required: true,
         help: "Entre 1 e 3600 segundos (1 hora).",
+      },
+      {
+        type: "switch",
+        key: "is_typing",
+        label: 'Simular "digitando..."',
+        description: "Exibe status de digitação no WhatsApp durante a espera.",
       },
     ],
   },
