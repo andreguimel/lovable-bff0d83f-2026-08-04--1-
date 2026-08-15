@@ -279,44 +279,49 @@ function SmartSidebarInner() {
 
       {/* ============ Ações ============ */}
       <footer className="smart-sidebar__actions">
-        {!isStart && (
-          <>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7"
-              onClick={() => duplicateNode(node.id)}
-              title="Duplicar"
-            >
-              <Copy className="mr-1 h-3 w-3" /> Duplicar
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 text-destructive hover:text-destructive"
-              onClick={() => {
-                removeNode(node.id);
-                clearSelection();
-              }}
-              title="Excluir"
-            >
-              <Trash2 className="mr-1 h-3 w-3" /> Excluir
-            </Button>
-          </>
-        )}
-        <div className="flex-1" />
-        <Button variant="ghost" size="sm" className="h-7" onClick={onCancel}>
-          Cancelar
-        </Button>
-        <Button
-          size="sm"
-          className="h-7"
-          onClick={onSave}
-          disabled={errorCount > 0}
-          title={errorCount > 0 ? "Corrija os erros antes de salvar" : "Salvar (autosave ativo)"}
-        >
-          Salvar
-        </Button>
+        <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+          {!isStart && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 text-xs gap-1.5 shrink-0"
+                onClick={() => duplicateNode(node.id)}
+                title="Duplicar bloco"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                <span>Duplicar</span>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 px-2.5 text-xs gap-1.5 shrink-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={() => {
+                  removeNode(node.id);
+                  clearSelection();
+                }}
+                title="Excluir bloco"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Excluir</span>
+              </Button>
+            </>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 ml-auto shrink-0">
+          <Button variant="ghost" size="sm" className="h-8 px-3 text-xs" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button
+            size="sm"
+            className="h-8 px-3.5 text-xs font-medium"
+            onClick={onSave}
+            disabled={errorCount > 0}
+            title={errorCount > 0 ? "Corrija os erros antes de salvar" : "Salvar alterações"}
+          >
+            Salvar
+          </Button>
+        </div>
       </footer>
     </aside>
   );

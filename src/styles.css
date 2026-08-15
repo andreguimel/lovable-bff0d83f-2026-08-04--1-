@@ -1293,7 +1293,7 @@
 @utility properties-panel {
   display: flex;
   flex-direction: column;
-  width: 320px;
+  width: min(380px, 100vw);
   flex-shrink: 0;
   border-left: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
   background: color-mix(in oklab, var(--color-card) 40%, var(--color-background));
@@ -1333,7 +1333,7 @@
 @utility smart-sidebar {
   display: flex;
   flex-direction: column;
-  width: 340px;
+  width: min(380px, 100vw);
   flex-shrink: 0;
   border-left: 1px solid color-mix(in oklab, var(--color-border) 55%, transparent);
   background: color-mix(in oklab, var(--color-card) 40%, var(--color-background));
@@ -1479,10 +1479,13 @@
 @utility smart-sidebar__actions {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 10px;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 12px;
   border-top: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
   background: color-mix(in oklab, var(--color-card) 60%, transparent);
+  flex-shrink: 0;
 }
 
 
