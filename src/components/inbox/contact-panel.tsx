@@ -26,6 +26,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -36,6 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { updateContact, listTags, toggleContactTag } from "@/lib/inbox.functions";
+import { listCustomFields, setCustomFieldValue } from "@/lib/crm.functions";
 import { BotPauseButton } from "@/components/inbox/bot-pause-button";
 import { CallButton } from "@/components/inbox/call-button";
 import { FlowAgentPickerPopover } from "@/components/inbox/flow-agent-picker-dialog";
@@ -433,8 +441,18 @@ function EditContactSheet({
 }) {
   const qc = useQueryClient();
   const upd = useServerFn(updateContact);
+  const listCFFn = useServerFn(listCustomFields);
+  const setCFValueFn = useServerFn(setCustomFieldValue);
+
   const [name, setName] = useState(contact.name);
   const [email, setEmail] = useState(contact.email ?? "");
+  const [customValues, setCustomValues] = useState<Record<string, string>>({});
+
+  const { data: fields = [] } = useQuery({
+    queryKey: ["custom-fields"],
+    queryFn: () => listCFFn(),
+    enabled: open,
+  });
 
   useEffect(() => {
     setName(contact.name);
@@ -442,9 +460,15 @@ function EditContactSheet({
   }, [contact.id, contact.name, contact.email]);
 
   const saveMut = useMutation({
-    mutationFn: () => upd({ data: { id: contact.id, name, email: email || null } }),
+    mutationFn: async () => {
+      await upd({ data: { id: contact.id, name, email: email || null } });
+      for (const [fieldId, val] of Object.entries(customValues)) {
+        await setCFValueFn({ data: { contactId: contact.id, fieldId, value: val || null } });
+      }
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["conversation"] });
+      qc.invalidateQueries({ queryKey: ["contact", contact.id] });
       toast.success("Contato atualizado");
       onOpenChange(false);
     },
@@ -453,11 +477,11 @@ function EditContactSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="flex w-full flex-col overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>Editar contato</SheetTitle>
         </SheetHeader>
-        <div className="mt-6 grid gap-4">
+        <div className="mt-6 flex-1 space-y-4">
           <div className="grid gap-1.5">
             <Label htmlFor="edit-name">Nome</Label>
             <Input id="edit-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -466,6 +490,53 @@ function EditContactSheet({
             <Label htmlFor="edit-email">Email</Label>
             <Input id="edit-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
+
+          {fields.length > 0 && (
+            <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Campos customizados
+              </p>
+              {fields.map((field) => (
+                <div key={field.id} className="grid gap-1.5">
+                  <Label htmlFor={`inbox-cf-${field.id}`} className="text-xs font-medium text-muted-foreground">
+                    {field.label}
+                  </Label>
+                  {field.field_type === "select" && Array.isArray(field.options) ? (
+                    <Select
+                      value={customValues[field.id] ?? ""}
+                      onValueChange={(v) => setCustomValues((prev) => ({ ...prev, [field.id]: v }))}
+                    >
+                      <SelectTrigger id={`inbox-cf-${field.id}`}>
+                        <SelectValue placeholder="— Selecione —" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(field.options as string[]).map((o) => (
+                          <SelectItem key={o} value={o}>
+                            {o}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      id={`inbox-cf-${field.id}`}
+                      type={
+                        field.field_type === "number"
+                          ? "number"
+                          : field.field_type === "date"
+                            ? "date"
+                            : "text"
+                      }
+                      value={customValues[field.id] ?? ""}
+                      onChange={(e) =>
+                        setCustomValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                      }
+                    />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
         <SheetFooter className="mt-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>

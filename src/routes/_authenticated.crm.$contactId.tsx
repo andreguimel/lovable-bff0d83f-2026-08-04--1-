@@ -80,6 +80,8 @@ import {
   toggleContactTag,
   listChannels,
   startConversationFromContact,
+  listCustomFields,
+  setCustomFieldValue,
 } from "@/lib/crm.functions";
 import { listTags } from "@/lib/inbox.functions";
 import { ContactTimeline } from "@/components/crm/contact-timeline";
@@ -159,6 +161,7 @@ function ContactPage() {
   const delFn = useServerFn(deleteContacts);
   const toggleTag = useServerFn(toggleContactTag);
   const startConv = useServerFn(startConversationFromContact);
+  const setCFValueFn = useServerFn(setCustomFieldValue);
 
   const detail = useQuery({
     queryKey: ["contact", contactId],
@@ -514,9 +517,16 @@ function ContactPage() {
               next_action: nextAction ?? "",
               deal_value_cents: value ?? 0,
               notes: contact.notes ?? "",
+              customValues: detail.data?.customValues ?? [],
             }}
-            onSave={(patch) => {
-              updateMut.mutate({ id: contactId, ...patch });
+            onSave={async (patch, customValuesPatch) => {
+              await updateMut.mutateAsync({ id: contactId, ...patch });
+              for (const [fieldId, val] of Object.entries(customValuesPatch)) {
+                await setCFValueFn({ data: { contactId, fieldId, value: val || null } });
+              }
+              qc.invalidateQueries({ queryKey: ["contact", contactId] });
+              qc.invalidateQueries({ queryKey: ["contacts"] });
+              toast.success("Contato atualizado");
               setEditOpen(false);
             }}
             saving={updateMut.isPending}
@@ -778,24 +788,54 @@ function EditContactForm({
     next_action: string;
     deal_value_cents: number;
     notes: string;
+    customValues?: Array<{ field_id: string; value: string | null }>;
   };
-  onSave: (patch: {
-    name: string;
-    phone: string;
-    email: string;
-    company_name: string;
-    job_title: string;
-    origin: string;
-    next_action: string;
-    deal_value_cents: number;
-    notes: string;
-  }) => void;
+  onSave: (
+    patch: {
+      name: string;
+      phone: string;
+      email: string;
+      company_name: string;
+      job_title: string;
+      origin: string;
+      next_action: string;
+      deal_value_cents: number;
+      notes: string;
+    },
+    customValuesPatch: Record<string, string>,
+  ) => void;
   saving: boolean;
 }) {
   const [f, setF] = useState(initial);
-  useEffect(() => setF(initial), [initial]);
+  const [customValues, setCustomValues] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    (initial.customValues ?? []).forEach((cv) => {
+      if (cv.field_id && cv.value !== null) {
+        map[cv.field_id] = cv.value;
+      }
+    });
+    return map;
+  });
+
+  const listCFFn = useServerFn(listCustomFields);
+  const { data: fields = [] } = useQuery({
+    queryKey: ["custom-fields"],
+    queryFn: () => listCFFn(),
+  });
+
+  useEffect(() => {
+    setF(initial);
+    const map: Record<string, string> = {};
+    (initial.customValues ?? []).forEach((cv) => {
+      if (cv.field_id && cv.value !== null) {
+        map[cv.field_id] = cv.value;
+      }
+    });
+    setCustomValues(map);
+  }, [initial]);
+
   return (
-    <div className="flex flex-1 flex-col gap-3 overflow-y-auto">
+    <div className="flex flex-1 flex-col gap-3 overflow-y-auto pr-1">
       <Field label="Nome">
         <Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
       </Field>
@@ -837,8 +877,52 @@ function EditContactForm({
       <Field label="Notas">
         <Textarea rows={4} value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} />
       </Field>
+
+      {fields.length > 0 && (
+        <div className="grid gap-3 rounded-lg border border-border/60 bg-muted/20 p-3">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Campos customizados
+          </p>
+          {fields.map((field) => (
+            <Field key={field.id} label={field.label}>
+              {field.field_type === "select" && Array.isArray(field.options) ? (
+                <Select
+                  value={customValues[field.id] ?? ""}
+                  onValueChange={(v) => setCustomValues((prev) => ({ ...prev, [field.id]: v }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="— Selecione —" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(field.options as string[]).map((o) => (
+                      <SelectItem key={o} value={o}>
+                        {o}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  type={
+                    field.field_type === "number"
+                      ? "number"
+                      : field.field_type === "date"
+                        ? "date"
+                        : "text"
+                  }
+                  value={customValues[field.id] ?? ""}
+                  onChange={(e) =>
+                    setCustomValues((prev) => ({ ...prev, [field.id]: e.target.value }))
+                  }
+                />
+              )}
+            </Field>
+          ))}
+        </div>
+      )}
+
       <div className="mt-auto flex justify-end pt-2">
-        <Button onClick={() => onSave(f)} disabled={saving}>
+        <Button onClick={() => onSave(f, customValues)} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Salvar
         </Button>
