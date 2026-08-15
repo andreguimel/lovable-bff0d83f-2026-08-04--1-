@@ -550,7 +550,7 @@ const BLOCKS: BlockSpec[] = [
   {
     kind: "wait_reply",
     label: "Aguardar resposta",
-    short: "Pausa até o contato responder",
+    short: "Esperar resposta sem tempo definido",
     icon: Clock,
     accent: "oklch(0.76 0.1 220)",
     category: "logic",
@@ -558,15 +558,15 @@ const BLOCKS: BlockSpec[] = [
     defaults: { label: "Aguardar resposta" },
     hints: {
       whenToUse:
-        "Use quando o próximo passo depende da próxima mensagem do contato.",
-      examples: ["Pausar até o cliente responder para continuar."],
+        "Use quando o próximo passo depende da próxima mensagem do contato sem limite de tempo.",
+      examples: ["Pausar até o cliente responder sem tempo definido."],
     },
-    preview: () => "Pausa até o contato responder",
+    preview: () => "Esperar resposta sem tempo definido",
     fields: [
       {
         type: "info",
         text:
-          "O fluxo pausa neste bloco. A próxima mensagem enviada pelo contato retoma a execução automaticamente.",
+          "O fluxo pausa neste bloco sem tempo definido (sem limite de expiração). A próxima mensagem enviada pelo contato retoma a execução automaticamente.",
       },
     ],
   },

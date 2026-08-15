@@ -132,6 +132,8 @@ function preview(kind: NodeKind, data: Record<string, unknown>): string | null {
       return typeof data.seconds === "number" && data.seconds > 0
         ? `Aguardar ${data.seconds}s${data.is_typing ? " (digitando...)" : ""}`
         : "sem tempo";
+    case "wait_reply":
+      return "Esperar resposta sem tempo definido";
     case "condition":
       if (Array.isArray(data.conditions) && data.conditions.length > 0) {
         const mode = data.logic === "ANY" ? "QUALQUER (OU)" : "TODAS (E)";

@@ -134,7 +134,7 @@ export const BLOCKS: Record<NodeKind, BlockMeta> = {
   wait_reply: {
     kind: "wait_reply",
     label: "Aguardar resposta",
-    short: "Pausa até o contato responder",
+    short: "Esperar resposta sem tempo definido",
     icon: Clock,
     category: "logic",
     accent: "oklch(0.76 0.1 220)",

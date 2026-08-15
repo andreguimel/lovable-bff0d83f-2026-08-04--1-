@@ -140,7 +140,7 @@ describe("FB-06 · Preview rico elimina necessidade de abrir o painel", () => {
   it("start/end/wait_reply/transfer: preview padrão explica a ação", () => {
     expect(blockRegistry.get("start")!.preview!({})).toMatch(/partida/i);
     expect(blockRegistry.get("end")!.preview!({})).toMatch(/Fim/);
-    expect(blockRegistry.get("wait_reply")!.preview!({})).toMatch(/responder/i);
+    expect(blockRegistry.get("wait_reply")!.preview!({})).toMatch(/resposta|responder/i);
     expect(blockRegistry.get("transfer")!.preview!({})).toMatch(/Inbox|humano/i);
   });
 });

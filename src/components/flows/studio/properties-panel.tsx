@@ -1084,9 +1084,12 @@ export function PropertiesPanel({
             )}
 
             {kind === "wait_reply" && (
-              <p className="rounded-md border border-border/60 bg-muted/40 p-2 text-[11px] text-muted-foreground">
-                O fluxo pausa aqui até o contato responder. A próxima mensagem retoma a execução.
-              </p>
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <p className="text-xs font-semibold text-primary">Esperar resposta sem tempo definido</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                  O fluxo pausa neste bloco sem tempo definido (sem limite de expiração). A próxima mensagem enviada pelo contato retoma a execução automaticamente.
+                </p>
+              </div>
             )}
 
             {mediaKind && (

@@ -55,7 +55,7 @@ const EMPTY_HINT: Record<string, string> = {
   send_video: "Anexe o vídeo que será enviado.",
   send_document: "Anexe o arquivo que será enviado.",
   wait: "Defina por quantos segundos o fluxo deve pausar.",
-  wait_reply: "Pausa até o contato responder pelo canal.",
+  wait_reply: "Esperar resposta sem tempo definido pelo canal.",
   condition: "Defina a regra para dividir o fluxo em Sim / Não.",
   ai: "Selecione o agente de IA que responderá.",
   transfer: "Encaminha o atendimento para uma pessoa.",
