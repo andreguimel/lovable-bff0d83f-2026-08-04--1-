@@ -81,6 +81,23 @@ export async function resolveActiveAIProvider(
   );
 }
 
+const KNOWN_MODEL_ALIASES: Record<string, string> = {
+  "openai/gpt-5-mini": "gpt-4o-mini",
+  "openai/gpt-5": "gpt-4o",
+  "gpt-5-mini": "gpt-4o-mini",
+  "gpt-5": "gpt-4o",
+  "google/gemini-3.5-flash": "gemini-2.5-flash",
+  "google/gemini-3.1-pro-preview": "gemini-2.5-pro",
+};
+
+function sanitizeModelId(requested?: string, fallbackDefault?: string): string {
+  if (!requested) return fallbackDefault || "gpt-4o-mini";
+  const mapped = KNOWN_MODEL_ALIASES[requested] || requested;
+  const parts = mapped.split("/");
+  const stripped = parts.length > 1 ? parts.slice(1).join("/") : mapped;
+  return stripped || fallbackDefault || "gpt-4o-mini";
+}
+
 /**
  * Builds an AI SDK LanguageModel from the resolved provider.
  * Returns { model, label } to display in the UI which provider actually ran.
@@ -91,7 +108,7 @@ export async function buildGuardianModel(
   requestedModel?: string,
 ): Promise<{ model: LanguageModel; label: string; providerId: ResolvedAIProvider["provider"]; usingFallback: boolean; modelId: string }> {
   const resolved = await resolveActiveAIProvider(supabase, companyId);
-  const modelToUse = requestedModel || resolved.model;
+  const modelToUse = sanitizeModelId(requestedModel || resolved.model, resolved.model);
 
   if (resolved.provider === "openai") {
     const { createOpenAI } = await import("@ai-sdk/openai");

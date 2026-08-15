@@ -1,11 +1,11 @@
 export const AGENT_MODEL_OPTIONS = [
   { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (rápido, econômico)" },
-  { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite (mais barato)" },
-  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (mais capaz)" },
-  { value: "google/gemini-3.5-flash", label: "Gemini 3.5 Flash" },
-  { value: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (preview)" },
-  { value: "openai/gpt-5-mini", label: "GPT-5 Mini" },
-  { value: "openai/gpt-5", label: "GPT-5" },
+  { value: "google/gemini-2.5-flash-lite", label: "Gemini 2.5 Flash Lite (ultra rápido)" },
+  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (raciocínio avançado)" },
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (rápido, inteligente)" },
+  { value: "openai/gpt-4o", label: "GPT-4o (alta precisão)" },
+  { value: "openai/gpt-4-turbo", label: "GPT-4 Turbo (alta capacidade)" },
+  { value: "anthropic/claude-3-5-sonnet", label: "Claude 3.5 Sonnet (análise profunda)" },
 ] as const;
 
 export const DEFAULT_AGENT_MODEL = "google/gemini-2.5-flash";
