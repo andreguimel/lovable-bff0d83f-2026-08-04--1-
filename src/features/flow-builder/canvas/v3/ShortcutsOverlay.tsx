@@ -11,6 +11,7 @@ import { X } from "lucide-react";
 const SHORTCUTS: Array<{ keys: string[]; label: string }> = [
   { keys: ["⌘", "K"], label: "Abrir paleta de comandos" },
   { keys: ["?"], label: "Mostrar/ocultar atalhos" },
+  { keys: ["M"], label: "Alternar visão geral (minimap)" },
   { keys: ["⌘", "D"], label: "Duplicar bloco selecionado" },
   { keys: ["⌫"], label: "Excluir seleção" },
   { keys: ["F"], label: "Enquadrar tudo (fit view)" },

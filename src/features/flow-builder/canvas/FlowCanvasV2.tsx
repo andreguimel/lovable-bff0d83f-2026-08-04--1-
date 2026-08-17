@@ -17,6 +17,7 @@ import {
   Background,
   BackgroundVariant,
   Controls,
+  ControlButton,
   MiniMap,
   ReactFlow,
   useReactFlow,
@@ -30,7 +31,7 @@ import {
   type OnSelectionChangeParams,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { HelpCircle, Keyboard, LayoutGrid, Maximize2, Minimize2 } from "lucide-react";
+import { Compass, HelpCircle, Keyboard, LayoutGrid, Map as MapIcon, Maximize2, Minimize2, X } from "lucide-react";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -84,6 +85,7 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
   const [density, setDensity] = useState<Density>(readDensity);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [minimapOpen, setMinimapOpen] = useState(false);
   useEffect(() => {
     try {
       window.localStorage.setItem(DENSITY_STORAGE_KEY, density);
@@ -307,6 +309,12 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
         organize();
         return;
       }
+      // M → toggle minimap
+      if (!meta && (e.key === "m" || e.key === "M")) {
+        e.preventDefault();
+        setMinimapOpen((prev) => !prev);
+        return;
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -379,9 +387,36 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
           size={1.2}
           color="color-mix(in oklab, var(--color-border) 55%, transparent)"
         />
-        {showMinimap ? (
+        <Controls position="bottom-left" className="fbv2-controls" showInteractive={false}>
+          <ControlButton
+            onClick={() => setMinimapOpen((prev) => !prev)}
+            title={minimapOpen ? "Ocultar Visão Geral do Canvas (M)" : "Mostrar Visão Geral do Canvas (M)"}
+            aria-label="Alternar Visão Geral"
+            className={minimapOpen ? "!bg-primary/20 !text-primary" : ""}
+          >
+            <MapIcon className="h-3.5 w-3.5" />
+          </ControlButton>
+        </Controls>
+      </ReactFlow>
+      {minimapOpen && (
+        <div className="fbv2-minimap-card">
+          <div className="fbv2-minimap-card__header">
+            <div className="fbv2-minimap-card__title">
+              <Compass className="h-3.5 w-3.5 text-primary" />
+              <span>Visão Geral</span>
+              <span className="fbv2-minimap-card__badge">{nodeIds.length} blocos</span>
+            </div>
+            <button
+              type="button"
+              className="fbv2-minimap-card__close"
+              onClick={() => setMinimapOpen(false)}
+              title="Fechar visão geral"
+              aria-label="Fechar visão geral"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
           <MiniMap
-            position="bottom-left"
             pannable
             zoomable
             className="fbv2-minimap"
@@ -394,9 +429,11 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
             nodeStrokeWidth={2}
             maskColor="color-mix(in oklab, var(--color-background) 78%, transparent)"
           />
-        ) : null}
-        <Controls position="bottom-left" className="fbv2-controls" showInteractive={false} />
-      </ReactFlow>
+          <div className="fbv2-minimap-card__footer">
+            Arraste a caixa para navegar no canvas (M)
+          </div>
+        </div>
+      )}
       <CanvasEmptyState visible={isEmpty} />
       <TooltipProvider>
         <Tooltip>
