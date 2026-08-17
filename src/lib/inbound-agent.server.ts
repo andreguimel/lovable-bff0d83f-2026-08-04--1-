@@ -91,9 +91,13 @@ export async function triggerAgentReply(args: {
 
   // Send through provider first (to get provider_message_id), then persist
   const { dispatchSend } = await import("@/lib/wa-providers/index.server");
-  const dispatch = await dispatchSend(args.channel, {
+  const channelPayload = {
+    ...args.channel,
+    company_id: args.companyId,
+  };
+  const dispatch = await dispatchSend(channelPayload, {
     type: "text",
-    to: args.toPhone.replace(/^\+/, ""),
+    to: args.toPhone.replace(/^\+/, "").replace(/\D/g, ""),
     body: reply,
   });
 

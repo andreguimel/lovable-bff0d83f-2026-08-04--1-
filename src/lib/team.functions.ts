@@ -67,6 +67,100 @@ function newInviteToken(): string {
   return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+export const createDirectTeamMember = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (input: {
+      email: string;
+      password: string;
+      fullName: string;
+      role: "admin" | "agent";
+      jobTitle?: string;
+      departmentId?: string;
+    }) =>
+      z
+        .object({
+          email: z.string().email("Formato de e-mail inválido").max(200),
+          password: z.string().min(6, "A senha deve ter no mínimo 6 caracteres").max(100),
+          fullName: z.string().trim().min(2, "Informe o nome do membro").max(120),
+          role: z.enum(["admin", "agent"]),
+          jobTitle: z.string().max(100).optional(),
+          departmentId: z.string().uuid().optional(),
+        })
+        .parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    await requireAdmin(context);
+    const companyId = await currentCompanyId(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // 1. Criar usuário direto no Supabase Auth com confirmação automática de e-mail
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: data.email.toLowerCase().trim(),
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.fullName },
+    });
+
+    if (authError || !authData.user) {
+      throw new Error(authError?.message ?? "Falha ao cadastrar usuário na autenticação");
+    }
+
+    const userId = authData.user.id;
+
+    // 2. Associar perfil à empresa
+    const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
+      id: userId,
+      email: data.email.toLowerCase().trim(),
+      full_name: data.fullName,
+      company_id: companyId,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (profileError) {
+      throw new Error(`Usuário criado, mas falhou ao atualizar perfil: ${profileError.message}`);
+    }
+
+    // 3. Atribuir função/role
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", userId).eq("company_id", companyId);
+    const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
+      user_id: userId,
+      company_id: companyId,
+      role: data.role,
+    });
+
+    if (roleError) {
+      throw new Error(`Perfil associado, mas falhou ao atribuir função: ${roleError.message}`);
+    }
+
+    // 4. Perfil adicional da equipe (departamento/cargo)
+    await supabaseAdmin.from("team_member_profiles").upsert(
+      {
+        user_id: userId,
+        company_id: companyId,
+        status: "active",
+        job_title: data.jobTitle ?? null,
+        department_id: data.departmentId ?? null,
+      },
+      { onConflict: "user_id" },
+    );
+
+    await audit(context, companyId, "member.create_direct", "member", userId, {
+      email: data.email,
+      role: data.role,
+      fullName: data.fullName,
+    });
+
+    return {
+      ok: true,
+      userId,
+      email: data.email,
+      password: data.password,
+      fullName: data.fullName,
+      role: data.role,
+    };
+  });
+
 export const inviteTeamMember = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { email: string; role: "admin" | "agent" }) =>

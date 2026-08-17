@@ -333,19 +333,40 @@ export const sendMessage = createServerFn({ method: "POST" })
     let sendError: string | null = null;
     if (channel && toPhone) {
       const { dispatchSend } = await import("@/lib/wa-providers/index.server");
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+      // Resolve relative storage path to signed URL for Meta/Stevo to download
+      let outboundMediaUrl = data.mediaUrl ?? "";
+      if (outboundMediaUrl && !/^https?:\/\//i.test(outboundMediaUrl)) {
+        const objectPath = outboundMediaUrl.replace(/^\/?message-media\//, "");
+        const { data: signed } = await supabaseAdmin.storage
+          .from("message-media")
+          .createSignedUrl(objectPath, 3600);
+        if (signed?.signedUrl) {
+          outboundMediaUrl = signed.signedUrl;
+        }
+      }
+
       const payload =
         data.type === "text"
           ? { type: "text" as const, to: toPhone, body: data.body ?? "", replyToProviderId }
           : data.type === "image"
-            ? { type: "image" as const, to: toPhone, mediaUrl: data.mediaUrl ?? "", caption: data.body, replyToProviderId }
+            ? { type: "image" as const, to: toPhone, mediaUrl: outboundMediaUrl, caption: data.body, replyToProviderId }
             : data.type === "audio"
-              ? { type: "audio" as const, to: toPhone, mediaUrl: data.mediaUrl ?? "", replyToProviderId }
+              ? {
+                  type: "audio" as const,
+                  to: toPhone,
+                  mediaUrl: outboundMediaUrl,
+                  voice: true,
+                  mime: (data.mediaMetadata?.mime as string | undefined) ?? "audio/webm",
+                  replyToProviderId,
+                }
               : data.type === "video"
-                ? { type: "video" as const, to: toPhone, mediaUrl: data.mediaUrl ?? "", caption: data.body, replyToProviderId }
+                ? { type: "video" as const, to: toPhone, mediaUrl: outboundMediaUrl, caption: data.body, replyToProviderId }
                 : {
                     type: "file" as const,
                     to: toPhone,
-                    mediaUrl: data.mediaUrl ?? "",
+                    mediaUrl: outboundMediaUrl,
                     filename: (data.mediaMetadata?.name as string | undefined) ?? "arquivo",
                     replyToProviderId,
                   };
@@ -355,6 +376,7 @@ export const sendMessage = createServerFn({ method: "POST" })
           provider_type: channel.provider_type,
           credentials: (channel.credentials ?? {}) as Record<string, unknown>,
           phone_number: channel.phone_number,
+          company_id: channel.company_id,
         },
         payload,
       );

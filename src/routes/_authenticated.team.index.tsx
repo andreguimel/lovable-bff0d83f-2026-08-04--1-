@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, Search, Shield, Users2, Sparkles, Building2, ListOrdered, Mail, Key, History } from "lucide-react";
+import { Plus, Search, Shield, Users2, Sparkles, Building2, ListOrdered, Mail, Key, History, UserPlus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,7 +99,7 @@ function TeamPage() {
             <Button variant="outline" size="sm"><Shield className="h-4 w-4 mr-1.5" /> Cargos & Permissões</Button>
           </Link>
           <TeamCopilotSheet trigger={<Button variant="outline" size="sm"><Sparkles className="h-4 w-4 mr-1.5" /> Copiloto</Button>} />
-          <InviteWizard trigger={<Button size="sm"><Plus className="h-4 w-4 mr-1.5" /> Convidar</Button>} />
+          <InviteWizard trigger={<Button size="sm"><UserPlus className="h-4 w-4 mr-1.5" /> Novo Membro</Button>} />
         </div>
       </div>
 
