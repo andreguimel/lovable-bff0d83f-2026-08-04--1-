@@ -572,17 +572,20 @@ function FlowStudio() {
               size={1}
               color="color-mix(in oklab, var(--color-border) 60%, transparent)"
             />
-            <MiniMap
-              pannable
-              zoomable
-              className="flow-minimap"
-              nodeColor={(n) => {
-                const k = (n.data as FlowNodeData)?.__kind ?? "message";
-                return BLOCKS[k]?.accent ?? "oklch(0.7 0.1 240)";
-              }}
-              maskColor="color-mix(in oklab, var(--color-background) 80%, transparent)"
-            />
-            <Controls className="flow-controls" showInteractive={false} />
+            {nodes.length > 5 && (
+              <MiniMap
+                position="bottom-left"
+                pannable
+                zoomable
+                className="flow-minimap"
+                nodeColor={(n) => {
+                  const k = (n.data as FlowNodeData)?.__kind ?? "message";
+                  return BLOCKS[k]?.accent ?? "oklch(0.7 0.1 240)";
+                }}
+                maskColor="color-mix(in oklab, var(--color-background) 80%, transparent)"
+              />
+            )}
+            <Controls position="bottom-left" className="flow-controls" showInteractive={false} />
           </ReactFlow>
 
           <CopilotFab

@@ -381,6 +381,7 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
         />
         {showMinimap ? (
           <MiniMap
+            position="bottom-left"
             pannable
             zoomable
             className="fbv2-minimap"
@@ -394,7 +395,7 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
             maskColor="color-mix(in oklab, var(--color-background) 78%, transparent)"
           />
         ) : null}
-        <Controls className="fbv2-controls" showInteractive={false} />
+        <Controls position="bottom-left" className="fbv2-controls" showInteractive={false} />
       </ReactFlow>
       <CanvasEmptyState visible={isEmpty} />
       <TooltipProvider>
