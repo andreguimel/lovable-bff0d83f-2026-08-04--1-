@@ -15,6 +15,7 @@ import {
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   generateFlowWithAI,
   runFlowCopilotAction,
@@ -90,16 +91,25 @@ export function CopilotFab({ flowId, onApply, contextSummary }: Props) {
 
   if (!open) {
     return (
-      <button
-        type="button"
-        className="copilot-fab"
-        style={{ bottom: "20px", right: "20px" }}
-        onClick={() => setOpen(true)}
-        aria-label="Copiloto IA"
-        title="Copiloto IA — Criar e otimizar fluxos"
-      >
-        <Sparkles className="h-5 w-5" />
-      </button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="copilot-fab"
+              style={{ bottom: "20px", right: "20px" }}
+              onClick={() => setOpen(true)}
+              aria-label="Copiloto IA — Criar e otimizar fluxos"
+            >
+              <Sparkles className="h-5 w-5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="flex items-center gap-1.5 text-xs">
+            <Sparkles className="h-3.5 w-3.5 text-purple-300" />
+            <span>Copiloto IA — Criar e otimizar fluxos</span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 

@@ -30,8 +30,9 @@ import {
   type OnSelectionChangeParams,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { LayoutGrid, Maximize2, Minimize2 } from "lucide-react";
+import { HelpCircle, Keyboard, LayoutGrid, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 import { blockRegistry } from "../blocks/registry";
 import { useBuilderStore } from "../state/store";
@@ -396,16 +397,26 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
         <Controls className="fbv2-controls" showInteractive={false} />
       </ReactFlow>
       <CanvasEmptyState visible={isEmpty} />
-      <button
-        type="button"
-        className="fbv3-help-fab"
-        style={{ bottom: "82px", right: "24px" }}
-        onClick={() => setShortcutsOpen(true)}
-        title="Atalhos do canvas (?)"
-        aria-label="Atalhos do canvas"
-      >
-        ?
-      </button>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              className="fbv3-help-fab"
+              style={{ bottom: "82px", right: "24px" }}
+              onClick={() => setShortcutsOpen(true)}
+              aria-label="Atalhos do teclado do canvas (?)"
+            >
+              <HelpCircle className="h-4 w-4" />
+              <span className="sr-only">Atalhos (?)</span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="left" className="flex items-center gap-1.5 text-xs">
+            <Keyboard className="h-3.5 w-3.5 text-primary-foreground/80" />
+            <span>Atalhos do teclado <kbd className="rounded border border-primary-foreground/30 bg-primary-foreground/10 px-1 py-0.2 text-[10px] font-mono">?</kbd></span>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
