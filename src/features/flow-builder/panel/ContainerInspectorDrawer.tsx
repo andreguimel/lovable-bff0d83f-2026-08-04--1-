@@ -25,6 +25,8 @@ import {
   Search,
   Filter,
   Rocket,
+  Shuffle,
+  AlertCircle,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
@@ -332,6 +334,159 @@ export function ContainerInspectorDrawer() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "randomizer" || kind === "split") {
+    const selectionType = (data.selectionType as string) || "random";
+    const options = (data.options as Array<{ id: string; label: string; percentage?: number; handleId?: string }>) || [];
+
+    const totalPercentage = options.reduce((sum, opt) => sum + (opt.percentage ?? Math.round(100 / (options.length || 1))), 0);
+    const isTotalInvalid = selectionType === "random" && options.length > 0 && Math.abs(totalPercentage - 100) > 1;
+
+    const handleAddOption = () => {
+      const newOptId = `opt_${Date.now()}`;
+      const newCount = options.length + 1;
+      const equalShare = Math.floor(100 / newCount);
+
+      const updatedExisting = options.map((o) => ({ ...o, percentage: equalShare }));
+      const newOpt = {
+        id: newOptId,
+        label: `Opção ${newCount}`,
+        percentage: equalShare,
+        handleId: `handle_${newOptId}`,
+      };
+
+      updateNodeData(node.id, { options: [...updatedExisting, newOpt] });
+    };
+
+    const handleUpdateOptionLabel = (optId: string, label: string) => {
+      const updated = options.map((o) => (o.id === optId ? { ...o, label } : o));
+      updateNodeData(node.id, { options: updated });
+    };
+
+    const handleUpdateOptionPercentage = (optId: string, percentage: number) => {
+      const updated = options.map((o) => (o.id === optId ? { ...o, percentage } : o));
+      updateNodeData(node.id, { options: updated });
+    };
+
+    const handleRemoveOption = (optId: string) => {
+      const updated = options.filter((o) => o.id !== optId);
+      updateNodeData(node.id, { options: updated });
+    };
+
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        {/* Header do Randomizador */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-cyan-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-cyan-500 text-white shadow-sm">
+              <Shuffle className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">Randomizador</h2>
+          </div>
+          <button
+            onClick={() => clearSelection()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+          {/* Radio Selector: Tipo de Seleção (Aleatório vs Sequencial) */}
+          <div className="space-y-3">
+            <label className="font-bold text-gray-800 block">Tipo de seleção</label>
+            <div className="space-y-2">
+              <label className="flex items-start gap-2.5 cursor-pointer font-medium text-gray-700">
+                <input
+                  type="radio"
+                  name="selectionType"
+                  checked={selectionType === "random"}
+                  onChange={() => updateNodeData(node.id, { selectionType: "random" })}
+                  className="w-4 h-4 text-cyan-600 focus:ring-cyan-500 mt-0.5"
+                />
+                <div>
+                  <span className="font-bold text-gray-800">Aleatório</span>
+                  <p className="text-[11px] text-gray-400 font-normal leading-relaxed">
+                    Indique a probabilidade de escolha da opção. Quanto maior o percentual, maiores as chances de escolher esta opção
+                  </p>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-2.5 cursor-pointer font-medium text-gray-700 pt-1">
+                <input
+                  type="radio"
+                  name="selectionType"
+                  checked={selectionType === "sequential"}
+                  onChange={() => updateNodeData(node.id, { selectionType: "sequential" })}
+                  className="w-4 h-4 text-cyan-600 focus:ring-cyan-500 mt-0.5"
+                />
+                <div>
+                  <span className="font-bold text-gray-800">Sequencial, um por um</span>
+                  <p className="text-[11px] text-gray-400 font-normal leading-relaxed">
+                    Cada opção será escolhida sequencialmente, começando pela primeira e será repetida.
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* Warning Banner (A porcentagem somada deve corresponder 100% - Print 1) */}
+          {isTotalInvalid && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-2xl flex items-start gap-2.5 text-red-600 animate-in fade-in duration-150">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-500" />
+              <span className="text-[11px] font-medium leading-tight">
+                A porcentagem somada deve corresponder 100%
+              </span>
+            </div>
+          )}
+
+          {/* Lista de Opções adicionadas */}
+          <div className="space-y-2">
+            {options.map((opt) => (
+              <div key={opt.id} className="flex items-center gap-2 p-2 bg-cyan-50/50 border border-cyan-200 rounded-xl">
+                <input
+                  type="text"
+                  value={opt.label}
+                  onChange={(e) => handleUpdateOptionLabel(opt.id, e.target.value)}
+                  className="flex-1 bg-white border border-cyan-200 rounded-lg px-2.5 py-1 text-xs font-semibold text-cyan-900 focus:outline-none"
+                />
+
+                {selectionType === "random" && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={opt.percentage ?? 50}
+                      onChange={(e) => handleUpdateOptionPercentage(opt.id, parseInt(e.target.value) || 0)}
+                      className="w-12 bg-white border border-cyan-200 rounded-lg px-1.5 py-1 text-xs font-bold text-cyan-600 text-center"
+                    />
+                    <span className="font-bold text-cyan-600 text-xs">%</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={() => handleRemoveOption(opt.id)}
+                  className="p-1 text-gray-400 hover:text-red-600 rounded shrink-0"
+                  title="Excluir opção"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Botão Adicionar opção (Cyan Pontilhado - Print do Usuário) */}
+          <button
+            onClick={handleAddOption}
+            className="w-full py-3 border-2 border-dashed border-cyan-300 bg-cyan-50/30 hover:bg-cyan-50 text-cyan-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5"
+          >
+            Adicionar opção
+          </button>
         </div>
       </div>
     );
