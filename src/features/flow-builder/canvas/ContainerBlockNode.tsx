@@ -18,6 +18,7 @@ import {
   FileVideo,
   LayoutGrid,
   Filter,
+  GitFork,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -245,6 +246,74 @@ function ContainerBlockNodeInner(props: NodeProps) {
               />
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isFlowConnectionKind = kind === "subflow" || kind === "flow_connection";
+
+  if (isFlowConnectionKind) {
+    const targetFlowName = (data.targetFlowName as string) || (data.flowName as string) || "";
+
+    return (
+      <div
+        className={`w-80 rounded-2xl border-2 border-emerald-200 bg-white shadow-md transition-all font-sans relative ${
+          selected ? "ring-2 ring-emerald-500 shadow-xl border-emerald-500" : ""
+        }`}
+      >
+        {/* Porta de Entrada (Left Handle) */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+        />
+
+        {/* Header do Card Conexão de Fluxo */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-emerald-50 border-b border-emerald-100">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500 text-white shadow-sm">
+              <Rocket className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-emerald-950">Conexão de Fluxo</span>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateNode(nodeId);
+              }}
+              className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+              title="Duplicar nó"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNode(nodeId);
+              }}
+              className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+              title="Excluir nó"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body do Card Conexão de Fluxo */}
+        <div className="p-3 space-y-2.5">
+          <p className="text-xs text-gray-500 font-medium">
+            Selecione o fluxo que será iniciado após a ação anterior
+          </p>
+
+          <button
+            onClick={() => selectNode(nodeId)}
+            className="w-full py-3 border-2 border-dashed border-emerald-200 bg-emerald-50/40 hover:bg-emerald-50 text-emerald-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 nodrag"
+          >
+            {targetFlowName ? `▶ ${targetFlowName}` : "Selecionar Fluxo"}
+          </button>
         </div>
       </div>
     );

@@ -24,6 +24,7 @@ import {
   LayoutGrid,
   Search,
   Filter,
+  Rocket,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
@@ -330,6 +331,81 @@ export function ContainerInspectorDrawer() {
                 Conecte no fluxo
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "subflow" || kind === "flow_connection") {
+    const targetFlowName = (data.targetFlowName as string) || (data.flowName as string) || "";
+    const [selectOpen, setSelectOpen] = useState(false);
+
+    const SYSTEM_FLOWS = [
+      { id: "flow_1", name: "Fluxo de Vendas Principal" },
+      { id: "flow_2", name: "Suporte Técnico Automático" },
+      { id: "flow_3", name: "Boas-vindas & Onboarding" },
+      { id: "flow_4", name: "Recuperação de Carrinho" },
+      { id: "flow_5", name: "Pesquisa de Satisfação (NPS)" },
+    ];
+
+    const handleSelectFlow = (flowName: string) => {
+      updateNodeData(node.id, { targetFlowName: flowName, flowName: flowName });
+      setSelectOpen(false);
+      toast.success(`Fluxo "${flowName}" conectado`);
+    };
+
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        {/* Header da Conexão de Fluxo */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-emerald-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500 text-white shadow-sm">
+              <Rocket className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">Conexão de Fluxo</h2>
+          </div>
+          <button
+            onClick={() => clearSelection()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+          {/* Instrução Inicial (Print do Usuário) */}
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            Clique no botão abaixo e selecione um fluxo para iniciar logo após o bloco conectado a este bloco for executado.
+          </p>
+
+          {/* Botão Selecionar Fluxo (Verde Pontilhado - Print do Usuário) */}
+          <div className="relative">
+            <button
+              onClick={() => setSelectOpen(!selectOpen)}
+              className="w-full py-3.5 border-2 border-dashed border-emerald-300 bg-emerald-50/30 hover:bg-emerald-50 text-emerald-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-2"
+            >
+              <span>{targetFlowName ? `▶ ${targetFlowName}` : "Selecionar Fluxo"}</span>
+              <ChevronRight className={`w-4 h-4 text-emerald-500 transition-transform ${selectOpen ? "rotate-90" : ""}`} />
+            </button>
+
+            {/* Dropdown de Seleção dos Fluxos */}
+            {selectOpen && (
+              <div className="mt-2 p-2 bg-white border border-gray-200 rounded-2xl shadow-xl space-y-1 text-xs animate-in zoom-in-95 duration-150 z-40 relative">
+                <span className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider block py-1">
+                  FLUXOS DISPONÍVEIS
+                </span>
+                {SYSTEM_FLOWS.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => handleSelectFlow(f.name)}
+                    className="w-full text-left px-3 py-2 font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl transition-colors block"
+                  >
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
