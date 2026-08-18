@@ -23,6 +23,7 @@ import {
   Copy,
   LayoutGrid,
   Search,
+  Filter,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
@@ -329,6 +330,190 @@ export function ContainerInspectorDrawer() {
                 Conecte no fluxo
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "condition") {
+    const matchRule = (data.matchRule as string) || "any";
+    const conditions = (data.conditions as Array<{ id: string; label: string; category?: string; operator?: string; value?: string }>) || [];
+    const [selectOpen, setSelectOpen] = useState(false);
+
+    const CONDITION_CATEGORIES = [
+      {
+        title: "OPERAÇÕES MAIS USADAS",
+        items: [
+          "Etiqueta",
+          "Dia da Semana ao passar por aqui",
+          "Horário de Atendimento",
+          "Hora ao passar por aqui",
+          "Atendimento está atribuído para um membro",
+        ],
+      },
+      {
+        title: "CAMPOS DO SISTEMA",
+        items: [
+          "Nome completo",
+          "Primeiro nome",
+          "Sobrenome",
+          "Telefone",
+          "ddd",
+          "Nome do Indicador",
+        ],
+      },
+      {
+        title: "CAMPOS DO USUÁRIO",
+        items: [
+          "CPF",
+          "DATA-FATURA-10D",
+          "DATA-POS-VCTO",
+          "Data-Fat-Disp-Manual",
+          "Data-fatura-01",
+          "Data-fatura-02",
+        ],
+      },
+      {
+        title: "CAMPOS DO ROBÔ",
+        items: ["AtendenteDaVez", "idade"],
+      },
+    ];
+
+    const handleSelectConditionItem = (itemLabel: string, categoryTitle: string) => {
+      const newCond = {
+        id: `cond_${Date.now()}`,
+        label: itemLabel,
+        category: categoryTitle,
+      };
+      updateNodeData(node.id, { conditions: [...conditions, newCond] });
+      setSelectOpen(false);
+      toast.success(`Condição "${itemLabel}" adicionada`);
+    };
+
+    const handleRemoveCondition = (condId: string) => {
+      const updated = conditions.filter((c) => c.id !== condId);
+      updateNodeData(node.id, { conditions: updated });
+    };
+
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        {/* Header da Condição */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-blue-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500 text-white shadow-sm">
+              <Filter className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">Condição</h2>
+          </div>
+          <button
+            onClick={() => clearSelection()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+          {/* Instrução Inicial (Print 1) */}
+          <p className="text-[11px] text-gray-500 leading-relaxed">
+            Defina as condições e regra lógica para que o fluxo continue pela saída superior deste bloco:
+          </p>
+
+          {/* Radio Selector: Match Rule (TODAS vs QUALQUER) */}
+          <div className="space-y-2.5">
+            <label className="flex items-center gap-2.5 cursor-pointer font-medium text-gray-700">
+              <input
+                type="radio"
+                name="matchRule"
+                checked={matchRule === "all"}
+                onChange={() => updateNodeData(node.id, { matchRule: "all" })}
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+              />
+              Contato corresponde a TODAS condições
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer font-medium text-gray-700">
+              <input
+                type="radio"
+                name="matchRule"
+                checked={matchRule === "any"}
+                onChange={() => updateNodeData(node.id, { matchRule: "any" })}
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+              />
+              Contato corresponde a QUALQUER condição
+            </label>
+          </div>
+
+          {/* Subtítulo de Lógica Ativa */}
+          <div className="font-bold text-gray-800 text-xs">
+            Lógica <span className="text-blue-600">{matchRule === "all" ? "E" : "Ou"}</span>
+          </div>
+
+          {/* Dropdown de Seleção de Condição (Prints 1, 2, 3, 4) */}
+          <div className="relative">
+            <button
+              onClick={() => setSelectOpen(!selectOpen)}
+              className="w-full p-2.5 bg-blue-50/40 border-2 border-blue-200 hover:border-blue-400 rounded-xl text-left font-medium text-blue-900 flex items-center justify-between transition-colors"
+            >
+              <span>Selecionar Condição</span>
+              <ChevronRight className={`w-4 h-4 text-blue-500 transition-transform ${selectOpen ? "rotate-90" : ""}`} />
+            </button>
+
+            {selectOpen && (
+              <div className="mt-1 p-2 bg-white border border-gray-200 rounded-2xl shadow-xl max-h-72 overflow-y-auto space-y-3 text-xs animate-in zoom-in-95 duration-150 z-40 relative">
+                {CONDITION_CATEGORIES.map((cat) => (
+                  <div key={cat.title} className="space-y-1">
+                    <span className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
+                      {cat.title}
+                    </span>
+                    {cat.items.map((item) => (
+                      <button
+                        key={item}
+                        onClick={() => handleSelectConditionItem(item, cat.title)}
+                        className="w-full text-left px-2.5 py-1.5 font-medium text-gray-700 hover:bg-blue-50 hover:text-blue-900 rounded-lg transition-colors block"
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Lista de Condições Adicionadas */}
+          <div className="space-y-2 pt-2">
+            {conditions.map((cond) => (
+              <div
+                key={cond.id}
+                className="p-3 bg-blue-50/60 border border-blue-200 rounded-2xl space-y-2 relative"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-blue-900 font-bold text-xs">
+                    <Filter className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                    <span>{cond.label}</span>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveCondition(cond.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 rounded"
+                    title="Excluir condição"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <input
+                  type="text"
+                  placeholder="Definir valor ou operador..."
+                  value={cond.value || ""}
+                  onChange={(e) => {
+                    const updated = conditions.map((c) => (c.id === cond.id ? { ...c, value: e.target.value } : c));
+                    updateNodeData(node.id, { conditions: updated });
+                  }}
+                  className="w-full p-2 bg-white border border-blue-200 rounded-xl text-xs focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                />
+              </div>
+            ))}
           </div>
         </div>
       </div>

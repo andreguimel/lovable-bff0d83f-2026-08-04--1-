@@ -17,6 +17,7 @@ import {
   Rocket,
   FileVideo,
   LayoutGrid,
+  Filter,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -244,6 +245,115 @@ function ContainerBlockNodeInner(props: NodeProps) {
               />
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isConditionKind = kind === "condition";
+
+  if (isConditionKind) {
+    const matchRule = (data.matchRule as string) || "any";
+    const conditions = (data.conditions as Array<{ id: string; label: string; operator?: string; value?: string }>) || [];
+    const logicLabel = matchRule === "all" ? "Lógica E" : "Lógica Ou";
+
+    return (
+      <div
+        className={`w-80 rounded-2xl border-2 border-blue-200 bg-white shadow-md transition-all font-sans relative ${
+          selected ? "ring-2 ring-blue-500 shadow-xl border-blue-500" : ""
+        }`}
+      >
+        {/* Porta de Entrada (Left Handle) */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+        />
+
+        {/* Header do Card Condição */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-blue-50 border-b border-blue-100">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-blue-500 text-white shadow-sm">
+              <Filter className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-blue-950">Condição</span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-blue-600">{logicLabel}</span>
+            <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  duplicateNode(nodeId);
+                }}
+                className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+                title="Duplicar nó"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeNode(nodeId);
+                }}
+                className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+                title="Excluir nó"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Body do Card Condição */}
+        <div className="p-3 space-y-2.5">
+          {conditions.length === 0 ? (
+            <>
+              <p className="text-xs text-gray-500 font-medium">Adicione algum conteúdo para ver</p>
+              <button
+                onClick={() => selectNode(nodeId)}
+                className="w-full py-3 border-2 border-dashed border-blue-200 bg-blue-50/40 hover:bg-blue-50 text-blue-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 nodrag"
+              >
+                Adicionar condição
+              </button>
+            </>
+          ) : (
+            <div className="space-y-2">
+              {conditions.map((cond) => (
+                <div
+                  key={cond.id}
+                  className="p-2.5 bg-blue-50/70 border border-blue-100 rounded-xl text-xs text-blue-900 flex items-center justify-between"
+                >
+                  <span className="font-semibold truncate">{cond.label}</span>
+                </div>
+              ))}
+              <button
+                onClick={() => selectNode(nodeId)}
+                className="w-full py-2 border border-dashed border-blue-300 text-blue-600 font-semibold rounded-xl text-xs hover:bg-blue-50 transition-colors nodrag"
+              >
+                + Adicionar condição
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Portas de Saída (Verdadeiro / Falso) */}
+        <div className="absolute right-0 top-1/3 -mr-2">
+          <Handle
+            type="source"
+            id="true"
+            position={Position.Right}
+            className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+          />
+        </div>
+        <div className="absolute right-0 bottom-1/4 -mr-2">
+          <Handle
+            type="source"
+            id="false"
+            position={Position.Right}
+            className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+          />
         </div>
       </div>
     );
