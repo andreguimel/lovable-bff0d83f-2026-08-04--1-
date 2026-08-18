@@ -486,10 +486,70 @@ export function TestChatDrawer({ open, onClose }: Props) {
             return;
           }
           case "message":
-          case "send_message": {
-            const txt = pickText(data, "body", "text", "message", "label");
-            const id = sendFromBot({ kind: "text", text: txt || "(mensagem vazia)" });
-            upgradeTicks(id);
+          case "send_message":
+          case "container_content": {
+            const rawItems = (data.items as Array<Record<string, unknown>>) || [];
+            if (rawItems.length > 0) {
+              let pausedForAnswer = false;
+              for (const sub of rawItems) {
+                const subType = sub.type as string;
+                if (subType === "text") {
+                  const content = (sub.content as string) || (sub.text as string) || "";
+                  if (content) {
+                    const id = sendFromBot({ kind: "text", text: content });
+                    upgradeTicks(id);
+                  }
+                } else if (subType === "image") {
+                  const url = (sub.url as string) || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809";
+                  const id = sendFromBot({ kind: "image", url, caption: "Imagem enviada" });
+                  upgradeTicks(id);
+                } else if (subType === "video") {
+                  const url = (sub.url as string) || "https://www.w3schools.com/html/mov_bbb.mp4";
+                  const id = sendFromBot({ kind: "video", url, caption: "Vídeo enviado" });
+                  upgradeTicks(id);
+                } else if (subType === "audio") {
+                  const url = (sub.url as string) || "https://www.w3schools.com/html/horse.mp3";
+                  const id = sendFromBot({ kind: "audio", url, seconds: 5 });
+                  upgradeTicks(id);
+                } else if (subType === "document") {
+                  const url = (sub.url as string) || "#";
+                  const filename = (sub.fileName as string) || "documento.pdf";
+                  const id = sendFromBot({ kind: "document", url, filename });
+                  upgradeTicks(id);
+                } else if (subType === "contact") {
+                  const name = (sub.name as string) || "Contato";
+                  const phone = (sub.phone as string) || "+5511999999999";
+                  const id = sendFromBot({ kind: "contact", name, phone });
+                  upgradeTicks(id);
+                } else if (subType === "delay") {
+                  const secs = Number(sub.seconds || 5);
+                  setStatus("typing");
+                  await new Promise((r) => setTimeout(r, Math.min(secs, 4) * 400));
+                } else if (subType === "auto_off") {
+                  append({
+                    kind: "system",
+                    from: "system",
+                    text: "Auto-Off ativado (resposta padrão desligada)",
+                    tone: "info",
+                  });
+                } else if (subType === "save_response") {
+                  const q = (sub.question as string) || "Insira sua pergunta aqui";
+                  const id = sendFromBot({ kind: "text", text: q });
+                  upgradeTicks(id);
+                  setWaiting({ kind: "text", nodeId: node.id, itemToken: String(sub.id || "") });
+                  setStatus("waiting");
+                  pausedForAnswer = true;
+                  break;
+                }
+              }
+              if (pausedForAnswer) return;
+            } else {
+              const txt = pickText(data, "body", "text", "message", "label");
+              if (txt) {
+                const id = sendFromBot({ kind: "text", text: txt });
+                upgradeTicks(id);
+              }
+            }
             current = nextFromHandle(node.id, null);
             break;
           }
