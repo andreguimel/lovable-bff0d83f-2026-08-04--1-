@@ -21,6 +21,7 @@ import {
   ChevronRight,
   GripVertical,
   Copy,
+  LayoutGrid,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
@@ -102,6 +103,229 @@ export function ContainerInspectorDrawer() {
                 </button>
               );
             })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "menu") {
+    const menuMode = (data.menuMode as string) || "list";
+    const questionText = (data.questionText as string) || (data.text as string) || "";
+    const invalidInputText = (data.invalidInputText as string) || "";
+    const errorLimit = (data.errorLimit as number) || 3;
+    const buttonTitle = (data.buttonTitle as string) || "VER OPÇÕES";
+    const options = (data.options as Array<{ id: string; label: string; handleId?: string }>) || [];
+    const expirationDelay = (data.expirationDelay as string) || "1 Dias";
+
+    const handleAddOption = () => {
+      const newOptId = `opt_${Date.now()}`;
+      const newOpt = {
+        id: newOptId,
+        label: `Opção ${options.length + 1}`,
+        handleId: `handle_${newOptId}`,
+      };
+      updateNodeData(node.id, { options: [...options, newOpt] });
+    };
+
+    const handleUpdateOption = (optId: string, label: string) => {
+      const updated = options.map((o) => (o.id === optId ? { ...o, label } : o));
+      updateNodeData(node.id, { options: updated });
+    };
+
+    const handleRemoveOption = (optId: string) => {
+      const updated = options.filter((o) => o.id !== optId);
+      updateNodeData(node.id, { options: updated });
+    };
+
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        {/* Header do Menu */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-purple-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-100 text-purple-600">
+              <LayoutGrid className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">Menu</h2>
+          </div>
+          <button
+            onClick={() => clearSelection()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+          {/* Seletor de Tipo de Menu (Radio Buttons) */}
+          <div className="space-y-2">
+            <label className="flex items-center gap-2.5 cursor-pointer font-medium text-gray-700">
+              <input
+                type="radio"
+                name="menuMode"
+                checked={menuMode === "list"}
+                onChange={() => updateNodeData(node.id, { menuMode: "list" })}
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+              />
+              Botão de lista
+            </label>
+            <label className="flex items-center gap-2.5 cursor-pointer font-medium text-gray-700">
+              <input
+                type="radio"
+                name="menuMode"
+                checked={menuMode === "number"}
+                onChange={() => updateNodeData(node.id, { menuMode: "number" })}
+                className="w-4 h-4 text-blue-600 focus:ring-blue-500"
+              />
+              Número
+            </label>
+          </div>
+
+          {/* Texto da pergunta */}
+          <div className="space-y-1.5">
+            <label className="font-bold text-gray-800 block">Texto da pergunta</label>
+            <div className="p-3 bg-purple-50/20 border border-purple-200 rounded-2xl space-y-2">
+              <textarea
+                value={questionText}
+                onChange={(e) => updateNodeData(node.id, { questionText: e.target.value })}
+                placeholder="Insira a mensagem do menu..."
+                rows={3}
+                className="w-full p-2.5 bg-white border border-purple-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+              />
+              <div className="flex items-center justify-between text-gray-400 px-1">
+                <div className="flex items-center gap-3">
+                  <Bold className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                  <Italic className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                  <AlignLeft className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                  <Code className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button className="px-3 py-1 text-xs text-blue-500 font-medium hover:bg-blue-50 rounded-lg">Cancelar</button>
+                <button onClick={() => toast.success("Texto da pergunta salvo")} className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
+              </div>
+            </div>
+          </div>
+
+          {/* Se Modo for Número */}
+          {menuMode === "number" && (
+            <>
+              <div className="space-y-1.5">
+                <label className="font-bold text-gray-800 block">Texto para entrada inválida</label>
+                <div className="p-3 bg-purple-50/20 border border-purple-200 rounded-2xl space-y-2">
+                  <textarea
+                    value={invalidInputText}
+                    onChange={(e) => updateNodeData(node.id, { invalidInputText: e.target.value })}
+                    placeholder="Opção inválida..."
+                    rows={3}
+                    className="w-full p-2.5 bg-white border border-purple-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-purple-400 resize-none"
+                  />
+                  <div className="flex items-center justify-between text-gray-400 px-1">
+                    <div className="flex items-center gap-3">
+                      <Bold className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <Italic className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <AlignLeft className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <Code className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button className="px-3 py-1 text-xs text-blue-500 font-medium hover:bg-blue-50 rounded-lg">Cancelar</button>
+                    <button onClick={() => toast.success("Texto salvo")} className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[11px] text-gray-600 block">Limitar a quantidade de erros que depois usam saída adicional</label>
+                <select
+                  value={errorLimit}
+                  onChange={(e) => updateNodeData(node.id, { errorLimit: parseInt(e.target.value) })}
+                  className="w-24 p-2 bg-white border border-gray-200 rounded-xl font-bold text-gray-800"
+                >
+                  <option value={1}>1</option>
+                  <option value={2}>2</option>
+                  <option value={3}>3</option>
+                  <option value={5}>5</option>
+                </select>
+              </div>
+            </>
+          )}
+
+          {/* Se Modo for Botão de Lista */}
+          {menuMode === "list" && (
+            <div className="space-y-1.5">
+              <label className="font-bold text-gray-800 block">Título do botão</label>
+              <div className="p-3 bg-purple-50/20 border border-purple-200 rounded-2xl space-y-2">
+                <input
+                  type="text"
+                  value={buttonTitle}
+                  onChange={(e) => updateNodeData(node.id, { buttonTitle: e.target.value })}
+                  placeholder="VER OPÇÕES"
+                  className="w-full p-2.5 bg-white border border-purple-200 rounded-xl text-xs font-bold uppercase tracking-wide focus:outline-none focus:ring-2 focus:ring-purple-400"
+                />
+                <div className="flex justify-end gap-2 pt-1">
+                  <button className="px-3 py-1 text-xs text-blue-500 font-medium hover:bg-blue-50 rounded-lg">Cancelar</button>
+                  <button onClick={() => toast.success("Título do botão salvo")} className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Respostas adicionadas */}
+          <div className="space-y-2 pt-2 border-t border-gray-100">
+            <div className="text-center text-xs font-semibold text-gray-400">—— Respostas ——</div>
+
+            <div className="space-y-2">
+              {options.map((opt) => (
+                <div key={opt.id} className="flex items-center gap-2 p-2 bg-purple-50/60 border border-purple-100 rounded-xl">
+                  <input
+                    type="text"
+                    value={opt.label}
+                    onChange={(e) => handleUpdateOption(opt.id, e.target.value)}
+                    className="flex-1 bg-white border border-purple-200 rounded-lg px-2 py-1 text-xs font-semibold text-purple-900 focus:outline-none"
+                  />
+                  <button
+                    onClick={() => handleRemoveOption(opt.id)}
+                    className="p-1 text-gray-400 hover:text-red-600 rounded"
+                    title="Excluir resposta"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={handleAddOption}
+              className="w-full py-2.5 border-2 border-dashed border-purple-200 bg-purple-50/30 hover:bg-purple-50 text-purple-700 font-semibold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5"
+            >
+              <Plus className="w-4 h-4" />
+              Adicionar nova resposta
+            </button>
+          </div>
+
+          {/* Se usuário não responder */}
+          <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2 pt-3">
+            <span className="font-bold text-gray-800 block">Se usuário não responder</span>
+            <div className="flex items-center gap-1.5 text-gray-600">
+              <span>Mensagem expira em</span>
+              <select
+                value={expirationDelay}
+                onChange={(e) => updateNodeData(node.id, { expirationDelay: e.target.value })}
+                className="font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-0.5"
+              >
+                <option value="1 Dias">1 Dias</option>
+                <option value="2 Dias">2 Dias</option>
+                <option value="3 Dias">3 Dias</option>
+                <option value="1 Horas">1 Horas</option>
+              </select>
+            </div>
+            <div className="pt-1">
+              <span className="text-[11px] text-gray-400 block mb-1">Você pode iniciar outra Automação quando o tempo expirar sem resposta:</span>
+              <div className="p-2.5 border-2 border-dashed border-gray-200 rounded-xl text-center font-medium text-gray-500 bg-white">
+                Conecte no fluxo
+              </div>
+            </div>
           </div>
         </div>
       </div>

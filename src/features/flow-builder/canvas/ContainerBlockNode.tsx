@@ -16,6 +16,7 @@ import {
   Sparkles,
   Rocket,
   FileVideo,
+  LayoutGrid,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -108,6 +109,145 @@ function ContainerBlockNodeInner(props: NodeProps) {
             position={Position.Right}
             className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-2"
           />
+        </div>
+      </div>
+    );
+  }
+
+  const isMenuKind = kind === "menu";
+
+  if (isMenuKind) {
+    const menuMode = (data.menuMode as string) || "list";
+    const questionText = (data.questionText as string) || (data.text as string) || "";
+    const invalidInputText = (data.invalidInputText as string) || "";
+    const errorLimit = (data.errorLimit as number) || 3;
+    const buttonTitle = (data.buttonTitle as string) || "VER OPÇÕES";
+    const options = (data.options as Array<{ id: string; label: string; handleId?: string }>) || [];
+
+    return (
+      <div
+        className={`w-80 rounded-2xl border-2 border-purple-200 bg-white shadow-md transition-all font-sans relative ${
+          selected ? "ring-2 ring-purple-500 shadow-xl border-purple-500" : ""
+        }`}
+      >
+        {/* Porta de Entrada (Left Handle) */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+        />
+
+        {/* Header do Card Menu */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-purple-50 border-b border-purple-100">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-purple-100 text-purple-600">
+              <LayoutGrid className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-purple-900">Menu</span>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateNode(nodeId);
+              }}
+              className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+              title="Duplicar nó"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNode(nodeId);
+              }}
+              className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+              title="Excluir nó"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Caixa de Métricas (0 Enviado | 0% Clicada) */}
+        <div className="p-3">
+          <div className="grid grid-cols-2 bg-purple-50/50 border border-purple-100 rounded-xl p-2 text-center text-xs mb-3">
+            <div className="border-r border-purple-100 pr-1">
+              <div className="font-bold text-purple-900 text-sm">0</div>
+              <div className="text-[10px] text-purple-400 font-medium">Enviado</div>
+            </div>
+            <div className="pl-1">
+              <div className="font-bold text-purple-900 text-sm">0%</div>
+              <div className="text-[10px] text-purple-400 font-medium">Clicada</div>
+            </div>
+          </div>
+
+          <div className="space-y-2.5">
+            {/* Texto da Pergunta */}
+            <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs text-gray-700">
+              <span className="text-gray-400 block text-[10px]">Texto da pergunta</span>
+              <p className="font-medium text-gray-800 break-words">{questionText || <span className="italic text-gray-400">Texto da pergunta</span>}</p>
+            </div>
+
+            {/* Modo Número */}
+            {menuMode === "number" && (
+              <>
+                <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs text-gray-700">
+                  <span className="text-gray-400 block text-[10px]">Texto para entrada inválida</span>
+                  <p className="font-medium text-gray-800 break-words">{invalidInputText || <span className="italic text-gray-400">Texto para entrada inválida</span>}</p>
+                </div>
+
+                <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs relative flex items-center justify-between">
+                  <div>
+                    <span className="text-gray-400 block text-[10px]">Saída de erro</span>
+                    <p className="text-[11px] text-gray-700 font-medium">Limitar a quantidade de erros que depois usam saída adicional: <span className="font-bold">{errorLimit}</span></p>
+                  </div>
+                  <Handle
+                    type="source"
+                    id="error_output"
+                    position={Position.Right}
+                    className="!w-3.5 !h-3.5 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-4"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Modo Botão de Lista */}
+            {menuMode === "list" && (
+              <div className="p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-xs">
+                <span className="text-gray-400 block text-[10px]">Nome da lista de botões</span>
+                <p className="font-bold text-gray-800 tracking-wide uppercase">{buttonTitle || "VER OPÇÕES"}</p>
+              </div>
+            )}
+
+            {/* Lista de Respostas (com seus handles azuis) */}
+            {options.map((opt, idx) => {
+              const handleId = opt.handleId || `option_${opt.id || idx}`;
+              return (
+                <div key={opt.id || idx} className="p-2.5 bg-purple-50/60 border border-purple-100 rounded-xl text-xs font-semibold text-purple-900 flex items-center justify-between relative">
+                  <span>{opt.label || `Opção ${idx + 1}`}</span>
+                  <Handle
+                    type="source"
+                    id={handleId}
+                    position={Position.Right}
+                    className="!w-3.5 !h-3.5 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-4"
+                  />
+                </div>
+              );
+            })}
+
+            {/* Se usuário não responder */}
+            <div className="pt-2 text-right relative flex items-center justify-end">
+              <span className="text-[11px] text-gray-500 font-medium mr-2">Se usuário não responder</span>
+              <Handle
+                type="source"
+                id="no_reply"
+                position={Position.Right}
+                className="!w-3.5 !h-3.5 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-4"
+              />
+            </div>
+          </div>
         </div>
       </div>
     );
