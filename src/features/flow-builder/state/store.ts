@@ -45,7 +45,7 @@ export interface BuilderStore extends CoreState {
   updateNodeData: (id: string, patch: Record<string, unknown>) => void;
   /** substitui integralmente `data` (usado por Cancelar do SmartSidebar). */
   replaceNodeData: (id: string, data: Record<string, unknown>) => void;
-  moveNode: (id: string, position: BuilderPosition) => void;
+  moveNode: (id: string, position: BuilderPosition, isDragging?: boolean) => void;
   /**
    * FB-10.3.1 — Reposiciona vários nós num único passo atômico.
    * Uma única entrada de histórico (undo restaura todas as posições
@@ -201,11 +201,21 @@ export const useBuilderStore = create<BuilderStore>((set, get) => {
 
 
 
-    moveNode: (id, position) => {
+    moveNode: (id, position, isDragging = false) => {
       if (!get().nodesById[id]) return;
-      mutate((draft) => {
-        draft.nodesById[id].position = position;
-      });
+      if (isDragging) {
+        set((s) => ({
+          nodesById: {
+            ...s.nodesById,
+            [id]: { ...s.nodesById[id], position },
+          },
+          dirty: true,
+        }));
+      } else {
+        mutate((draft) => {
+          draft.nodesById[id].position = position;
+        });
+      }
       builderBus.emit({ type: "node:moved", nodeId: id });
     },
 

@@ -155,8 +155,8 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
   const onNodesChange = useCallback((changes: NodeChange[]) => {
     const store = useBuilderStore.getState();
     for (const c of changes) {
-      if (c.type === "position" && c.position && !c.dragging) {
-        store.moveNode(c.id, { x: c.position.x, y: c.position.y });
+      if (c.type === "position" && c.position) {
+        store.moveNode(c.id, { x: c.position.x, y: c.position.y }, Boolean(c.dragging));
       } else if (c.type === "remove") {
         const n = store.nodesById[c.id];
         if (n && n.kind === "start") continue;
