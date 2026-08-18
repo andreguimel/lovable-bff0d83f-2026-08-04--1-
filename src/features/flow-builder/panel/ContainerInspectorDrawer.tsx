@@ -33,6 +33,7 @@ export function ContainerInspectorDrawer() {
   const clearSelection = useBuilderStore((s) => s.clearSelection);
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [activeSaveConfigId, setActiveSaveConfigId] = useState<string | null>(null);
 
   const addNode = useBuilderStore((s) => s.addNode);
   const connect = useBuilderStore((s) => s.connect);
@@ -442,14 +443,17 @@ export function ContainerInspectorDrawer() {
                   />
                   <div className="flex items-center justify-between text-gray-400 px-1">
                     <div className="flex items-center gap-3">
-                      <Bold className="w-4 h-4 cursor-pointer" />
-                      <Italic className="w-4 h-4 cursor-pointer" />
-                      <AlignLeft className="w-4 h-4 cursor-pointer" />
-                      <Code className="w-4 h-4 cursor-pointer" />
+                      <Bold className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <Italic className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <AlignLeft className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <Code className="w-4 h-4 cursor-pointer hover:text-gray-700" />
                     </div>
                   </div>
                   <div className="flex justify-between items-center pt-1">
-                    <button className="text-xs font-semibold text-red-500 hover:underline flex items-center gap-1">
+                    <button
+                      onClick={() => setActiveSaveConfigId(activeSaveConfigId === item.id ? null : item.id)}
+                      className="text-xs font-semibold text-red-500 hover:underline flex items-center gap-1"
+                    >
                       Escolher onde salvar <ChevronRight className="w-3.5 h-3.5" />
                     </button>
                     <button
@@ -459,6 +463,133 @@ export function ContainerInspectorDrawer() {
                       Salvar
                     </button>
                   </div>
+
+                  {/* Modal / Painel de Configuração Detalhada de Salvar Resposta (Prints do Usuário) */}
+                  {activeSaveConfigId === item.id && (
+                    <div className="p-4 bg-white border-2 border-indigo-300 rounded-2xl shadow-2xl space-y-4 my-2 animate-in zoom-in-95 duration-150 text-xs relative z-30">
+                      {/* 1. Tipo de resposta */}
+                      <div className="space-y-1">
+                        <label className="font-bold text-gray-800 block">Tipo de resposta</label>
+                        <select
+                          value={item.responseType || "Texto"}
+                          onChange={(e) => handleUpdateItem(item.id, { responseType: e.target.value })}
+                          className="w-full p-2.5 bg-gray-50 border-2 border-indigo-200 rounded-xl font-medium text-gray-800 focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="Texto">Texto</option>
+                          <option value="Número">Número</option>
+                          <option value="Data">Data</option>
+                          <option value="Data e hora">Data e hora</option>
+                          <option value="Primeiro nome">Primeiro nome</option>
+                          <option value="Sobrenome">Sobrenome</option>
+                          <option value="Nome completo">Nome completo</option>
+                          <option value="Código de Indicação">Código de Indicação</option>
+                          <option value="Imagem">Imagem</option>
+                          <option value="Video">Video</option>
+                          <option value="Áudio">Áudio</option>
+                          <option value="Arquivo">Arquivo</option>
+                          <option value="E-mail">E-mail</option>
+                          <option value="CPF">CPF</option>
+                        </select>
+                      </div>
+
+                      {/* 2. Salve a resposta em um campo */}
+                      <div className="space-y-1">
+                        <label className="font-bold text-gray-800 block">Salve a resposta em um campo</label>
+                        <select
+                          value={item.variableName || "resposta_usuario"}
+                          onChange={(e) => {
+                            if (e.target.value === "NEW_FIELD") {
+                              const newField = prompt("Digite o nome do novo campo do usuário:");
+                              if (newField) handleUpdateItem(item.id, { variableName: newField });
+                            } else {
+                              handleUpdateItem(item.id, { variableName: e.target.value });
+                            }
+                          }}
+                          className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-800 focus:outline-none focus:border-indigo-500"
+                        >
+                          <option value="resposta_usuario">resposta_usuario</option>
+                          <option value="email">email</option>
+                          <option value="telefone">telefone</option>
+                          <option value="nome">nome</option>
+                          <option value="cpf">cpf</option>
+                          <option value="NEW_FIELD">+ Adicionar novo campo do usuário</option>
+                        </select>
+                      </div>
+
+                      {/* 3. Ação após resposta válida */}
+                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-1">
+                        <span className="font-bold text-gray-800 block">Ação após resposta válida</span>
+                        <p className="text-[11px] text-gray-500">Conectar a um bloco de ação no construtor de fluxo</p>
+                      </div>
+
+                      {/* 4. Se usuário não responder */}
+                      <div className="p-3 bg-gray-50 rounded-xl border border-gray-100 space-y-2">
+                        <span className="font-bold text-gray-800 block">Se usuário não responder</span>
+                        <div className="flex items-center gap-1.5 text-gray-600">
+                          <span>Entrada expira em</span>
+                          <select
+                            value={item.expirationDelay || "1 Dias"}
+                            onChange={(e) => handleUpdateItem(item.id, { expirationDelay: e.target.value })}
+                            className="font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-0.5"
+                          >
+                            <option value="1 Dias">1 Dias</option>
+                            <option value="2 Dias">2 Dias</option>
+                            <option value="3 Dias">3 Dias</option>
+                            <option value="1 Horas">1 Horas</option>
+                          </select>
+                        </div>
+                        <div className="pt-1">
+                          <span className="text-[11px] text-gray-400 block mb-1">Você pode iniciar:</span>
+                          <div className="p-2.5 border-2 border-dashed border-gray-200 rounded-xl text-center font-medium text-gray-500 bg-white">
+                            Conecte no fluxo
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 5. Mensagem de erro em caso de resposta inválida */}
+                      <div className="space-y-2">
+                        <label className="font-bold text-gray-800 block">Mensagem de erro em caso de resposta inválida</label>
+                        <div className="p-2.5 bg-red-50/20 border border-red-200 rounded-xl space-y-2">
+                          <textarea
+                            value={item.errorMessage || ""}
+                            onChange={(e) => handleUpdateItem(item.id, { errorMessage: e.target.value })}
+                            placeholder="Insira mensagem de erro..."
+                            rows={3}
+                            className="w-full p-2 bg-white border border-red-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                          />
+                          <div className="flex items-center justify-between text-gray-400 px-1">
+                            <div className="flex items-center gap-3">
+                              <Bold className="w-4 h-4 cursor-pointer" />
+                              <Italic className="w-4 h-4 cursor-pointer" />
+                              <AlignLeft className="w-4 h-4 cursor-pointer" />
+                              <Code className="w-4 h-4 cursor-pointer" />
+                            </div>
+                          </div>
+                          <div className="flex justify-end gap-2 pt-1">
+                            <button onClick={() => setActiveSaveConfigId(null)} className="px-3 py-1 text-xs text-blue-500 font-medium hover:bg-blue-50 rounded-lg">Cancelar</button>
+                            <button onClick={() => { setActiveSaveConfigId(null); toast.success("Configuração de resposta salva"); }} className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 6. Tentar X vezes */}
+                      <div className="pt-2 border-t border-gray-100 flex items-center gap-1.5 text-gray-700">
+                        <span>Tentar</span>
+                        <select
+                          value={item.retryCount || 3}
+                          onChange={(e) => handleUpdateItem(item.id, { retryCount: parseInt(e.target.value) })}
+                          className="font-bold text-gray-900 bg-white border border-gray-200 rounded px-1.5 py-0.5"
+                        >
+                          <option value={1}>1 vez</option>
+                          <option value={2}>2 vezes</option>
+                          <option value={3}>3 vezes</option>
+                          <option value={5}>5 vezes</option>
+                        </select>
+                        <span>se entrada do usuário for inválida</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="text-center text-[10px] text-gray-400 pt-2 border-t border-gray-100">
                     —— Aguardando uma resposta do usuário ——
                   </div>

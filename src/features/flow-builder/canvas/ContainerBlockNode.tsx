@@ -40,6 +40,10 @@ export interface ContainerSubItem {
   phone?: string;
   question?: string;
   variableName?: string;
+  responseType?: string;
+  expirationDelay?: string;
+  errorMessage?: string;
+  retryCount?: number;
   onValidHandleId?: string;
   onNoReplyHandleId?: string;
 }
