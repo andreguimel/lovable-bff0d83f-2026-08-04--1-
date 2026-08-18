@@ -33,6 +33,7 @@ export interface ContainerSubItem {
     | "save_response";
   content?: string;
   url?: string;
+  fileName?: string;
   seconds?: number;
   typing?: boolean;
   name?: string;
@@ -208,10 +209,16 @@ function ContainerBlockNodeInner(props: NodeProps) {
                 return (
                   <div
                     key={item.id}
-                    className="p-2.5 bg-red-50/50 border border-red-100 rounded-xl text-xs text-gray-500 flex items-center gap-2"
+                    className="p-1 bg-red-50/50 border border-red-100 rounded-xl overflow-hidden"
                   >
-                    <ImageIcon className="w-4 h-4 text-red-400" />
-                    <span>{item.url ? "Imagem anexada" : "Suba uma imagem"}</span>
+                    {item.url ? (
+                      <img src={item.url} alt="Thumbnail" className="w-full h-28 object-cover rounded-lg" />
+                    ) : (
+                      <div className="p-2 text-xs text-gray-500 flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-red-400" />
+                        <span>Suba uma imagem</span>
+                      </div>
+                    )}
                   </div>
                 );
               }

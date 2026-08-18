@@ -19,10 +19,12 @@ import {
   Zap,
   Info,
   ChevronRight,
-  Upload,
+  GripVertical,
+  Copy,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
+import { toast } from "sonner";
 
 export function ContainerInspectorDrawer() {
   const selectedNodeId = useBuilderStore((s) => s.selection.nodeIds[0]);
@@ -30,8 +32,7 @@ export function ContainerInspectorDrawer() {
   const updateNodeData = useBuilderStore((s) => s.updateNodeData);
   const clearSelection = useBuilderStore((s) => s.clearSelection);
 
-  const [activeItemText, setActiveItemText] = useState("");
-  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
   const addNode = useBuilderStore((s) => s.addNode);
   const connect = useBuilderStore((s) => s.connect);
@@ -42,7 +43,7 @@ export function ContainerInspectorDrawer() {
   const kind = node.kind;
   const data = node.data || {};
 
-  // Bloco Inicial: exibe as 9 funções para o primeiro conector
+  // Bloco Inicial
   if (kind === "start") {
     return (
       <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
@@ -127,8 +128,34 @@ export function ContainerInspectorDrawer() {
 
     const updated = [...items, newItem];
     updateNodeData(node.id, { items: updated });
-    setEditingItemId(newItemId);
-    setActiveItemText("");
+  };
+
+  const handleDuplicateItem = (index: number) => {
+    const itemToCopy = items[index];
+    if (!itemToCopy) return;
+    const newItem = { ...itemToCopy, id: `item_${Date.now()}` };
+    const updated = [...items];
+    updated.splice(index + 1, 0, newItem);
+    updateNodeData(node.id, { items: updated });
+    toast.success("Item duplicado");
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    const updated = items.filter((i) => i.id !== itemId);
+    updateNodeData(node.id, { items: updated });
+  };
+
+  const handleUpdateItem = (itemId: string, patch: Partial<ContainerSubItem>) => {
+    const updated = items.map((i) => (i.id === itemId ? { ...i, ...patch } : i));
+    updateNodeData(node.id, { items: updated });
+  };
+
+  const handleReorder = (fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0 || fromIndex >= items.length || toIndex >= items.length) return;
+    const updated = [...items];
+    const [moved] = updated.splice(fromIndex, 1);
+    updated.splice(toIndex, 0, moved);
+    updateNodeData(node.id, { items: updated });
   };
 
   const handleAddAction = (type: ContainerActionItem["type"]) => {
@@ -142,20 +169,9 @@ export function ContainerInspectorDrawer() {
     updateNodeData(node.id, { actions: updated });
   };
 
-  const handleRemoveItem = (itemId: string) => {
-    const updated = items.filter((i) => i.id !== itemId);
-    updateNodeData(node.id, { items: updated });
-    if (editingItemId === itemId) setEditingItemId(null);
-  };
-
   const handleRemoveAction = (actionId: string) => {
     const updated = actions.filter((a) => a.id !== actionId);
     updateNodeData(node.id, { actions: updated });
-  };
-
-  const handleUpdateItem = (itemId: string, patch: Partial<ContainerSubItem>) => {
-    const updated = items.map((i) => (i.id === itemId ? { ...i, ...patch } : i));
-    updateNodeData(node.id, { items: updated });
   };
 
   return (
@@ -177,10 +193,49 @@ export function ContainerInspectorDrawer() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Renderização Detalhada dos Sub-itens (Botconversa) */}
-        {!isActionKind && items.map((item) => {
+        {/* Sub-itens com Reordenação Drag-and-Drop + Toolbar Flutuante */}
+        {!isActionKind && items.map((item, index) => {
           return (
-            <div key={item.id} className="relative group">
+            <div
+              key={item.id}
+              draggable
+              onDragStart={() => setDraggedIndex(index)}
+              onDragOver={(e) => {
+                e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                if (draggedIndex !== null) {
+                  handleReorder(draggedIndex, index);
+                  setDraggedIndex(null);
+                }
+              }}
+              className="relative group transition-transform"
+            >
+              {/* Barra Flutuante de Ações na Borda Direita do Card (Botconversa) */}
+              <div className="absolute -right-2 top-2 z-20 flex items-center bg-white border border-gray-200 rounded-lg shadow-md px-1 py-0.5 text-gray-600 gap-0.5 opacity-90 group-hover:opacity-100">
+                <div
+                  className="p-1 hover:bg-gray-100 rounded cursor-grab active:cursor-grabbing"
+                  title="Arrastar e Soltar"
+                >
+                  <GripVertical className="w-3.5 h-3.5 text-gray-500" />
+                </div>
+                <button
+                  onClick={() => handleDuplicateItem(index)}
+                  className="p-1 hover:bg-gray-100 rounded text-gray-600"
+                  title="Duplicar item"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => handleRemoveItem(item.id)}
+                  className="p-1 hover:bg-red-50 rounded text-red-500"
+                  title="Excluir item"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
               {/* Item: Texto */}
               {item.type === "text" && (
                 <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-3">
@@ -198,71 +253,177 @@ export function ContainerInspectorDrawer() {
                       <AlignLeft className="w-4 h-4 cursor-pointer hover:text-gray-700" />
                       <Code className="w-4 h-4 cursor-pointer hover:text-gray-700" />
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleRemoveItem(item.id)}
-                        className="p-1 text-red-500 hover:bg-red-50 rounded"
-                        title="Excluir item"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-1">
-                    <button className="px-3 py-1 text-xs text-blue-500 font-medium hover:bg-blue-50 rounded-lg">Cancelar</button>
-                    <button className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
+                    <button
+                      onClick={() => handleUpdateItem(item.id, { content: "" })}
+                      className="px-3 py-1 text-xs text-blue-500 font-medium hover:bg-blue-50 rounded-lg"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={() => toast.success("Texto salvo no bloco")}
+                      className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm"
+                    >
+                      Salvar
+                    </button>
                   </div>
                 </div>
               )}
 
-              {/* Item: Imagem */}
+              {/* Item: Imagem (com preview enviado + botão fechar X) */}
               {item.type === "image" && (
                 <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
-                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
-                  <ImageIcon className="w-6 h-6 text-red-400 mx-auto" />
-                  <p className="text-[11px] text-gray-500 leading-tight">
-                    Tamanho máximo permitido: 2MB, Tipos de arquivos aceitos: jpg, jpeg, png, webp
-                  </p>
-                  <label className="inline-block text-xs font-bold text-red-500 hover:underline cursor-pointer">
-                    Subir Imagem
-                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleUpdateItem(item.id, { url: URL.createObjectURL(file) });
-                    }} />
-                  </label>
+                  {item.url ? (
+                    <div className="relative w-44 h-44 mx-auto rounded-2xl overflow-hidden border border-gray-200 shadow-md group/img">
+                      <img src={item.url} alt="Imagem enviada" className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => handleUpdateItem(item.id, { url: undefined })}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-pink-500 hover:bg-pink-600 text-white font-bold text-sm flex items-center justify-center shadow-lg transition-transform hover:scale-110"
+                        title="Remover imagem"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <ImageIcon className="w-6 h-6 text-red-400 mx-auto" />
+                      <p className="text-[11px] text-gray-500 leading-tight">
+                        Tamanho máximo permitido: 2MB, Tipos de arquivos aceitos: jpg, jpeg, png, webp
+                      </p>
+                      <label className="inline-block text-xs font-bold text-red-500 hover:underline cursor-pointer">
+                        Subir Imagem
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleUpdateItem(item.id, { url: URL.createObjectURL(file), fileName: file.name });
+                              toast.success("Imagem enviada com sucesso!");
+                            }
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Item: Vídeo */}
               {item.type === "video" && (
                 <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
-                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
-                  <Video className="w-6 h-6 text-red-400 mx-auto" />
-                  <p className="text-[11px] text-gray-500 leading-tight">
-                    Clique Aqui Para Subir Video. Tamanho do Video deve ser abaixo de 15MB e tipo pode ser .mp4
-                  </p>
+                  {item.url ? (
+                    <div className="relative w-full p-3 bg-white rounded-xl border border-gray-200 flex items-center justify-between text-xs">
+                      <span className="truncate font-semibold text-gray-700">{item.fileName || "Vídeo enviado"}</span>
+                      <button
+                        onClick={() => handleUpdateItem(item.id, { url: undefined, fileName: undefined })}
+                        className="w-6 h-6 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Video className="w-6 h-6 text-red-400 mx-auto" />
+                      <p className="text-[11px] text-gray-500 leading-tight">
+                        Clique Aqui Para Subir Video. Tamanho do Video deve ser abaixo de 15MB e tipo pode ser .mp4
+                      </p>
+                      <label className="inline-block text-xs font-bold text-red-500 hover:underline cursor-pointer">
+                        Subir Vídeo
+                        <input
+                          type="file"
+                          accept="video/mp4"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleUpdateItem(item.id, { url: URL.createObjectURL(file), fileName: file.name });
+                              toast.success("Vídeo enviado com sucesso!");
+                            }
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Item: Arquivo */}
               {item.type === "document" && (
                 <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
-                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
-                  <FileText className="w-6 h-6 text-red-400 mx-auto" />
-                  <p className="text-[11px] text-gray-500 leading-tight">
-                    Clique Aqui Para Subir Arquivo. Tamanho do Arquivo deve ser abaixo de 15MB e tipo pode ser .pdf,.doc,.docx,.htm,.html,.json,.xml,.txt,.csv,.zip,.7z,.xls,.xlsx,.ppt,.pptx
-                  </p>
+                  {item.url ? (
+                    <div className="relative w-full p-3 bg-white rounded-xl border border-gray-200 flex items-center justify-between text-xs">
+                      <span className="truncate font-semibold text-gray-700">{item.fileName || "Arquivo enviado"}</span>
+                      <button
+                        onClick={() => handleUpdateItem(item.id, { url: undefined, fileName: undefined })}
+                        className="w-6 h-6 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <FileText className="w-6 h-6 text-red-400 mx-auto" />
+                      <p className="text-[11px] text-gray-500 leading-tight">
+                        Clique Aqui Para Subir Arquivo. Tamanho do Arquivo deve ser abaixo de 15MB e tipo pode ser .pdf,.doc,.docx,.htm,.html,.json,.xml,.txt,.csv,.zip,.7z,.xls,.xlsx,.ppt,.pptx
+                      </p>
+                      <label className="inline-block text-xs font-bold text-red-500 hover:underline cursor-pointer">
+                        Subir Arquivo
+                        <input
+                          type="file"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleUpdateItem(item.id, { url: URL.createObjectURL(file), fileName: file.name });
+                              toast.success("Arquivo enviado com sucesso!");
+                            }
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
                 </div>
               )}
 
               {/* Item: Áudio */}
               {item.type === "audio" && (
                 <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
-                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
-                  <Volume2 className="w-6 h-6 text-red-400 mx-auto" />
-                  <p className="text-[11px] text-gray-500 leading-tight">
-                    Clique Aqui Para Subir Áudio. Tamanho do Áudio deve ser abaixo de 15MB e tipo pode ser .mp3
-                  </p>
+                  {item.url ? (
+                    <div className="relative w-full p-3 bg-white rounded-xl border border-gray-200 flex items-center justify-between text-xs">
+                      <span className="truncate font-semibold text-gray-700">{item.fileName || "Áudio enviado"}</span>
+                      <button
+                        onClick={() => handleUpdateItem(item.id, { url: undefined, fileName: undefined })}
+                        className="w-6 h-6 rounded-full bg-pink-500 text-white flex items-center justify-center text-xs font-bold shrink-0"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Volume2 className="w-6 h-6 text-red-400 mx-auto" />
+                      <p className="text-[11px] text-gray-500 leading-tight">
+                        Clique Aqui Para Subir Áudio. Tamanho do Áudio deve ser abaixo de 15MB e tipo pode ser .mp3
+                      </p>
+                      <label className="inline-block text-xs font-bold text-red-500 hover:underline cursor-pointer">
+                        Subir Áudio
+                        <input
+                          type="file"
+                          accept="audio/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              handleUpdateItem(item.id, { url: URL.createObjectURL(file), fileName: file.name });
+                              toast.success("Áudio enviado com sucesso!");
+                            }
+                          }}
+                        />
+                      </label>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -271,7 +432,6 @@ export function ContainerInspectorDrawer() {
                 <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-3 relative">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-red-700">Salvar</span>
-                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                   <textarea
                     value={item.question || ""}
@@ -292,7 +452,12 @@ export function ContainerInspectorDrawer() {
                     <button className="text-xs font-semibold text-red-500 hover:underline flex items-center gap-1">
                       Escolher onde salvar <ChevronRight className="w-3.5 h-3.5" />
                     </button>
-                    <button className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
+                    <button
+                      onClick={() => toast.success("Pergunta salva no bloco")}
+                      className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm"
+                    >
+                      Salvar
+                    </button>
                   </div>
                   <div className="text-center text-[10px] text-gray-400 pt-2 border-t border-gray-100">
                     —— Aguardando uma resposta do usuário ——
@@ -305,7 +470,6 @@ export function ContainerInspectorDrawer() {
                 <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-2 relative">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-red-700">Atraso</span>
-                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                   <p className="text-[11px] text-gray-500">Por favor selecione a duração do delay</p>
                   <div className="flex items-center gap-3">
@@ -336,7 +500,6 @@ export function ContainerInspectorDrawer() {
                 <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-2 relative">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-red-700">Auto-Off</span>
-                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                   <p className="text-[11px] text-gray-500">Desligar resposta padrão por</p>
                   <input
@@ -354,7 +517,6 @@ export function ContainerInspectorDrawer() {
                     <span className="text-xs font-bold text-red-700 flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-red-500" /> Enviar cartão de contato
                     </span>
-                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
                   </div>
                   <div className="flex items-center gap-1.5 p-2 bg-amber-50 rounded-xl text-[10px] text-amber-800">
                     <Info className="w-3.5 h-3.5 shrink-0 text-amber-600" />
@@ -378,7 +540,12 @@ export function ContainerInspectorDrawer() {
                     <input type="checkbox" className="rounded border-gray-300 text-blue-600" />
                     Utilizar o número de WhatsApp conectado
                   </label>
-                  <button className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-xs shadow-sm">Salvar</button>
+                  <button
+                    onClick={() => toast.success("Contato salvo no bloco")}
+                    className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-xs shadow-sm"
+                  >
+                    Salvar
+                  </button>
                 </div>
               )}
             </div>
