@@ -352,8 +352,8 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
         fitViewOptions={{ padding: 0.35, maxZoom: 1, minZoom: 0.55 }}
         proOptions={{ hideAttribution: true }}
         defaultEdgeOptions={{ type: "smoothstep", animated: false }}
-        snapToGrid
-        snapGrid={[4, 4]}
+        snapToGrid={false}
+        nodeDragThreshold={1}
         panOnDrag={[0, 1, 2]}
         selectionOnDrag
         multiSelectionKeyCode={["Meta", "Control", "Shift"]}

@@ -48,6 +48,22 @@
 
 }
 
+/* Otimizações de performance para drag-and-drop fluido 60fps */
+.react-flow__node {
+  will-change: transform;
+  cursor: grab;
+  user-select: none;
+}
+.react-flow__node:active,
+.react-flow__node.dragging {
+  cursor: grabbing !important;
+  transition: none !important;
+}
+.react-flow__handle {
+  cursor: crosshair;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
 /* React Flow chrome — segue o tema global (light/dark do SaaS) */
 .fbv2-canvas .fbv2-minimap-card {
   position: absolute;

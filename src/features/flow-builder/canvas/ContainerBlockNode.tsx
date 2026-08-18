@@ -142,7 +142,7 @@ function ContainerBlockNodeInner(props: NodeProps) {
               e.stopPropagation();
               duplicateNode(nodeId);
             }}
-            className="p-1 text-gray-600 hover:bg-white/60 rounded"
+            className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
             title="Duplicar nó"
           >
             <Copy className="w-3.5 h-3.5" />
@@ -152,7 +152,7 @@ function ContainerBlockNodeInner(props: NodeProps) {
               e.stopPropagation();
               removeNode(nodeId);
             }}
-            className="p-1 text-red-600 hover:bg-white/60 rounded"
+            className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
             title="Excluir nó"
           >
             <Trash2 className="w-3.5 h-3.5" />
