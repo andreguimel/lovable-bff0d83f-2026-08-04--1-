@@ -339,6 +339,107 @@ export function ContainerInspectorDrawer() {
     );
   }
 
+  if (kind === "wait" || kind === "smart_delay") {
+    const delayTab = (data.delayTab as string) || "delay";
+    const delayAmount = (data.delayAmount as number) ?? (data.seconds as number) ?? 0;
+    const delayUnit = (data.delayUnit as string) || "Minutos";
+    const targetDateTime = (data.targetDateTime as string) || "";
+
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        {/* Header do Atraso Inteligente */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-orange-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-orange-500 text-white shadow-sm">
+              <Clock className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">Atraso inteligente</h2>
+          </div>
+          <button
+            onClick={() => clearSelection()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+          {/* Alternador de Abas (Atraso vs Data & Hora - Print do Usuário) */}
+          <div className="grid grid-cols-2 p-1 bg-gray-100 rounded-xl text-center font-bold text-xs">
+            <button
+              onClick={() => updateNodeData(node.id, { delayTab: "delay" })}
+              className={`py-2 rounded-lg transition-all ${
+                delayTab === "delay"
+                  ? "bg-slate-800 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Atraso
+            </button>
+            <button
+              onClick={() => updateNodeData(node.id, { delayTab: "datetime" })}
+              className={`py-2 rounded-lg transition-all ${
+                delayTab === "datetime"
+                  ? "bg-slate-800 text-white shadow-sm"
+                  : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              Data & Hora
+            </button>
+          </div>
+
+          {/* Conteúdo da Aba Atraso */}
+          {delayTab === "delay" && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-gray-700">
+                <span className="font-bold text-xs">Duração do atraso</span>
+                <span className="text-[11px] text-gray-400 font-normal">(30 dias máx.)</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <select
+                  value={delayAmount}
+                  onChange={(e) => updateNodeData(node.id, { delayAmount: parseInt(e.target.value) || 0, seconds: parseInt(e.target.value) || 0 })}
+                  className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl font-bold text-gray-800 focus:outline-none focus:border-orange-500"
+                >
+                  {[0, 1, 2, 3, 5, 10, 15, 20, 30, 45, 60].map((val) => (
+                    <option key={val} value={val}>
+                      {val}
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value={delayUnit}
+                  onChange={(e) => updateNodeData(node.id, { delayUnit: e.target.value })}
+                  className="p-2.5 bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-800 focus:outline-none focus:border-orange-500"
+                >
+                  <option value="Minutos">Minutos</option>
+                  <option value="Horas">Horas</option>
+                  <option value="Dias">Dias</option>
+                  <option value="Segundos">Segundos</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Conteúdo da Aba Data & Hora */}
+          {delayTab === "datetime" && (
+            <div className="space-y-2">
+              <label className="font-bold text-gray-800 block">Aguardar até a Data & Hora</label>
+              <input
+                type="datetime-local"
+                value={targetDateTime}
+                onChange={(e) => updateNodeData(node.id, { targetDateTime: e.target.value })}
+                className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-xl font-medium text-gray-800 focus:outline-none focus:border-orange-500"
+              />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   if (kind === "randomizer" || kind === "split") {
     const selectionType = (data.selectionType as string) || "random";
     const options = (data.options as Array<{ id: string; label: string; percentage?: number; handleId?: string }>) || [];

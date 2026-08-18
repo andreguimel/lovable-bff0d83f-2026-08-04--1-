@@ -252,6 +252,91 @@ function ContainerBlockNodeInner(props: NodeProps) {
     );
   }
 
+  const isWaitKind = kind === "wait" || kind === "smart_delay";
+
+  if (isWaitKind) {
+    const delayTab = (data.delayTab as string) || "delay";
+    const delayAmount = (data.delayAmount as number) ?? (data.seconds as number) ?? 0;
+    const delayUnit = (data.delayUnit as string) || "Minutos";
+    const targetDateTime = (data.targetDateTime as string) || "";
+
+    const hasValue = delayTab === "datetime" ? Boolean(targetDateTime) : delayAmount > 0;
+
+    return (
+      <div
+        className={`w-80 rounded-2xl border-2 border-orange-300 bg-white shadow-md transition-all font-sans relative ${
+          selected ? "ring-2 ring-orange-500 shadow-xl border-orange-500" : ""
+        }`}
+      >
+        {/* Porta de Entrada (Left Handle) */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+        />
+
+        {/* Header do Card Atraso Inteligente */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-orange-50/80 border-b border-orange-100">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-orange-500 text-white shadow-sm">
+              <Clock className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-orange-950">Atraso inteligente</span>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateNode(nodeId);
+              }}
+              className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+              title="Duplicar nó"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNode(nodeId);
+              }}
+              className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+              title="Excluir nó"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body do Card Atraso Inteligente */}
+        <div className="p-3 space-y-2.5">
+          <p className="text-xs text-gray-500 font-medium">
+            Definir o tempo de espera antes da próxima etapa
+          </p>
+
+          <button
+            onClick={() => selectNode(nodeId)}
+            className="w-full py-3 border-2 border-dashed border-orange-200 bg-orange-50/30 hover:bg-orange-50 text-orange-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 nodrag"
+          >
+            {hasValue
+              ? delayTab === "datetime"
+                ? `⏳ Até ${targetDateTime}`
+                : `⏳ Aguardar ${delayAmount} ${delayUnit}`
+              : "Adicionar atraso"}
+          </button>
+        </div>
+
+        {/* Porta de Saída (Right Handle) */}
+        <Handle
+          type="source"
+          id="default"
+          position={Position.Right}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-2"
+        />
+      </div>
+    );
+  }
+
   const isRandomizerKind = kind === "randomizer" || kind === "split";
 
   if (isRandomizerKind) {
