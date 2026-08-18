@@ -1,19 +1,15 @@
 import { useMemo, useState } from "react";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
   ChevronDown,
-  Folder,
-  FolderPlus,
   Loader2,
   MoreVertical,
-  Plus,
   Search,
   Trash2,
   Copy,
-  Archive,
-  ArchiveRestore,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -39,15 +35,14 @@ import {
 
 import {
   createFlow,
+  createFlowFromTemplate,
   deleteFlow,
   duplicateFlow,
   listFlows,
-  setFlowStatus,
+  listFlowTemplates,
 } from "@/lib/flows.functions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileFlowsHome } from "@/components/flows/mobile/mobile-flows-home";
-
-type FlowStatus = "active" | "draft" | "archived";
 
 export const Route = createFileRoute("/_authenticated/flows/")({
   head: () => ({
@@ -72,13 +67,19 @@ function FlowsHomeBotconversa() {
   const qc = useQueryClient();
   const fn = useServerFn(listFlows);
   const createFn = useServerFn(createFlow);
+  const listTplFn = useServerFn(listFlowTemplates);
+  const createFromTplFn = useServerFn(createFlowFromTemplate);
   const deleteFn = useServerFn(deleteFlow);
   const dupFn = useServerFn(duplicateFlow);
-  const setStatusFn = useServerFn(setFlowStatus);
 
   const { data: flows = [], isLoading } = useQuery({
     queryKey: ["flows-list"],
     queryFn: () => fn(),
+  });
+
+  const { data: templates = [] } = useQuery({
+    queryKey: ["flow-templates"],
+    queryFn: () => listTplFn(),
   });
 
   const [popoverOpen, setPopoverOpen] = useState(false);
@@ -91,13 +92,27 @@ function FlowsHomeBotconversa() {
       return createFn({ data: { name: name.trim(), triggerType: "manual" } });
     },
     onSuccess: ({ id }) => {
-      toast.success("Fluxo criado.");
+      toast.success("Fluxo criado com sucesso.");
       setPopoverOpen(false);
       setName("");
       qc.invalidateQueries({ queryKey: ["flows-list"] });
       navigate({ to: "/flows/$flowId", params: { flowId: id } });
     },
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao criar fluxo"),
+  });
+
+  const createFromTplMut = useMutation({
+    mutationFn: async (tpl: { slug: string; name: string }) => {
+      return createFromTplFn({
+        data: { slug: tpl.slug, name: `${tpl.name}` },
+      });
+    },
+    onSuccess: ({ id }) => {
+      toast.success("Fluxo criado a partir do modelo.");
+      qc.invalidateQueries({ queryKey: ["flows-list"] });
+      navigate({ to: "/flows/$flowId", params: { flowId: id } });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao criar fluxo do modelo"),
   });
 
   const deleteMut = useMutation({
@@ -133,13 +148,6 @@ function FlowsHomeBotconversa() {
         <h1 className="text-2xl font-bold text-gray-800">Fluxos de conversa</h1>
 
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            className="h-10 px-4 bg-blue-500 hover:bg-blue-600 text-white border-none rounded-xl font-medium shadow-sm transition-all"
-          >
-            Criar Pasta +
-          </Button>
-
           {/* Popover de Criação de Fluxo Estilo Botconversa */}
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
@@ -168,7 +176,7 @@ function FlowsHomeBotconversa() {
               <Button
                 onClick={() => createMut.mutate()}
                 disabled={!name.trim() || createMut.isPending}
-                className="w-full h-11 bg-blue-400 hover:bg-blue-500 text-white font-semibold rounded-xl transition-colors"
+                className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors"
               >
                 {createMut.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -181,31 +189,37 @@ function FlowsHomeBotconversa() {
         </div>
       </div>
 
-      {/* Seção: Fluxos Padrões Básicos */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-1 text-sm font-semibold text-gray-700 cursor-pointer">
-          <span>Fluxos Padrões Básicos</span>
-          <ChevronDown className="w-4 h-4 text-gray-400" />
+      {/* Seção: Modelos de Fluxos Padrões */}
+      {templates.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-1 text-sm font-semibold text-gray-700">
+            <span>Fluxos Padrões Básicos</span>
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {templates.slice(0, 3).map((tpl) => (
+              <div
+                key={tpl.slug}
+                onClick={() => createFromTplMut.mutate(tpl)}
+                className="p-4 bg-white hover:bg-blue-50/30 rounded-2xl border-2 border-dashed border-blue-200 flex items-center justify-between cursor-pointer transition-colors group"
+              >
+                <div>
+                  <p className="text-[11px] font-medium text-blue-500">Modelo Padrão</p>
+                  <p className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
+                    {tpl.name}
+                  </p>
+                </div>
+                {createFromTplMut.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                ) : (
+                  <Plus className="w-4 h-4 text-blue-500 opacity-60 group-hover:opacity-100" />
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-white rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-[11px] font-medium text-blue-500">Fluxo de boas vindas</p>
-              <p className="text-sm font-bold text-gray-800">1- ATENDIMENTO</p>
-            </div>
-            <MoreVertical className="w-4 h-4 text-gray-400 cursor-pointer" />
-          </div>
-
-          <div className="p-4 bg-white/60 rounded-2xl border-2 border-dashed border-blue-200 flex items-center justify-center text-sm font-medium text-blue-600 hover:bg-blue-50/50 cursor-pointer transition-colors">
-            Fluxo de resposta padrão
-          </div>
-
-          <div className="p-4 bg-white/60 rounded-2xl border-2 border-dashed border-blue-200 flex items-center justify-center text-sm font-medium text-blue-600 hover:bg-blue-50/50 cursor-pointer transition-colors">
-            Fluxo padrão para mídia
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Seção: Todos os Fluxos */}
       <div className="space-y-4">
@@ -224,26 +238,7 @@ function FlowsHomeBotconversa() {
           </div>
         </div>
 
-        {/* Pastas */}
-        <div className="flex items-center gap-3 overflow-x-auto pb-1">
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl shadow-sm text-xs font-medium text-gray-700 min-w-[180px] justify-between">
-            <div className="flex items-center gap-2 truncate">
-              <Folder className="w-4 h-4 text-gray-400 fill-gray-200" />
-              <span className="truncate">AF Company - fluxos...</span>
-            </div>
-            <span className="text-gray-400 text-[11px]">8</span>
-          </div>
-
-          <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-100 rounded-xl shadow-sm text-xs font-medium text-gray-700 min-w-[160px] justify-between">
-            <div className="flex items-center gap-2 truncate">
-              <Folder className="w-4 h-4 text-gray-400 fill-gray-200" />
-              <span className="truncate">Fluxos Talita</span>
-            </div>
-            <span className="text-gray-400 text-[11px]">1</span>
-          </div>
-        </div>
-
-        {/* Tabela de Fluxos Estilo Botconversa */}
+        {/* Tabela Real de Fluxos */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <table className="w-full text-left border-collapse">
             <thead>
@@ -278,7 +273,7 @@ function FlowsHomeBotconversa() {
                 filtered.map((f) => {
                   const updatedDate = f.updated_at
                     ? new Date(f.updated_at).toLocaleDateString("pt-BR")
-                    : "18/08/2026";
+                    : "-";
 
                   return (
                     <tr
@@ -296,7 +291,9 @@ function FlowsHomeBotconversa() {
                       <td className="py-3.5 px-4 text-center text-gray-400">
                         {f.runs_count > 0 ? f.runs_count : "-"}
                       </td>
-                      <td className="py-3.5 px-4 text-center text-gray-400">-</td>
+                      <td className="py-3.5 px-4 text-center text-gray-400">
+                        {f.success_rate != null ? `${f.success_rate}%` : "-"}
+                      </td>
                       <td className="py-3.5 px-4 text-center text-gray-500">{updatedDate}</td>
                       <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>

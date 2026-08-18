@@ -14,6 +14,7 @@ import {
   ShieldAlert,
   ArrowRight,
   Sparkles,
+  Rocket,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -67,8 +68,35 @@ function ContainerBlockNodeInner(props: NodeProps) {
   const items = (data.items as ContainerSubItem[]) ?? [];
   const actions = (data.actions as ContainerActionItem[]) ?? [];
 
+  const isStartKind = kind === "start";
   const isActionKind = kind === "action";
   const isContentKind = kind === "message" || kind === "container_content";
+
+  if (isStartKind) {
+    return (
+      <div
+        className={`w-64 rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm transition-all font-sans relative ${
+          selected ? "ring-2 ring-blue-500 shadow-md" : ""
+        }`}
+      >
+        <div className="flex items-center gap-2 mb-2">
+          <div className="w-6 h-6 rounded-md flex items-center justify-center bg-gray-100 text-gray-800">
+            <Rocket className="w-3.5 h-3.5" />
+          </div>
+          <span className="text-xs font-bold text-gray-800">Bloco Inicial</span>
+        </div>
+        <p className="text-[11px] text-gray-500 leading-snug">
+          Seu fluxo começa por este bloco. Conecte-o com outro bloco.
+        </p>
+        <Handle
+          type="source"
+          id="default"
+          position={Position.Right}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-2"
+        />
+      </div>
+    );
+  }
 
   // Estilos de borda e cores por categoria
   const cardBorderColor = isActionKind
