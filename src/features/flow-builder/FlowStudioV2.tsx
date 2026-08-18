@@ -427,13 +427,9 @@ function FlowStudioV2Inner({ flowId }: Props) {
       />
 
       <div className="fbv2-body">
-        <NodeLibraryPanelV3 />
-
-
-        <div style={{ position: "relative", minHeight: 0 }}>
+        <div style={{ position: "relative", minHeight: 0, flex: 1 }}>
           <FlowCanvasV2 />
           <ContainerInspectorDrawer />
-          {isEmpty && <EmptyState originNodeId={startNodeId} />}
           <CopilotFab flowId={flowId} onApply={applyAIPatch} contextSummary={contextSummary} />
           {!healthOpen && <HealthFab ctx={sidebarCtx} onOpen={() => setHealthOpen(true)} />}
           <HealthPanel ctx={sidebarCtx} open={healthOpen} onClose={() => setHealthOpen(false)} />
@@ -445,9 +441,6 @@ function FlowStudioV2Inner({ flowId }: Props) {
             publishing={publishMutation.isPending}
           />
         </div>
-
-        {selectedNode && <SmartSidebar ctx={sidebarCtx} />}
-        {!selectedNode && selectedEdge && <EdgePropertiesPanel />}
       </div>
 
 

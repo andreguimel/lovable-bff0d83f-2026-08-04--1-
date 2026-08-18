@@ -336,27 +336,6 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
       onDrop={onDrop}
       onDragOver={onDragOver}
     >
-      <div className="fbv2-toolbar">
-        <button
-          type="button"
-          className="fbv2-layout-btn"
-          onClick={organize}
-          title="Reorganiza o grafo em layout hierárquico (esquerda → direita)."
-          disabled={nodeIds.length < 2}
-        >
-          <LayoutGrid className="h-3.5 w-3.5" />
-          Organizar
-        </button>
-        <button
-          type="button"
-          className="fbv2-layout-btn"
-          onClick={() => setDensity((d) => (d === "compact" ? "detailed" : "compact"))}
-          title={density === "compact" ? "Expandir cards (mostrar preview)" : "Compactar cards (mais blocos na tela)"}
-        >
-          {density === "compact" ? <Maximize2 className="h-3.5 w-3.5" /> : <Minimize2 className="h-3.5 w-3.5" />}
-          {density === "compact" ? "Expandir" : "Compactar"}
-        </button>
-      </div>
 
       <ReactFlow
         nodes={nodes}
@@ -436,7 +415,6 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
           </div>
         </div>
       )}
-      <CanvasEmptyState visible={isEmpty} />
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
