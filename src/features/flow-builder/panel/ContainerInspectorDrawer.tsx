@@ -17,6 +17,9 @@ import {
   Plus,
   Trash2,
   Zap,
+  Info,
+  ChevronRight,
+  Upload,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
@@ -39,6 +42,7 @@ export function ContainerInspectorDrawer() {
   const kind = node.kind;
   const data = node.data || {};
 
+  // Bloco Inicial: exibe as 9 funções para o primeiro conector
   if (kind === "start") {
     return (
       <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
@@ -101,28 +105,30 @@ export function ContainerInspectorDrawer() {
       </div>
     );
   }
+
   const items = (data.items as ContainerSubItem[]) || [];
   const actions = (data.actions as ContainerActionItem[]) || [];
-
   const isActionKind = kind === "action";
 
   const handleAddItem = (type: ContainerSubItem["type"]) => {
     const newItemId = `item_${Date.now()}`;
     let newItem: ContainerSubItem = { id: newItemId, type };
 
-    if (type === "text") newItem.content = "Insira texto";
+    if (type === "text") newItem.content = "";
     if (type === "delay") newItem.seconds = 5;
     if (type === "contact") {
-      newItem.name = "Nome do Contato";
-      newItem.phone = "+5511999999999";
+      newItem.name = "";
+      newItem.phone = "";
     }
     if (type === "save_response") {
-      newItem.question = "Insira sua pergunta aqui";
+      newItem.question = "";
       newItem.variableName = "resposta_usuario";
     }
 
     const updated = [...items, newItem];
     updateNodeData(node.id, { items: updated });
+    setEditingItemId(newItemId);
+    setActiveItemText("");
   };
 
   const handleAddAction = (type: ContainerActionItem["type"]) => {
@@ -139,6 +145,7 @@ export function ContainerInspectorDrawer() {
   const handleRemoveItem = (itemId: string) => {
     const updated = items.filter((i) => i.id !== itemId);
     updateNodeData(node.id, { items: updated });
+    if (editingItemId === itemId) setEditingItemId(null);
   };
 
   const handleRemoveAction = (actionId: string) => {
@@ -146,14 +153,9 @@ export function ContainerInspectorDrawer() {
     updateNodeData(node.id, { actions: updated });
   };
 
-  const handleSaveTextItem = () => {
-    if (!editingItemId) return;
-    const updated = items.map((item) =>
-      item.id === editingItemId ? { ...item, content: activeItemText } : item
-    );
+  const handleUpdateItem = (itemId: string, patch: Partial<ContainerSubItem>) => {
+    const updated = items.map((i) => (i.id === itemId ? { ...i, ...patch } : i));
     updateNodeData(node.id, { items: updated });
-    setEditingItemId(null);
-    setActiveItemText("");
   };
 
   return (
@@ -175,98 +177,217 @@ export function ContainerInspectorDrawer() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
-        {/* Editor de Texto do Item Selecionado */}
-        {editingItemId ? (
-          <div className="bg-red-50/30 border border-red-200 rounded-2xl p-3 space-y-3">
-            <textarea
-              value={activeItemText}
-              onChange={(e) => setActiveItemText(e.target.value)}
-              placeholder="Insira texto"
-              rows={4}
-              className="w-full p-2.5 bg-white border border-red-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
-            />
-
-            {/* Barra de Formatação */}
-            <div className="flex items-center gap-3 text-gray-500 px-1">
-              <button className="hover:text-gray-900" title="Negrito">
-                <Bold className="w-4 h-4" />
-              </button>
-              <button className="hover:text-gray-900" title="Itálico">
-                <Italic className="w-4 h-4" />
-              </button>
-              <button className="hover:text-gray-900" title="Alinhamento">
-                <AlignLeft className="w-4 h-4" />
-              </button>
-              <button className="hover:text-gray-900" title="Variável">
-                <Code className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setEditingItemId(null)}
-                className="px-4 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSaveTextItem}
-                className="px-4 py-1.5 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-600 rounded-lg shadow-sm transition-colors"
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
-        ) : null}
-
-        {/* Lista de sub-itens configurados */}
-        {!isActionKind && items.length > 0 && (
-          <div className="space-y-2">
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
-              Itens no Bloco
-            </span>
-            <div className="space-y-2">
-              {items.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-3 bg-gray-50 border border-gray-200 rounded-xl flex items-center justify-between group hover:border-red-200 transition-colors"
-                >
-                  <div className="flex-1 truncate pr-2 text-xs font-medium text-gray-700">
-                    {item.type === "text" && (item.content || "Item de Texto")}
-                    {item.type === "delay" && `Atraso (${item.seconds}s)`}
-                    {item.type === "image" && "Imagem"}
-                    {item.type === "contact" && `Contato (${item.name})`}
-                    {item.type === "save_response" && `Salvar Resposta`}
-                  </div>
-
-                  <div className="flex items-center gap-1">
-                    {item.type === "text" && (
+        {/* Renderização Detalhada dos Sub-itens (Botconversa) */}
+        {!isActionKind && items.map((item) => {
+          return (
+            <div key={item.id} className="relative group">
+              {/* Item: Texto */}
+              {item.type === "text" && (
+                <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-3">
+                  <textarea
+                    value={item.content || ""}
+                    onChange={(e) => handleUpdateItem(item.id, { content: e.target.value })}
+                    placeholder="Insira texto"
+                    rows={4}
+                    className="w-full p-2.5 bg-white border border-red-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                  />
+                  <div className="flex items-center justify-between text-gray-400 px-1">
+                    <div className="flex items-center gap-3">
+                      <Bold className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <Italic className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <AlignLeft className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <Code className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                    </div>
+                    <div className="flex gap-2">
                       <button
-                        onClick={() => {
-                          setEditingItemId(item.id);
-                          setActiveItemText(item.content || "");
-                        }}
-                        className="px-2 py-1 text-[11px] font-medium text-blue-600 hover:bg-blue-50 rounded"
+                        onClick={() => handleRemoveItem(item.id)}
+                        className="p-1 text-red-500 hover:bg-red-50 rounded"
+                        title="Excluir item"
                       >
-                        Editar
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
-                    )}
-                    <button
-                      onClick={() => handleRemoveItem(item.id)}
-                      className="p-1 text-gray-400 hover:text-red-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    </div>
+                  </div>
+                  <div className="flex justify-end gap-2 pt-1">
+                    <button className="px-3 py-1 text-xs text-blue-500 font-medium hover:bg-blue-50 rounded-lg">Cancelar</button>
+                    <button className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
                   </div>
                 </div>
-              ))}
+              )}
+
+              {/* Item: Imagem */}
+              {item.type === "image" && (
+                <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
+                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <ImageIcon className="w-6 h-6 text-red-400 mx-auto" />
+                  <p className="text-[11px] text-gray-500 leading-tight">
+                    Tamanho máximo permitido: 2MB, Tipos de arquivos aceitos: jpg, jpeg, png, webp
+                  </p>
+                  <label className="inline-block text-xs font-bold text-red-500 hover:underline cursor-pointer">
+                    Subir Imagem
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUpdateItem(item.id, { url: URL.createObjectURL(file) });
+                    }} />
+                  </label>
+                </div>
+              )}
+
+              {/* Item: Vídeo */}
+              {item.type === "video" && (
+                <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
+                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <Video className="w-6 h-6 text-red-400 mx-auto" />
+                  <p className="text-[11px] text-gray-500 leading-tight">
+                    Clique Aqui Para Subir Video. Tamanho do Video deve ser abaixo de 15MB e tipo pode ser .mp4
+                  </p>
+                </div>
+              )}
+
+              {/* Item: Arquivo */}
+              {item.type === "document" && (
+                <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
+                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <FileText className="w-6 h-6 text-red-400 mx-auto" />
+                  <p className="text-[11px] text-gray-500 leading-tight">
+                    Clique Aqui Para Subir Arquivo. Tamanho do Arquivo deve ser abaixo de 15MB e tipo pode ser .pdf,.doc,.docx,.htm,.html,.json,.xml,.txt,.csv,.zip,.7z,.xls,.xlsx,.ppt,.pptx
+                  </p>
+                </div>
+              )}
+
+              {/* Item: Áudio */}
+              {item.type === "audio" && (
+                <div className="p-4 bg-red-50/20 border-2 border-dashed border-red-200 rounded-2xl text-center space-y-2 relative">
+                  <button onClick={() => handleRemoveItem(item.id)} className="absolute top-2 right-2 p-1 text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <Volume2 className="w-6 h-6 text-red-400 mx-auto" />
+                  <p className="text-[11px] text-gray-500 leading-tight">
+                    Clique Aqui Para Subir Áudio. Tamanho do Áudio deve ser abaixo de 15MB e tipo pode ser .mp3
+                  </p>
+                </div>
+              )}
+
+              {/* Item: Salvar (Capturar Resposta) */}
+              {item.type === "save_response" && (
+                <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-3 relative">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-red-700">Salvar</span>
+                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                  <textarea
+                    value={item.question || ""}
+                    onChange={(e) => handleUpdateItem(item.id, { question: e.target.value })}
+                    placeholder="Insira sua pergunta aqui"
+                    rows={3}
+                    className="w-full p-2.5 bg-white border border-red-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                  />
+                  <div className="flex items-center justify-between text-gray-400 px-1">
+                    <div className="flex items-center gap-3">
+                      <Bold className="w-4 h-4 cursor-pointer" />
+                      <Italic className="w-4 h-4 cursor-pointer" />
+                      <AlignLeft className="w-4 h-4 cursor-pointer" />
+                      <Code className="w-4 h-4 cursor-pointer" />
+                    </div>
+                  </div>
+                  <div className="flex justify-between items-center pt-1">
+                    <button className="text-xs font-semibold text-red-500 hover:underline flex items-center gap-1">
+                      Escolher onde salvar <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                    <button className="px-4 py-1.5 text-xs text-white bg-blue-400 font-semibold rounded-xl hover:bg-blue-500 shadow-sm">Salvar</button>
+                  </div>
+                  <div className="text-center text-[10px] text-gray-400 pt-2 border-t border-gray-100">
+                    —— Aguardando uma resposta do usuário ——
+                  </div>
+                </div>
+              )}
+
+              {/* Item: Atraso */}
+              {item.type === "delay" && (
+                <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-2 relative">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-red-700">Atraso</span>
+                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                  <p className="text-[11px] text-gray-500">Por favor selecione a duração do delay</p>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="range"
+                      min={1}
+                      max={60}
+                      value={item.seconds || 5}
+                      onChange={(e) => handleUpdateItem(item.id, { seconds: parseInt(e.target.value) })}
+                      className="flex-1 accent-red-500"
+                    />
+                    <span className="text-xs font-semibold text-red-600 w-10 text-right">{item.seconds || 5}seg</span>
+                  </div>
+                  <label className="flex items-center gap-2 pt-1 text-xs text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={item.typing ?? true}
+                      onChange={(e) => handleUpdateItem(item.id, { typing: e.target.checked })}
+                      className="rounded border-gray-300 text-red-500 focus:ring-red-400"
+                    />
+                    Ativar Digitando
+                  </label>
+                </div>
+              )}
+
+              {/* Item: Auto-Off */}
+              {item.type === "auto_off" && (
+                <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-2 relative">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-red-700">Auto-Off</span>
+                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                  <p className="text-[11px] text-gray-500">Desligar resposta padrão por</p>
+                  <input
+                    type="text"
+                    defaultValue="00:00:00"
+                    className="w-full p-2 bg-white border border-gray-200 rounded-xl text-center text-sm font-mono tracking-widest focus:ring-2 focus:ring-red-400"
+                  />
+                </div>
+              )}
+
+              {/* Item: Contato */}
+              {item.type === "contact" && (
+                <div className="p-3 bg-red-50/20 border border-red-200 rounded-2xl space-y-2.5 relative text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-red-700 flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-red-500" /> Enviar cartão de contato
+                    </span>
+                    <button onClick={() => handleRemoveItem(item.id)} className="text-gray-400 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                  <div className="flex items-center gap-1.5 p-2 bg-amber-50 rounded-xl text-[10px] text-amber-800">
+                    <Info className="w-3.5 h-3.5 shrink-0 text-amber-600" />
+                    Preencha e salve o número e o nome
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Nome"
+                    value={item.name || ""}
+                    onChange={(e) => handleUpdateItem(item.id, { name: e.target.value })}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-xl text-xs"
+                  />
+                  <input
+                    type="text"
+                    placeholder="+55..."
+                    value={item.phone || ""}
+                    onChange={(e) => handleUpdateItem(item.id, { phone: e.target.value })}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-xl text-xs"
+                  />
+                  <label className="flex items-center gap-2 text-[11px] text-gray-600 cursor-pointer pt-1">
+                    <input type="checkbox" className="rounded border-gray-300 text-blue-600" />
+                    Utilizar o número de WhatsApp conectado
+                  </label>
+                  <button className="w-full py-1.5 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl text-xs shadow-sm">Salvar</button>
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })}
 
         {/* Grade de 9 Sub-elementos para Inserção (Botconversa) */}
         {!isActionKind && (
-          <div className="space-y-2">
+          <div className="space-y-2 pt-2 border-t border-gray-100">
             <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
               Adicionar ao Conteúdo
             </span>

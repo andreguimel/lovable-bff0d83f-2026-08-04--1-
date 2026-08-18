@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Sparkles,
   Rocket,
+  FileVideo,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -211,6 +212,54 @@ function ContainerBlockNodeInner(props: NodeProps) {
                   >
                     <ImageIcon className="w-4 h-4 text-red-400" />
                     <span>{item.url ? "Imagem anexada" : "Suba uma imagem"}</span>
+                  </div>
+                );
+              }
+
+              if (item.type === "video") {
+                return (
+                  <div
+                    key={item.id}
+                    className="p-2.5 bg-red-50/50 border border-red-100 rounded-xl text-xs text-gray-500 flex items-center gap-2"
+                  >
+                    <FileVideo className="w-4 h-4 text-red-400" />
+                    <span>{item.url ? "Vídeo anexado" : "Suba um vídeo"}</span>
+                  </div>
+                );
+              }
+
+              if (item.type === "document") {
+                return (
+                  <div
+                    key={item.id}
+                    className="p-2.5 bg-red-50/50 border border-red-100 rounded-xl text-xs text-gray-500 flex items-center gap-2"
+                  >
+                    <FileText className="w-4 h-4 text-red-400" />
+                    <span>{item.url ? "Arquivo anexado" : "Suba um arquivo"}</span>
+                  </div>
+                );
+              }
+
+              if (item.type === "audio") {
+                return (
+                  <div
+                    key={item.id}
+                    className="p-2.5 bg-red-50/50 border border-red-100 rounded-xl text-xs text-gray-500 flex items-center gap-2"
+                  >
+                    <Volume2 className="w-4 h-4 text-red-400" />
+                    <span>{item.url ? "Áudio anexado" : "Suba um áudio"}</span>
+                  </div>
+                );
+              }
+
+              if (item.type === "auto_off") {
+                return (
+                  <div
+                    key={item.id}
+                    className="p-2 bg-gray-50 border border-gray-200 rounded-xl text-[11px] text-gray-700 flex items-center gap-2"
+                  >
+                    <ShieldAlert className="w-3.5 h-3.5 text-gray-500" />
+                    <span>Auto-Off (Desligar resposta padrão)</span>
                   </div>
                 );
               }
