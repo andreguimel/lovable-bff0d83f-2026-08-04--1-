@@ -47,9 +47,11 @@ import { ShortcutsOverlay } from "./v3/ShortcutsOverlay";
 import { CommandPalette } from "./v3/CommandPalette";
 import { isV3Kind } from "./v3/tokens";
 import { computeLayeredLayout } from "./layout";
+import { FloatingBlockMenu } from "./floating-block-menu";
+import { ContainerBlockNode } from "./ContainerBlockNode";
 import "./v3/v3.css";
 
-const NODE_TYPES: NodeTypes = { fbv2: BlockNode, fbv3: BlockNodeV3 };
+const NODE_TYPES: NodeTypes = { fbv2: BlockNode, fbv3: BlockNodeV3, container_block: ContainerBlockNode };
 const EDGE_TYPES: EdgeTypes = { "fbv3-soft": SoftCurvedEdge };
 
 export interface FlowCanvasV2Props {
@@ -111,7 +113,7 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
       .filter(Boolean)
       .map<Node>((n) => ({
         id: n.id,
-        type: isV3Kind(n.kind) ? "fbv3" : "fbv2",
+        type: (n.kind === "message" || n.kind === "action" || n.kind.startsWith("container_")) ? "container_block" : (isV3Kind(n.kind) ? "fbv3" : "fbv2"),
         position: n.position,
         selected: selected.has(n.id),
         data: {
@@ -455,6 +457,7 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
+      <FloatingBlockMenu />
       <ShortcutsOverlay open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>

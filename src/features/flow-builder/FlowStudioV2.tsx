@@ -67,6 +67,7 @@ import { LibraryProvider } from "./library/context";
 import { EmptyState } from "./library/EmptyState";
 import { HealthFab, HealthPanel } from "./panel/HealthPanel";
 import { PublishGate } from "./panel/PublishGate";
+import { ContainerInspectorDrawer } from "./panel/ContainerInspectorDrawer";
 import { analyzeFlow } from "./validation";
 
 
@@ -431,6 +432,7 @@ function FlowStudioV2Inner({ flowId }: Props) {
 
         <div style={{ position: "relative", minHeight: 0 }}>
           <FlowCanvasV2 />
+          <ContainerInspectorDrawer />
           {isEmpty && <EmptyState originNodeId={startNodeId} />}
           <CopilotFab flowId={flowId} onApply={applyAIPatch} contextSummary={contextSummary} />
           {!healthOpen && <HealthFab ctx={sidebarCtx} onOpen={() => setHealthOpen(true)} />}
