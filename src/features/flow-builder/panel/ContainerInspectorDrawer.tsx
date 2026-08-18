@@ -30,10 +30,77 @@ export function ContainerInspectorDrawer() {
   const [activeItemText, setActiveItemText] = useState("");
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
+  const addNode = useBuilderStore((s) => s.addNode);
+  const connect = useBuilderStore((s) => s.connect);
+  const selectNode = useBuilderStore((s) => s.selectNode);
+
   if (!node) return null;
 
   const kind = node.kind;
   const data = node.data || {};
+
+  if (kind === "start") {
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-blue-50/50">
+          <div className="flex items-center gap-2">
+            <span className="w-3 h-3 rounded-full bg-blue-500" />
+            <h2 className="text-base font-semibold text-gray-800">Bloco Inicial</h2>
+          </div>
+          <button
+            onClick={() => clearSelection()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+          <p className="text-xs text-gray-500 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
+            Selecione qual bloco conectar ao <b>Bloco Inicial</b> para começar a automação:
+          </p>
+
+          <div className="space-y-1.5">
+            {[
+              { kind: "message", label: "Conteúdo", icon: Type, color: "#EF4444", bg: "#FEF2F2", data: { items: [{ type: "text", content: "" }] } },
+              { kind: "menu", label: "Menu", icon: AlignLeft, color: "#8B5CF6", bg: "#F5F3FF" },
+              { kind: "action", label: "Ação", icon: Zap, color: "#F59E0B", bg: "#FFFBEB", data: { actions: [] } },
+              { kind: "condition", label: "Condição", icon: Code, color: "#3B82F6", bg: "#EFF6FF" },
+              { kind: "flow_connection", label: "Conexão de fluxo", icon: Plus, color: "#10B981", bg: "#ECFDF5" },
+              { kind: "randomizer", label: "Randomizador", icon: Code, color: "#06B6D4", bg: "#ECFEFF" },
+              { kind: "wait", label: "Atraso inteligente", icon: Clock, color: "#F97316", bg: "#FFF7ED", data: { seconds: 259200 } },
+              { kind: "http_request", label: "Integração", icon: Code, color: "#EC4899", bg: "#FDF2F8" },
+              { kind: "ai", label: "Assistente GPT", icon: Bookmark, color: "#14B8A6", bg: "#F0FDFA" },
+            ].map((opt) => {
+              const Icon = opt.icon;
+              return (
+                <button
+                  key={opt.kind}
+                  onClick={() => {
+                    const nextPos = { x: node.position.x + 340, y: node.position.y };
+                    const newId = addNode(opt.kind, nextPos, opt.data);
+                    connect({ source: node.id, target: newId, sourceHandle: "default", label: null });
+                    selectNode(newId);
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-blue-200 hover:bg-blue-50/40 text-left transition-all group"
+                >
+                  <div
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-transform group-hover:scale-110"
+                    style={{ backgroundColor: opt.bg, color: opt.color }}
+                  >
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="text-xs font-semibold text-gray-700 group-hover:text-blue-600">
+                    {opt.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
   const items = (data.items as ContainerSubItem[]) || [];
   const actions = (data.actions as ContainerActionItem[]) || [];
 

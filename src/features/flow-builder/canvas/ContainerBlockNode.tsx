@@ -72,28 +72,37 @@ function ContainerBlockNodeInner(props: NodeProps) {
   const isActionKind = kind === "action";
   const isContentKind = kind === "message" || kind === "container_content";
 
+  const selectNode = useBuilderStore((s) => s.selectNode);
+
   if (isStartKind) {
     return (
       <div
-        className={`w-64 rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm transition-all font-sans relative ${
-          selected ? "ring-2 ring-blue-500 shadow-md" : ""
+        onClick={() => selectNode(nodeId)}
+        className={`w-72 rounded-2xl border-2 border-blue-200 bg-white p-4 shadow-sm transition-all font-sans relative cursor-pointer hover:border-blue-400 group ${
+          selected ? "ring-2 ring-blue-500 shadow-md border-blue-500" : ""
         }`}
       >
         <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 rounded-md flex items-center justify-center bg-gray-100 text-gray-800">
-            <Rocket className="w-3.5 h-3.5" />
+          <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-blue-100 text-blue-600">
+            <Rocket className="w-4 h-4" />
           </div>
-          <span className="text-xs font-bold text-gray-800">Bloco Inicial</span>
+          <span className="text-sm font-bold text-gray-800">Bloco Inicial</span>
         </div>
-        <p className="text-[11px] text-gray-500 leading-snug">
+        <p className="text-xs text-gray-500 leading-relaxed mb-3">
           Seu fluxo começa por este bloco. Conecte-o com outro bloco.
         </p>
-        <Handle
-          type="source"
-          id="default"
-          position={Position.Right}
-          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-2"
-        />
+
+        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+          <span className="text-[11px] font-semibold text-blue-600 group-hover:underline">
+            Adicionar próxima função →
+          </span>
+          <Handle
+            type="source"
+            id="default"
+            position={Position.Right}
+            className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-2"
+          />
+        </div>
       </div>
     );
   }
