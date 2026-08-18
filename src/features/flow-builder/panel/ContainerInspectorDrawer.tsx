@@ -608,11 +608,21 @@ export function ContainerInspectorDrawer() {
                       type="range"
                       min={1}
                       max={60}
-                      value={item.seconds || 5}
-                      onChange={(e) => handleUpdateItem(item.id, { seconds: parseInt(e.target.value) })}
-                      className="flex-1 accent-red-500"
+                      value={item.seconds ?? 5}
+                      onChange={(e) => handleUpdateItem(item.id, { seconds: Math.max(1, parseInt(e.target.value) || 1) })}
+                      className="flex-1 accent-red-500 cursor-pointer"
                     />
-                    <span className="text-xs font-semibold text-red-600 w-10 text-right">{item.seconds || 5}seg</span>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="number"
+                        min={1}
+                        max={300}
+                        value={item.seconds ?? 5}
+                        onChange={(e) => handleUpdateItem(item.id, { seconds: Math.max(1, parseInt(e.target.value) || 1) })}
+                        className="w-14 p-1 text-xs font-bold text-red-600 bg-white border border-gray-200 rounded text-center focus:ring-2 focus:ring-red-400"
+                      />
+                      <span className="text-xs font-medium text-gray-600">seg</span>
+                    </div>
                   </div>
                   <label className="flex items-center gap-2 pt-1 text-xs text-gray-700 cursor-pointer">
                     <input

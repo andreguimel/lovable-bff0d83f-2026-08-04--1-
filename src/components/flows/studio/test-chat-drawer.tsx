@@ -522,9 +522,16 @@ export function TestChatDrawer({ open, onClose }: Props) {
                   const id = sendFromBot({ kind: "contact", name, phone });
                   upgradeTicks(id);
                 } else if (subType === "delay") {
-                  const secs = Number(sub.seconds || 5);
-                  setStatus("typing");
-                  await new Promise((r) => setTimeout(r, Math.min(secs, 4) * 400));
+                  const secs = Number(sub.seconds ?? 5);
+                  const isTyping = sub.typing ?? true;
+                  append({
+                    kind: "system",
+                    from: "system",
+                    text: `⏳ Atraso: aguardando ${secs}s ${isTyping ? "(Digitando...)" : ""}`,
+                    tone: "info",
+                  });
+                  if (isTyping) setStatus("typing");
+                  await new Promise((r) => setTimeout(r, Math.min(secs, 30) * 1000));
                 } else if (subType === "auto_off") {
                   append({
                     kind: "system",
@@ -739,7 +746,7 @@ export function TestChatDrawer({ open, onClose }: Props) {
               text: `Aguardando ${seconds}s…`,
               tone: "info",
             });
-            await new Promise((r) => setTimeout(r, Math.min(seconds, 4) * 400));
+            await new Promise((r) => setTimeout(r, Math.min(seconds, 30) * 1000));
             current = nextFromHandle(node.id, null);
             break;
           }
