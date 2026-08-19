@@ -186,8 +186,12 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
   const onSelectionChange = useCallback((p: OnSelectionChangeParams) => {
     const store = useBuilderStore.getState();
     const ids = p.nodes.map((n) => n.id);
+    const cur = store.selection.nodeIds;
+    if (cur.length === ids.length && cur.every((id, idx) => id === ids[idx])) {
+      return;
+    }
     if (ids.length === 0) {
-      if (store.selection.nodeIds.length > 0) store.clearSelection();
+      if (cur.length > 0) store.clearSelection();
       return;
     }
     if (ids.length === 1) store.selectNode(ids[0]);
