@@ -70,6 +70,15 @@ export const LEGACY_KIND_ALIASES = [
   "apply_tag",      // → tag
   "transfer_human", // → transfer
   "run_agent",      // → ai
+  "subflow",        // → flow_connection
+  "split",          // → randomizer
+  "smart_delay",    // → wait
+  "integration",    // → http_request
+  "api_call",       // → http_request
+  "ai_agent",       // → ai
+  "assistant_gpt",  // → ai
+  "gpt",            // → ai
+  "container_block",
 ] as const;
 
 export type LegacyKindAlias = (typeof LEGACY_KIND_ALIASES)[number];

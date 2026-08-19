@@ -47,7 +47,7 @@ export async function dispatchSend(channel: ChannelRow, payload: SendPayload): P
   const provider = channel.provider_type ?? "manual";
   const creds = (channel.credentials ?? {}) as Record<string, unknown>;
 
-  if (provider === "whatsapp_cloud") {
+  if (provider === "whatsapp_cloud" || provider === "whatsapp_business" || provider === "meta_whatsapp") {
     const has = creds.phone_number_id && creds.access_token;
     if (!has) return { ok: true, provider_message_id: null, provider, skipped: true };
     const res: SendResult = await sendViaWhatsAppCloud(creds as WhatsAppCloudCreds, payload);
@@ -71,7 +71,13 @@ export async function dispatchSend(channel: ChannelRow, payload: SendPayload): P
     };
   }
 
-  if (provider === "stevo") {
+  if (
+    provider === "stevo" ||
+    provider === "evolution" ||
+    provider === "evolution_api" ||
+    provider === "zapi" ||
+    provider === "baileys"
+  ) {
     const { sendViaStevo, resolveStevoApiKey } = await import("./stevo.server");
     const stevoCreds = { ...creds, company_id: channel.company_id } as { instance_id?: string; api_key?: string; base_url?: string; company_id?: string };
     if (!stevoCreds.instance_id || !(await resolveStevoApiKey(stevoCreds))) {
@@ -98,7 +104,7 @@ export async function dispatchSend(channel: ChannelRow, payload: SendPayload): P
     };
   }
 
-  // Evolution / Baileys / manual — not implemented yet; treat as app-only
+  // Manual / unknown provider — treat as app-only
   return { ok: true, provider_message_id: null, provider, skipped: true };
 }
 
@@ -109,7 +115,11 @@ export async function dispatchSend(channel: ChannelRow, payload: SendPayload): P
 const DELETION_PROVIDERS: Record<string, MessageDeletionProvider> = {
   whatsapp_cloud: whatsappCloudDeletionProvider,
   whatsapp_business: whatsappCloudDeletionProvider,
+  meta_whatsapp: whatsappCloudDeletionProvider,
+  stevo: evolutionDeletionProvider,
   evolution: evolutionDeletionProvider,
+  evolution_api: evolutionDeletionProvider,
+  zapi: baileysDeletionProvider,
   baileys: baileysDeletionProvider,
 };
 

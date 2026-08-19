@@ -1834,13 +1834,19 @@ const NODE_PLUGINS: Record<string, NodeExecutor> = {
   send_video: mediaNode,
   send_document: mediaNode,
   wait: waitNode,
+  smart_delay: waitNode,
   wait_reply: waitReplyNode,
   menu: menuNode,
   condition: conditionNode,
   ai: aiNode,
   run_agent: aiNode,
+  ai_agent: aiNode,
+  assistant_gpt: aiNode,
+  gpt: aiNode,
   http_request: httpNode,
   webhook: httpNode,
+  integration: httpNode,
+  api_call: httpNode,
   tag: tagNode,
   add_tag: tagNode,
   apply_tag: tagNode,
@@ -1850,22 +1856,27 @@ const NODE_PLUGINS: Record<string, NodeExecutor> = {
   action: actionNode,
   question: questionNode,
   flow_connection: flowConnectionNode,
+  subflow: flowConnectionNode,
   randomizer: randomizerNode,
+  split: randomizerNode,
   transfer_number: transferNumberNode,
-
+  container_block: messageNode,
 };
-
 
 export function getPlugin(nodeType: string): NodeExecutor | null {
   const basePlugin = NODE_PLUGINS[nodeType] ?? null;
-  if (!basePlugin) return null;
+  if (!basePlugin && nodeType !== "container_block") return null;
+
   return {
-    ...basePlugin,
+    ...(basePlugin ?? messageNode),
     async execute(node, ctx) {
+      const realKind = String(node.data?.__kind ?? node.data?.kind ?? node.node_type ?? nodeType);
+      const specificPlugin = (realKind !== nodeType && NODE_PLUGINS[realKind]) ? NODE_PLUGINS[realKind] : (basePlugin ?? messageNode);
+
       if (Array.isArray(node.data?.actions) && node.data.actions.length > 0) {
         return executeMultiActionNode(node, ctx);
       }
-      return basePlugin.execute(node, ctx);
+      return specificPlugin.execute(node, ctx);
     },
   };
 }
