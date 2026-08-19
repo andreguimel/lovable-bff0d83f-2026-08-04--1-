@@ -47,10 +47,10 @@ export async function resumeWaitingReplyForConversation(args: {
 
   const { data: run } = await supabase
     .from("flow_runs")
-    .select("id, flow_id, variables")
+    .select("id, flow_id, variables, state")
     .eq("company_id", companyId)
     .eq("conversation_id", conversationId)
-    .eq("state", "WAITING_REPLY")
+    .in("state", ["WAITING_REPLY", "WAITING"])
     .order("updated_at", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -58,6 +58,7 @@ export async function resumeWaitingReplyForConversation(args: {
 
   const runId = (run as { id: string }).id;
   const flowId = (run as { flow_id: string }).flow_id;
+  const currentState = (run as { state: string }).state;
 
   // Idempotency guard against Meta retries / concurrent workers.
   if (replyMessage.provider_message_id) {
@@ -88,7 +89,7 @@ export async function resumeWaitingReplyForConversation(args: {
     message: replyPayload,
   };
 
-  // Atomic hand-off — only one worker flips WAITING_REPLY → RUNNING.
+  // Atomic hand-off — only one worker flips WAITING_REPLY/WAITING → RUNNING.
   const { data: claimed } = await supabase
     .from("flow_runs")
     .update({
@@ -97,7 +98,7 @@ export async function resumeWaitingReplyForConversation(args: {
       status: "running",
     })
     .eq("id", runId)
-    .eq("state", "WAITING_REPLY")
+    .eq("state", currentState)
     .select("id")
     .maybeSingle();
   if (!claimed) return { resumed: false, reason: "lost_race" };

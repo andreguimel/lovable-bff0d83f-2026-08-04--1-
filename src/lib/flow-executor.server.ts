@@ -412,13 +412,28 @@ async function sendMenuText(
 }
 
 function parseMenuOptions(nd: Record<string, unknown>): MenuOption[] {
-  const raw = Array.isArray(nd.options) ? (nd.options as unknown[]) : [];
+  const raw = Array.isArray(nd.options)
+    ? (nd.options as unknown[])
+    : Array.isArray(nd.items)
+    ? (nd.items as unknown[])
+    : Array.isArray(nd.subItems)
+    ? (nd.subItems as unknown[])
+    : Array.isArray(nd.buttons)
+    ? (nd.buttons as unknown[])
+    : [];
   const out: MenuOption[] = [];
   for (const item of raw) {
     if (!item || typeof item !== "object") continue;
-    const o = item as { id?: unknown; label?: unknown };
+    const o = item as { id?: unknown; label?: unknown; text?: unknown; title?: unknown };
     const id = typeof o.id === "string" ? o.id : "";
-    const label = typeof o.label === "string" ? o.label.trim() : "";
+    const label =
+      typeof o.label === "string" && o.label.trim()
+        ? o.label.trim()
+        : typeof o.text === "string" && o.text.trim()
+          ? o.text.trim()
+          : typeof o.title === "string" && o.title.trim()
+            ? o.title.trim()
+            : "";
     if (id && label) out.push({ id, label });
   }
   return out;

@@ -462,6 +462,17 @@ export const sendMessage = createServerFn({ method: "POST" })
       .update({ last_message_at: new Date().toISOString(), last_message_preview: preview })
       .eq("id", data.conversationId);
 
+    // Human agent intervention: pause open flow runs so the bot doesn't talk over the agent
+    await supabaseAdmin
+      .from("flow_runs")
+      .update({
+        state: "PAUSED" as never,
+        status: "paused",
+        completed_at: new Date().toISOString(),
+      })
+      .eq("conversation_id", data.conversationId)
+      .is("completed_at", null);
+
     return msg;
   });
 
