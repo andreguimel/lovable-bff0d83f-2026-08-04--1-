@@ -27,6 +27,7 @@ import {
   Rocket,
   Shuffle,
   AlertCircle,
+  Target,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
@@ -334,6 +335,154 @@ export function ContainerInspectorDrawer() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "integration") {
+    const integrations = (data.integrations as Array<{ id: string; type: string; label: string; url?: string; method?: string; sheetName?: string }>) || [];
+
+    const handleAddIntegration = (type: string, label: string) => {
+      const newInteg = {
+        id: `integ_${Date.now()}`,
+        type,
+        label,
+        url: type === "webhook" ? "https://api.exemplo.com/webhook" : "",
+        method: type === "webhook" ? "POST" : undefined,
+      };
+      updateNodeData(node.id, { integrations: [...integrations, newInteg] });
+      toast.success(`Integração "${label}" adicionada`);
+    };
+
+    const handleRemoveIntegration = (integId: string) => {
+      const updated = integrations.filter((i) => i.id !== integId);
+      updateNodeData(node.id, { integrations: updated });
+    };
+
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        {/* Header da Integração */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-pink-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-pink-500 text-white shadow-sm">
+              <Target className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">Integração</h2>
+          </div>
+          <button
+            onClick={() => clearSelection()}
+            className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+          <p className="text-[11px] text-gray-500 leading-relaxed font-medium">
+            Adicionar método de integração
+          </p>
+
+          {/* 4 Botões de Integração Rósas do Anexo */}
+          <div className="space-y-2.5">
+            <button
+              onClick={() => handleAddIntegration("zapier", "Integração do Zapier")}
+              className="w-full py-3 px-3 border-2 border-dashed border-pink-200 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Adicionar Integração do Zapier</span>
+              <span className="text-sm">✴️</span>
+            </button>
+
+            <button
+              onClick={() => handleAddIntegration("webhook", "Integração de Webhook")}
+              className="w-full py-3 px-3 border-2 border-dashed border-pink-200 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Adicionar Integração de Webhook</span>
+              <span className="text-sm">🔗</span>
+            </button>
+
+            <button
+              onClick={() => handleAddIntegration("sheets", "Google Sheets")}
+              className="w-full py-3 px-3 border-2 border-dashed border-pink-200 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Adicionar Google Sheets</span>
+              <span className="text-sm">📊</span>
+            </button>
+
+            <button
+              onClick={() => handleAddIntegration("rdstation", "Integração com RD Station")}
+              className="w-full py-3 px-3 border-2 border-dashed border-pink-200 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-2"
+            >
+              <span>Adicionar integração com RD Station</span>
+              <span className="text-sm">🚀</span>
+            </button>
+          </div>
+
+          {/* Lista de Integrações Configuradas */}
+          {integrations.length > 0 && (
+            <div className="space-y-3 pt-3 border-t border-gray-100">
+              <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block">
+                INTEGRAÇÕES CONFIGURADAS
+              </span>
+
+              <div className="space-y-2">
+                {integrations.map((integ) => (
+                  <div key={integ.id} className="p-3 bg-pink-50/50 border border-pink-200 rounded-2xl space-y-2 relative">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-pink-900 text-xs">{integ.label}</span>
+                      <button
+                        onClick={() => handleRemoveIntegration(integ.id)}
+                        className="p-1 text-gray-400 hover:text-red-600 rounded"
+                        title="Excluir integração"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {integ.type === "webhook" && (
+                      <div className="space-y-1.5">
+                        <input
+                          type="text"
+                          value={integ.url || ""}
+                          onChange={(e) => {
+                            const updated = integrations.map((i) => (i.id === integ.id ? { ...i, url: e.target.value } : i));
+                            updateNodeData(node.id, { integrations: updated });
+                          }}
+                          placeholder="URL do Webhook (https://...)"
+                          className="w-full p-2 bg-white border border-pink-200 rounded-xl text-xs focus:ring-2 focus:ring-pink-400 focus:outline-none"
+                        />
+                        <select
+                          value={integ.method || "POST"}
+                          onChange={(e) => {
+                            const updated = integrations.map((i) => (i.id === integ.id ? { ...i, method: e.target.value } : i));
+                            updateNodeData(node.id, { integrations: updated });
+                          }}
+                          className="w-full p-2 bg-white border border-pink-200 rounded-xl text-xs font-bold text-gray-800"
+                        >
+                          <option value="POST">Método POST</option>
+                          <option value="GET">Método GET</option>
+                          <option value="PUT">Método PUT</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {integ.type === "sheets" && (
+                      <input
+                        type="text"
+                        value={integ.sheetName || ""}
+                        onChange={(e) => {
+                          const updated = integrations.map((i) => (i.id === integ.id ? { ...i, sheetName: e.target.value } : i));
+                          updateNodeData(node.id, { integrations: updated });
+                        }}
+                        placeholder="Nome da Planilha Google..."
+                        className="w-full p-2 bg-white border border-pink-200 rounded-xl text-xs focus:ring-2 focus:ring-pink-400 focus:outline-none"
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );

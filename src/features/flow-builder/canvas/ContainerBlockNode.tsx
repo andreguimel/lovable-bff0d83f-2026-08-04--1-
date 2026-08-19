@@ -20,6 +20,7 @@ import {
   Filter,
   GitFork,
   Shuffle,
+  Target,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -248,6 +249,122 @@ function ContainerBlockNodeInner(props: NodeProps) {
             </div>
           </div>
         </div>
+      </div>
+    );
+  }
+
+  const isIntegrationKind = kind === "integration";
+
+  if (isIntegrationKind) {
+    const integrations = (data.integrations as Array<{ id: string; type: string; label: string }>) || [];
+
+    return (
+      <div
+        className={`w-80 rounded-2xl border-2 border-pink-300 bg-white shadow-md transition-all font-sans relative ${
+          selected ? "ring-2 ring-pink-500 shadow-xl border-pink-500" : ""
+        }`}
+      >
+        {/* Porta de Entrada (Left Handle) */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+        />
+
+        {/* Header do Card Integração */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-pink-50/80 border-b border-pink-100">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-pink-500 text-white shadow-sm">
+              <Target className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-pink-950">Integração</span>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateNode(nodeId);
+              }}
+              className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+              title="Duplicar nó"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNode(nodeId);
+              }}
+              className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+              title="Excluir nó"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body do Card Integração */}
+        <div className="p-3 space-y-2.5">
+          <p className="text-xs text-gray-500 font-medium">Qual ação deve ser tomada?</p>
+
+          {integrations.length === 0 ? (
+            <div className="space-y-2">
+              <button
+                onClick={() => selectNode(nodeId)}
+                className="w-full py-2.5 px-3 border border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-semibold rounded-2xl text-xs transition-colors text-center block nodrag"
+              >
+                Adicionar Integração do Zapier ✴️
+              </button>
+              <button
+                onClick={() => selectNode(nodeId)}
+                className="w-full py-2.5 px-3 border border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-semibold rounded-2xl text-xs transition-colors text-center block nodrag"
+              >
+                Adicionar Integração de Webhook 🔗
+              </button>
+              <button
+                onClick={() => selectNode(nodeId)}
+                className="w-full py-2.5 px-3 border border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-semibold rounded-2xl text-xs transition-colors text-center block nodrag"
+              >
+                Adicionar Google Sheets 📊
+              </button>
+              <button
+                onClick={() => selectNode(nodeId)}
+                className="w-full py-2.5 px-3 border border-dashed border-pink-300 bg-pink-50/30 hover:bg-pink-50 text-pink-600 font-semibold rounded-2xl text-xs transition-colors text-center block nodrag"
+              >
+                Adicionar integração com RD Station 🚀
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {integrations.map((integ) => (
+                <div
+                  key={integ.id}
+                  className="p-2.5 bg-pink-50/70 border border-pink-200 rounded-xl text-xs text-pink-900 font-semibold flex items-center justify-between"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Target className="w-3.5 h-3.5 text-pink-600 shrink-0" />
+                    <span className="truncate">{integ.label}</span>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => selectNode(nodeId)}
+                className="w-full py-2 border border-dashed border-pink-300 text-pink-600 font-semibold rounded-xl text-xs hover:bg-pink-50 transition-colors nodrag"
+              >
+                + Adicionar Integração
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Porta de Saída (Right Handle) */}
+        <Handle
+          type="source"
+          id="default"
+          position={Position.Right}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform !-right-2"
+        />
       </div>
     );
   }
