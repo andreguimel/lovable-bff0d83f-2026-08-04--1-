@@ -28,6 +28,9 @@ import {
   Shuffle,
   AlertCircle,
   Target,
+  Bot,
+  Settings,
+  Upload,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
@@ -335,6 +338,437 @@ export function ContainerInspectorDrawer() {
               </div>
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (kind === "ai_agent" || kind === "assistant_gpt") {
+    const assistantMode = (data.assistantMode as string) || "create";
+    const assistantName = (data.assistantName as string) || "";
+
+    const initialMsgType = (data.initialMsgType as string) || "contact";
+    const initialMsgText = (data.initialMsgText as string) || "Um assistente de IA responderá você agora, você pode fazer qualquer pergunta que quiser";
+    const language = (data.language as string) || "Português";
+    const temperature = (data.temperature as number) ?? 0.7;
+    const instructions = (data.instructions as string) || "Você é um assistente amigável que ajuda os usuários a entenderem os planos da academia, preços e aulas disponíveis, de forma clara e objetiva.";
+    const individualInstructions = (data.individualInstructions as string) || "Nome do cliente: {primeiro-nome}. Plano atual: {plano}. Último pagamento: {data_pagamento}";
+    const errorMessage = (data.errorMessage as string) || "Desculpe, não consegui encontrar a resposta certa agora. Quer tentar reformular a pergunta?";
+    const gptModel = (data.gptModel as string) || "gpt-5.5-luna";
+    const generalContext = (data.generalContext as string) || "Academia Vida Ativa, localizada na Rua das Palmeiras, 234, São Paulo, oferece planos mensais a partir de R$99,90. Aberta de segunda à sexta das 6h às 23h e sábados das 8h às 18h.";
+    const isGroupDelayEnabled = (data.isGroupDelayEnabled as boolean) ?? true;
+    const groupDelayValue = (data.groupDelayValue as number) ?? 10;
+    const groupDelayUnit = (data.groupDelayUnit as string) || "Segundos";
+    const successCriteria = (data.successCriteria as string) || "Todas as dúvidas do usuário foram claramente respondidas, ou o usuário confirmou explicitamente que não possui mais dúvidas (ex.: 'era só isso', 'obrigado').";
+    const interruptionCriteria = (data.interruptionCriteria as string) || "Usuário faz perguntas fora das informações disponíveis, envia arquivos multimídia, expressa frustração ou solicita explicitamente atendimento humano.";
+    const inactivityTimeoutValue = (data.inactivityTimeoutValue as number) ?? 30;
+    const inactivityTimeoutUnit = (data.inactivityTimeoutUnit as string) || "Minutos";
+    const saveSummaryField = (data.saveSummaryField as string) || "";
+    const customFields = (data.customFields as Array<{ id: string; name: string }>) || [];
+    const exitConditions = (data.exitConditions as Array<{ id: string; name: string }>) || [];
+
+    const EXISTING_ASSISTANTS = [
+      { id: "ast_1", name: "Assistente de Vendas (Oficial)" },
+      { id: "ast_2", name: "Suporte Técnico IA 24h" },
+      { id: "ast_3", name: "Atendente Financeiro IA" },
+    ];
+
+    const handleSave = () => {
+      toast.success("Configurações do Assistente GPT salvas com sucesso!");
+      clearSelection();
+    };
+
+    return (
+      <div className="absolute top-0 left-0 bottom-0 z-30 w-80 bg-white border-r border-gray-200 shadow-2xl flex flex-col font-sans animate-in slide-in-from-left duration-200">
+        {/* Header do Assistente GPT */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-100 bg-teal-50/50">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-teal-500 text-white shadow-sm">
+              <Bot className="w-4 h-4" />
+            </div>
+            <h2 className="text-base font-semibold text-gray-800">Assistente GPT</h2>
+          </div>
+          <div className="flex items-center gap-1">
+            <button className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors" title="Configurações">
+              <Settings className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => clearSelection()}
+              className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Radio Mode Switcher: Criar novo vs Selecionar existente (Print 2 e 3) */}
+        <div className="p-4 border-b border-gray-100 flex items-center gap-6 text-xs font-semibold text-gray-700 bg-gray-50/40">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="assistantMode"
+              checked={assistantMode === "create"}
+              onChange={() => updateNodeData(node.id, { assistantMode: "create" })}
+              className="w-4 h-4 text-teal-600 focus:ring-teal-500"
+            />
+            <span>Criar novo</span>
+          </label>
+
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="radio"
+              name="assistantMode"
+              checked={assistantMode === "select"}
+              onChange={() => updateNodeData(node.id, { assistantMode: "select" })}
+              className="w-4 h-4 text-teal-600 focus:ring-teal-500"
+            />
+            <span>Selecionar existente</span>
+          </label>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
+          {/* MODO: SELECIONAR EXISTENTE (Print 3) */}
+          {assistantMode === "select" ? (
+            <div className="space-y-3">
+              <label className="font-bold text-gray-800 block">Nome do assistente</label>
+              <select
+                value={assistantName}
+                onChange={(e) => updateNodeData(node.id, { assistantName: e.target.value })}
+                className="w-full p-3 bg-gray-50 border border-teal-200 rounded-2xl font-medium text-gray-700 focus:outline-none focus:border-teal-500"
+              >
+                <option value="">Selecione na lista</option>
+                {EXISTING_ASSISTANTS.map((ast) => (
+                  <option key={ast.id} value={ast.name}>
+                    {ast.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            /* MODO: CRIAR NOVO (Formulário Completo Print 2) */
+            <div className="space-y-4">
+              {/* 1. Nome do assistente */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-gray-800 block">Nome do assistente</label>
+                <input
+                  type="text"
+                  value={assistantName}
+                  onChange={(e) => updateNodeData(node.id, { assistantName: e.target.value })}
+                  placeholder="Nome do assistente"
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-medium text-gray-800 focus:outline-none focus:border-teal-500"
+                />
+              </div>
+
+              {/* 2. Mensagem inicial */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Mensagem inicial</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="initialMsgType"
+                      checked={initialMsgType === "contact"}
+                      onChange={() => updateNodeData(node.id, { initialMsgType: "contact" })}
+                      className="w-4 h-4 text-teal-600 focus:ring-teal-500"
+                    />
+                    <span>Mensagem Inicial Para o Contato</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer font-medium text-gray-700">
+                    <input
+                      type="radio"
+                      name="initialMsgType"
+                      checked={initialMsgType === "ia"}
+                      onChange={() => updateNodeData(node.id, { initialMsgType: "ia" })}
+                      className="w-4 h-4 text-teal-600 focus:ring-teal-500"
+                    />
+                    <span>Mensagem Inicial Para a I.A.</span>
+                  </label>
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    rows={3}
+                    value={initialMsgText}
+                    onChange={(e) => updateNodeData(node.id, { initialMsgText: e.target.value })}
+                    className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl text-xs font-normal text-gray-800 focus:outline-none focus:border-teal-500 resize-y"
+                  />
+                  <div className="flex items-center justify-between text-[10px] text-gray-400 mt-1 px-1">
+                    <span>{`{}`}</span>
+                    <span>0/1000</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Idioma */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-gray-800 block">Idioma</label>
+                <select
+                  value={language}
+                  onChange={(e) => updateNodeData(node.id, { language: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-medium text-gray-800 focus:outline-none focus:border-teal-500"
+                >
+                  <option value="Português">Português</option>
+                  <option value="Inglês">Inglês</option>
+                  <option value="Espanhol">Espanhol</option>
+                </select>
+              </div>
+
+              {/* 4. Temperatura */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Temperatura</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+                <p className="text-[11px] text-gray-400">
+                  Escolha o quão criativas ou precisas devem ser as respostas.
+                </p>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(e) => updateNodeData(node.id, { temperature: parseFloat(e.target.value) })}
+                  className="w-full accent-teal-500"
+                />
+              </div>
+
+              {/* 5. Instruções do assistente */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Instruções do assistente</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+                <textarea
+                  rows={3}
+                  value={instructions}
+                  onChange={(e) => updateNodeData(node.id, { instructions: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl text-xs text-gray-800 focus:outline-none focus:border-teal-500 resize-y"
+                />
+              </div>
+
+              {/* 6. Instruções individuais */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Instruções individuais</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+                <textarea
+                  rows={2}
+                  value={individualInstructions}
+                  onChange={(e) => updateNodeData(node.id, { individualInstructions: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl text-xs text-gray-800 focus:outline-none focus:border-teal-500 resize-y"
+                />
+              </div>
+
+              {/* 7. Mensagem de erro personalizada */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Mensagem de erro personalizada</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+                <textarea
+                  rows={2}
+                  value={errorMessage}
+                  onChange={(e) => updateNodeData(node.id, { errorMessage: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl text-xs text-gray-800 focus:outline-none focus:border-teal-500 resize-y"
+                />
+              </div>
+
+              {/* 8. Modelo GPT */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-gray-800 block">Modelo GPT</label>
+                <select
+                  value={gptModel}
+                  onChange={(e) => updateNodeData(node.id, { gptModel: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-medium text-gray-800 focus:outline-none focus:border-teal-500"
+                >
+                  <option value="gpt-5.5-luna">gpt-5.5-luna</option>
+                  <option value="gpt-4o">gpt-4o</option>
+                  <option value="gpt-4o-mini">gpt-4o-mini</option>
+                  <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                </select>
+              </div>
+
+              {/* 9. Contexto Geral */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Contexto Geral</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+                <textarea
+                  rows={3}
+                  value={generalContext}
+                  onChange={(e) => updateNodeData(node.id, { generalContext: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl text-xs text-gray-800 focus:outline-none focus:border-teal-500 resize-y"
+                />
+
+                {/* File Upload Box (Print 2) */}
+                <div className="p-4 border-2 border-dashed border-teal-200 rounded-2xl bg-teal-50/20 text-center space-y-1.5">
+                  <div className="w-8 h-8 mx-auto rounded-full bg-teal-100 text-teal-600 flex items-center justify-center">
+                    <FileText className="w-4 h-4" />
+                  </div>
+                  <button className="text-teal-600 font-bold text-xs hover:underline block mx-auto">
+                    Suba um arquivo
+                  </button>
+                  <p className="text-[10px] text-gray-400 leading-tight max-w-[220px] mx-auto">
+                    O arquivo enviado deve estar nos formatos TXT, PDF, DOC, XLS, XLSX e CSV e ter no máximo 5 MB. Limite: 8 arquivos.
+                  </p>
+                </div>
+              </div>
+
+              {/* 10. Tempo de espera para agrupar mensagens */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 font-bold text-gray-800">
+                    <span>Tempo de espera para agrupar mensagens</span>
+                    <Info className="w-3.5 h-3.5 text-teal-500" />
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={isGroupDelayEnabled}
+                    onChange={(e) => updateNodeData(node.id, { isGroupDelayEnabled: e.target.checked })}
+                    className="w-4 h-4 text-teal-600 rounded"
+                  />
+                </div>
+
+                {isGroupDelayEnabled && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={groupDelayValue}
+                      onChange={(e) => updateNodeData(node.id, { groupDelayValue: parseInt(e.target.value) || 0 })}
+                      className="p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-bold text-gray-800"
+                    >
+                      {[5, 10, 15, 20, 30, 60].map((v) => (
+                        <option key={v} value={v}>
+                          {v}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      value={groupDelayUnit}
+                      onChange={(e) => updateNodeData(node.id, { groupDelayUnit: e.target.value })}
+                      className="p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-medium text-gray-800"
+                    >
+                      <option value="Segundos">Segundos</option>
+                      <option value="Minutos">Minutos</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* 11. Sucesso do assistente */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Sucesso do assistente</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+                <textarea
+                  rows={2}
+                  value={successCriteria}
+                  onChange={(e) => updateNodeData(node.id, { successCriteria: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl text-xs text-gray-800 focus:outline-none focus:border-teal-500 resize-y"
+                />
+              </div>
+
+              {/* 12. Interrupção do assistente */}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1 font-bold text-gray-800">
+                  <span>Interrupção do assistente</span>
+                  <Info className="w-3.5 h-3.5 text-teal-500" />
+                </div>
+                <textarea
+                  rows={2}
+                  value={interruptionCriteria}
+                  onChange={(e) => updateNodeData(node.id, { interruptionCriteria: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl text-xs text-gray-800 focus:outline-none focus:border-teal-500 resize-y"
+                />
+              </div>
+
+              {/* 13. Parar IA por inatividade em */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-gray-800 block">Parar IA por inatividade em</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    value={inactivityTimeoutValue}
+                    onChange={(e) => updateNodeData(node.id, { inactivityTimeoutValue: parseInt(e.target.value) || 0 })}
+                    className="p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-bold text-gray-800"
+                  >
+                    {[10, 15, 30, 45, 60, 120].map((v) => (
+                      <option key={v} value={v}>
+                        {v}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    value={inactivityTimeoutUnit}
+                    onChange={(e) => updateNodeData(node.id, { inactivityTimeoutUnit: e.target.value })}
+                    className="p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-medium text-gray-800"
+                  >
+                    <option value="Minutos">Minutos</option>
+                    <option value="Horas">Horas</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* 14. Salvar resumo da interação em */}
+              <div className="space-y-1.5">
+                <label className="font-bold text-gray-800 block">Salvar resumo da interação em</label>
+                <select
+                  value={saveSummaryField}
+                  onChange={(e) => updateNodeData(node.id, { saveSummaryField: e.target.value })}
+                  className="w-full p-2.5 bg-gray-50 border border-teal-200 rounded-2xl font-medium text-gray-800"
+                >
+                  <option value="">Selecionar</option>
+                  <option value="resumo_ia">Resumo da IA</option>
+                  <option value="historico_conversa">Histórico da Conversa</option>
+                </select>
+              </div>
+
+              {/* 15. Campos Personalizados (Print 2) */}
+              <div className="p-3 bg-teal-50/40 border border-teal-200 rounded-2xl space-y-2.5">
+                <span className="font-bold text-teal-950 block text-xs">Campos Personalizados</span>
+                <div className="flex items-start gap-2 text-[11px] text-teal-700">
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <p>Use campos personalizados para definir onde a I.A. deve salvar uma informação coletada durante a conversa.</p>
+                </div>
+                <button
+                  onClick={() => {
+                    const newCustom = [...customFields, { id: `field_${Date.now()}`, name: "Novo campo" }];
+                    updateNodeData(node.id, { customFields: newCustom });
+                  }}
+                  className="w-full py-2.5 border border-dashed border-teal-300 bg-white hover:bg-teal-50 text-teal-600 font-bold rounded-xl text-xs transition-colors"
+                >
+                  Adicionar novo campo personalizado
+                </button>
+              </div>
+
+              {/* 16. Condição de Saída (Print 2) */}
+              <button
+                onClick={() => {
+                  const newExit = [...exitConditions, { id: `exit_${Date.now()}`, name: "Nova condição" }];
+                  updateNodeData(node.id, { exitConditions: newExit });
+                }}
+                className="w-full py-3 border-2 border-dashed border-teal-300 bg-teal-50/20 hover:bg-teal-50 text-teal-600 font-bold rounded-2xl text-xs transition-colors"
+              >
+                Adicionar nova condição de saída
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Footer Blue Save Button (Print 2 e 3) */}
+        <div className="p-4 border-t border-gray-100 bg-white">
+          <button
+            onClick={handleSave}
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-sm shadow-md transition-colors"
+          >
+            Salvar
+          </button>
         </div>
       </div>
     );

@@ -21,6 +21,8 @@ import {
   GitFork,
   Shuffle,
   Target,
+  Bot,
+  Settings,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -248,6 +250,81 @@ function ContainerBlockNodeInner(props: NodeProps) {
               />
             </div>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  const isAssistantGptKind = kind === "ai_agent" || kind === "assistant_gpt";
+
+  if (isAssistantGptKind) {
+    const assistantName = (data.assistantName as string) || (data.label as string) || "";
+    const sentCount = (data.sentCount as number) || 0;
+
+    return (
+      <div
+        className={`w-80 rounded-2xl border-2 border-teal-200 bg-white shadow-md transition-all font-sans relative ${
+          selected ? "ring-2 ring-teal-500 shadow-xl border-teal-500" : ""
+        }`}
+      >
+        {/* Porta de Entrada (Left Handle) */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
+        />
+
+        {/* Header do Card Assistente GPT */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-teal-50/60 border-b border-teal-100">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center bg-teal-500 text-white shadow-sm">
+              <Bot className="w-3.5 h-3.5" />
+            </div>
+            <span className="text-sm font-semibold text-teal-950">Assistente GPT</span>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateNode(nodeId);
+              }}
+              className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+              title="Duplicar nó"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNode(nodeId);
+              }}
+              className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+              title="Excluir nó"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body do Card Assistente GPT */}
+        <div className="p-3 space-y-3">
+          {/* Caixa de estatística de Envio (0 Enviado - Print 1) */}
+          <div className="py-2.5 px-3 bg-teal-50/40 border border-teal-100/80 rounded-xl text-center">
+            <span className="text-sm font-bold text-teal-700 block">{sentCount}</span>
+            <span className="text-[10px] font-semibold text-teal-600">Enviado</span>
+          </div>
+
+          <p className="text-xs text-gray-600 leading-relaxed font-medium">
+            Adicione instruções detalhadas e documentos sobre sua empresa
+          </p>
+
+          <button
+            onClick={() => selectNode(nodeId)}
+            className="w-full py-3 border-2 border-dashed border-teal-200 bg-teal-50/30 hover:bg-teal-50 text-teal-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 nodrag"
+          >
+            {assistantName ? `🤖 ${assistantName}` : "Assistente IA"}
+          </button>
         </div>
       </div>
     );

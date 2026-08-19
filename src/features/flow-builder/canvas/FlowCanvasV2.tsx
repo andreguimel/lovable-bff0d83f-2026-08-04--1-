@@ -113,7 +113,7 @@ export function FlowCanvasV2({ className }: FlowCanvasV2Props) {
       .filter(Boolean)
       .map<Node>((n) => ({
         id: n.id,
-        type: (n.kind === "message" || n.kind === "action" || n.kind === "start" || n.kind === "menu" || n.kind === "condition" || n.kind === "subflow" || n.kind === "flow_connection" || n.kind === "randomizer" || n.kind === "split" || n.kind === "wait" || n.kind === "smart_delay" || n.kind === "integration" || n.kind === "http_request" || n.kind === "webhook" || n.kind === "api_call" || n.kind.startsWith("container_")) ? "container_block" : (isV3Kind(n.kind) ? "fbv3" : "fbv2"),
+        type: (n.kind === "message" || n.kind === "action" || n.kind === "start" || n.kind === "menu" || n.kind === "condition" || n.kind === "subflow" || n.kind === "flow_connection" || n.kind === "randomizer" || n.kind === "split" || n.kind === "wait" || n.kind === "smart_delay" || n.kind === "integration" || n.kind === "http_request" || n.kind === "webhook" || n.kind === "api_call" || n.kind === "ai_agent" || n.kind === "assistant_gpt" || n.kind.startsWith("container_")) ? "container_block" : (isV3Kind(n.kind) ? "fbv3" : "fbv2"),
         position: n.position,
         selected: selected.has(n.id),
         data: {
