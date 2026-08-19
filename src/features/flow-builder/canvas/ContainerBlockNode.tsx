@@ -253,7 +253,7 @@ function ContainerBlockNodeInner(props: NodeProps) {
     );
   }
 
-  const isIntegrationKind = kind === "integration";
+  const isIntegrationKind = kind === "integration" || kind === "http_request" || kind === "webhook" || kind === "api_call";
 
   if (isIntegrationKind) {
     const integrations = (data.integrations as Array<{ id: string; type: string; label: string }>) || [];

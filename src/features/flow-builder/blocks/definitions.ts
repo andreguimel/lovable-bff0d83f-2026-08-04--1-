@@ -962,14 +962,14 @@ const BLOCKS: BlockSpec[] = [
   // ============ INTEGRAÇÕES ============
   {
     kind: "http_request",
-    label: "Chamar API externa",
+    label: "Integração",
     short: "Faz uma requisição HTTP a um sistema",
     icon: Globe,
     accent: "oklch(0.7 0.14 260)",
     category: "integrations",
     handles: { in: 1, out: [{ id: "default" }] },
     defaults: {
-      label: "Chamar API externa",
+      label: "Integração",
       method: "GET",
       url: "",
       headers: "",

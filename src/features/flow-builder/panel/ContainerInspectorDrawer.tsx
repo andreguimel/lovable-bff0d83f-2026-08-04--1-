@@ -340,7 +340,7 @@ export function ContainerInspectorDrawer() {
     );
   }
 
-  if (kind === "integration") {
+  if (kind === "integration" || kind === "http_request" || kind === "webhook" || kind === "api_call") {
     const integrations = (data.integrations as Array<{ id: string; type: string; label: string; url?: string; method?: string; sheetName?: string }>) || [];
 
     const handleAddIntegration = (type: string, label: string) => {
