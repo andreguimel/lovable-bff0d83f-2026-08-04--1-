@@ -255,7 +255,7 @@ function ContainerBlockNodeInner(props: NodeProps) {
     );
   }
 
-  const isAssistantGptKind = kind === "ai_agent" || kind === "assistant_gpt";
+  const isAssistantGptKind = kind === "ai" || kind === "ai_agent" || kind === "assistant_gpt" || kind === "gpt";
 
   if (isAssistantGptKind) {
     const assistantName = (data.assistantName as string) || (data.label as string) || "";

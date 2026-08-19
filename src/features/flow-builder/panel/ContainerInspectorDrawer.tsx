@@ -343,7 +343,7 @@ export function ContainerInspectorDrawer() {
     );
   }
 
-  if (kind === "ai_agent" || kind === "assistant_gpt") {
+  if (kind === "ai" || kind === "ai_agent" || kind === "assistant_gpt" || kind === "gpt") {
     const assistantMode = (data.assistantMode as string) || "create";
     const assistantName = (data.assistantName as string) || "";
 

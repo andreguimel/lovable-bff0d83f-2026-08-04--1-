@@ -643,13 +643,13 @@ const BLOCKS: BlockSpec[] = [
   // ============ IA ============
   {
     kind: "ai",
-    label: "Chamar IA",
+    label: "Assistente GPT",
     short: "Roteia a conversa a um agente de IA",
     icon: Bot,
     accent: "oklch(0.7 0.2 320)",
     category: "ai",
     handles: { in: 1, out: [{ id: "default" }] },
-    defaults: { label: "Chamar IA" },
+    defaults: { label: "Assistente GPT" },
     hints: {
       whenToUse:
         "Delegue a resposta a um agente de IA já configurado. A resposta fica disponível em {{ai.output}}.",

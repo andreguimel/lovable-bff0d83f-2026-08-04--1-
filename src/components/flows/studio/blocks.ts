@@ -150,7 +150,7 @@ export const BLOCKS: Record<NodeKind, BlockMeta> = {
   },
   ai: {
     kind: "ai",
-    label: "Chamar IA",
+    label: "Assistente GPT",
     short: "Roteia para um agente",
     icon: Bot,
     category: "ai",
