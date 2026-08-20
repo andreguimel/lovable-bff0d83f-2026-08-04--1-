@@ -131,139 +131,145 @@ export function ImportCsvDialog({ open, onOpenChange }: Props) {
         if (!o) reset();
       }}
     >
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Importar contatos via CSV</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="sm:max-w-3xl md:max-w-4xl w-[92vw] max-h-[90vh] flex flex-col overflow-hidden p-6 rounded-2xl shadow-2xl">
+        <DialogHeader className="shrink-0 pb-2 border-b border-border/40">
+          <DialogTitle className="text-xl font-bold">Importar contatos via CSV</DialogTitle>
+          <DialogDescription className="text-sm text-muted-foreground">
             Faça upload de um arquivo CSV. Mapearemos as colunas para os campos do CRM. Telefones
             duplicados serão atualizados.
           </DialogDescription>
         </DialogHeader>
 
-        {!result && rows.length === 0 && (
-          <label className="flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border/70 p-8 text-center cursor-pointer hover:bg-muted/50">
-            <Upload className="h-8 w-8 text-muted-foreground" />
-            <p className="text-sm font-medium">Clique para selecionar um arquivo CSV</p>
-            <p className="text-xs text-muted-foreground">Ou arraste até aqui</p>
-            <input
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
-            />
-          </label>
-        )}
+        <div className="flex-1 overflow-y-auto py-3 pr-1 space-y-4">
+          {!result && rows.length === 0 && (
+            <label className="flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border/70 p-10 text-center cursor-pointer hover:bg-muted/40 transition-colors">
+              <Upload className="h-10 w-10 text-muted-foreground" />
+              <p className="text-base font-semibold">Clique para selecionar um arquivo CSV</p>
+              <p className="text-xs text-muted-foreground">Ou arraste até aqui</p>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                className="hidden"
+                onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
+              />
+            </label>
+          )}
 
-        {!result && rows.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-sm">
-              <FileText className="h-4 w-4 text-primary" />
-              <span className="font-medium">{rows.length} linhas encontradas</span>
-              <Button size="sm" variant="ghost" onClick={reset} className="ml-auto">
-                Trocar arquivo
-              </Button>
-            </div>
-
-            <div className="rounded-lg border border-border/60">
-              <div className="grid grid-cols-2 gap-3 border-b border-border/60 p-3">
-                {headers.map((col) => (
-                  <div key={col} className="grid gap-1">
-                    <Label className="truncate text-xs">{col}</Label>
-                    <Select
-                      value={mapping[col]}
-                      onValueChange={(v) => setMapping((p) => ({ ...p, [col]: v as FieldKey }))}
-                    >
-                      <SelectTrigger className="h-8">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {(Object.keys(FIELD_LABELS) as FieldKey[]).map((k) => (
-                          <SelectItem key={k} value={k}>
-                            {FIELD_LABELS[k]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
+          {!result && rows.length > 0 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm bg-muted/40 p-2.5 rounded-lg border border-border/40">
+                <FileText className="h-4 w-4 text-primary" />
+                <span className="font-semibold text-foreground">{rows.length} linhas encontradas</span>
+                <Button size="sm" variant="ghost" onClick={reset} className="ml-auto text-xs font-semibold">
+                  Trocar arquivo
+                </Button>
               </div>
 
-              <div className="max-h-52 overflow-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      {headers.map((h) => (
-                        <TableHead key={h} className="text-xs">
-                          {h}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {rows.slice(0, 5).map((r, i) => (
-                      <TableRow key={i}>
+              <div className="space-y-3">
+                <p className="text-xs font-semibold text-muted-foreground">Mapeamento de colunas:</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-3 max-h-56 overflow-y-auto rounded-xl border border-border/60 bg-muted/20">
+                  {headers.map((col) => (
+                    <div key={col} className="grid gap-1 min-w-0">
+                      <Label className="truncate text-xs font-semibold text-foreground" title={col}>
+                        {col}
+                      </Label>
+                      <Select
+                        value={mapping[col]}
+                        onValueChange={(v) => setMapping((p) => ({ ...p, [col]: v as FieldKey }))}
+                      >
+                        <SelectTrigger className="h-8 text-xs bg-background">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(Object.keys(FIELD_LABELS) as FieldKey[]).map((k) => (
+                            <SelectItem key={k} value={k} className="text-xs">
+                              {FIELD_LABELS[k]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="text-xs font-semibold text-muted-foreground pt-1">Pré-visualização dos dados:</p>
+                <div className="rounded-xl border border-border/60 overflow-x-auto max-h-52 bg-background">
+                  <Table className="min-w-[650px] w-full">
+                    <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                      <TableRow>
                         {headers.map((h) => (
-                          <TableCell key={h} className="text-xs">
-                            {r[h]}
-                          </TableCell>
+                          <TableHead key={h} className="text-xs font-bold whitespace-nowrap">
+                            {h}
+                          </TableHead>
                         ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {result && (
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                <p className="text-xs text-muted-foreground">Criados</p>
-                <p className="text-2xl font-bold text-emerald-600">{result.created}</p>
-              </div>
-              <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 p-3">
-                <p className="text-xs text-muted-foreground">Atualizados</p>
-                <p className="text-2xl font-bold text-blue-600">{result.updated}</p>
-              </div>
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-                <p className="text-xs text-muted-foreground">Ignorados</p>
-                <p className="text-2xl font-bold text-amber-600">{result.skipped}</p>
-              </div>
-            </div>
-            {result.errors.length > 0 ? (
-              <div className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
-                <div className="flex-1">
-                  <p className="font-medium">{result.errors.length} linhas com erro</p>
-                  <Button size="sm" variant="link" className="h-auto p-0" onClick={downloadErrors}>
-                    Baixar linhas com erro (CSV)
-                  </Button>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.slice(0, 5).map((r, i) => (
+                        <TableRow key={i}>
+                          {headers.map((h) => (
+                            <TableCell key={h} className="text-xs max-w-[200px] truncate">
+                              {r[h]}
+                            </TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                Importação concluída sem erros.
-              </div>
-            )}
-          </div>
-        )}
+            </div>
+          )}
 
-        <DialogFooter>
+          {result && (
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-3 gap-3">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-center">
+                  <p className="text-xs text-muted-foreground font-semibold">Criados</p>
+                  <p className="text-2xl font-bold text-emerald-600">{result.created}</p>
+                </div>
+                <div className="rounded-xl border border-blue-500/30 bg-blue-500/10 p-3 text-center">
+                  <p className="text-xs text-muted-foreground font-semibold">Atualizados</p>
+                  <p className="text-2xl font-bold text-blue-600">{result.updated}</p>
+                </div>
+                <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-center">
+                  <p className="text-xs text-muted-foreground font-semibold">Ignorados</p>
+                  <p className="text-2xl font-bold text-amber-600">{result.skipped}</p>
+                </div>
+              </div>
+              {result.errors.length > 0 ? (
+                <div className="flex items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                  <div className="flex-1">
+                    <p className="font-semibold">{result.errors.length} linhas com erro</p>
+                    <Button size="sm" variant="link" className="h-auto p-0 text-destructive" onClick={downloadErrors}>
+                      Baixar linhas com erro (CSV)
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 text-sm font-semibold">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  Importação concluída sem erros.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <DialogFooter className="shrink-0 pt-3 border-t border-border/40">
           {!result ? (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
                 Cancelar
               </Button>
-              <Button onClick={() => mut.mutate()} disabled={rows.length === 0 || mut.isPending}>
+              <Button onClick={() => mut.mutate()} disabled={rows.length === 0 || mut.isPending} className="rounded-xl font-bold">
                 {mut.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Importar {rows.length > 0 && `(${rows.length})`}
               </Button>
             </>
           ) : (
-            <Button onClick={() => onOpenChange(false)}>Concluído</Button>
+            <Button onClick={() => onOpenChange(false)} className="rounded-xl font-bold">Concluído</Button>
           )}
         </DialogFooter>
       </DialogContent>
