@@ -76,28 +76,22 @@ function SmartSidebarInner() {
     return () => window.removeEventListener("keydown", h);
   }, [clearSelection, searchOpen]);
 
-  if (!node) return null;
-  const def = blockRegistry.get(node.kind);
+  const def = node ? blockRegistry.get(node.kind) : null;
   const meta = def?.meta;
-  if (!meta) return null;
 
-  const Icon = meta.icon;
-  const isStart = node.kind === "start";
-
-  // Campos: sempre injeta o "Rótulo" como primeiro (padrão da plataforma).
-  const declaredFields: FieldSpec[] = (def as { fields?: FieldSpec[] }).fields ?? [];
+  const declaredFields: FieldSpec[] = (def as { fields?: FieldSpec[] })?.fields ?? [];
   const fields: FieldSpec[] = useMemo(
     () => [
       {
         type: "text",
         key: "label",
         label: "Rótulo",
-        placeholder: meta.label,
+        placeholder: meta?.label ?? "",
         maxLength: 80,
       } as FieldSpec,
       ...declaredFields,
     ],
-    [declaredFields, meta.label],
+    [declaredFields, meta?.label],
   );
 
   const filteredFields = useMemo(() => {
@@ -110,12 +104,16 @@ function SmartSidebarInner() {
     });
   }, [fields, searchQuery]);
 
-  // Validação em tempo real
-  const validation = def?.validate ? def.validate(node.data) : { valid: true, issues: [] };
+  const validation = node && def?.validate ? def.validate(node.data) : { valid: true, issues: [] };
   const errorLookup = useMemo(
-    () => makeErrorLookup(fields, node.data, validation.issues),
-    [fields, node.data, validation.issues],
+    () => (node ? makeErrorLookup(fields, node.data, validation.issues) : () => null),
+    [fields, node, validation.issues],
   );
+
+  if (!node || !meta) return null;
+
+  const Icon = meta.icon;
+  const isStart = node.kind === "start";
 
   // Preview inteligente — reusa o mesmo preview do card do canvas
   const previewText = def?.preview?.(node.data) ?? null;
