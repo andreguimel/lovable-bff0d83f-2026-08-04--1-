@@ -131,27 +131,10 @@ export const setFlowStatus = createServerFn({ method: "POST" })
         );
       }
 
-      // CRITICAL-01 P1: Ativar exige uma versão publicada. Sem esta trava,
-      // o Inbox recusa a execução com "Fluxo não possui versão publicada"
-      // enquanto a UI mostra o fluxo como Ativo.
-      const { data: pub, error: pubErr } = await context.supabase
-        .from("flow_versions")
-        .select("id")
-        .eq("flow_id", data.flowId)
-        .eq("status", "published")
-        .limit(1)
-        .maybeSingle();
-      if (pubErr) throw new Error(pubErr.message);
-      if (!pub) {
-        throw new Error(
-          "Publique o fluxo antes de ativá-lo. Use o botão \"Publicar\" no editor para criar uma versão publicada.",
-        );
-      }
-
       // CRITICAL-01 P2: Grafo precisa ter todos os nós-folha como `end`, senão
       // o runtime completa "no meio" e o operador percebe como interrupção.
       const [{ data: liveNodes }, { data: liveEdges }] = await Promise.all([
-        context.supabase.from("flow_nodes").select("id, node_type, data").eq("flow_id", data.flowId),
+        context.supabase.from("flow_nodes").select("id, node_type, data, company_id").eq("flow_id", data.flowId),
         context.supabase
           .from("flow_edges")
           .select("source_node_id, target_node_id, source_handle")
@@ -163,6 +146,37 @@ export const setFlowStatus = createServerFn({ method: "POST" })
       );
       if (!graphCheck.ok) {
         throw new Error(graphCheck.error);
+      }
+
+      // CRITICAL-01 P1: Se não houver versão publicada, auto-publica automaticamente!
+      const { data: pub, error: pubErr } = await context.supabase
+        .from("flow_versions")
+        .select("id")
+        .eq("flow_id", data.flowId)
+        .eq("status", "published")
+        .limit(1)
+        .maybeSingle();
+      if (pubErr) throw new Error(pubErr.message);
+
+      if (!pub) {
+        const snapshot = await buildSnapshot(context.supabase, data.flowId);
+        const hash = await sha256Hex(stableStringify(snapshot));
+        const { data: nextNumber } = await context.supabase.rpc(
+          "next_flow_version_number",
+          { _flow_id: data.flowId },
+        );
+        const now = new Date().toISOString();
+        const companyId = (liveNodes?.[0]?.company_id as string) || (await getCompanyId(context.supabase as never, context.userId));
+        await context.supabase.from("flow_versions").insert({
+          flow_id: data.flowId,
+          company_id: companyId,
+          version_number: (nextNumber as number) ?? 1,
+          description: "Publicação automática ao ativar fluxo",
+          snapshot: snapshot as unknown as Json,
+          integrity_hash: hash,
+          status: "published",
+          published_at: now,
+        });
       }
     }
     const { error } = await context.supabase
@@ -1026,6 +1040,20 @@ export const createFlowFromTemplate = createServerFn({ method: "POST" })
       );
       if (insE.error) throw new Error(insE.error.message);
     }
+
+    // Auto-publica a versão inicial do template para uso imediato
+    const snapshot = await buildSnapshot(context.supabase, flow.id);
+    const hash = await sha256Hex(stableStringify(snapshot));
+    await context.supabase.from("flow_versions").insert({
+      flow_id: flow.id,
+      company_id: companyId,
+      version_number: 1,
+      description: "Versão inicial criada via template",
+      snapshot: snapshot as unknown as Json,
+      integrity_hash: hash,
+      status: "published",
+      published_at: new Date().toISOString(),
+    });
 
     return { id: flow.id };
   });
