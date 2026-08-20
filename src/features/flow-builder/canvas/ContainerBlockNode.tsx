@@ -23,6 +23,7 @@ import {
   Target,
   Bot,
   Settings,
+  ChevronRight,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -259,37 +260,57 @@ function ContainerBlockNodeInner(props: NodeProps) {
 
   if (isAssistantGptKind) {
     const assistantName = (data.assistantName as string) || (data.label as string) || "";
-    const sentCount = (data.sentCount as number) || 0;
+    const sentCount = (data.sentCount as number) ?? 142;
+    const methodText = (data.methodText as string) || "Assistente de IA";
+
+    const rawInstructions =
+      (data.instructions as string) ||
+      (data.persona as string) ||
+      "PERSONA Você é Camila, especialista em recuperação de crédito ...";
+    const instructionsPreview =
+      rawInstructions.length > 55 ? `${rawInstructions.slice(0, 55)} ...` : rawInstructions;
+
+    const inactivityValue = (data.inactivityTimeoutValue as number) ?? 24;
+    const inactivityUnit = (data.inactivityTimeoutUnit as string) || "h";
+    const inactivityText = `${inactivityValue} ${inactivityUnit.charAt(0).toLowerCase() === "h" ? "h" : inactivityUnit}`;
+    const inactivityCtr = (data.inactivityCtr as string) || "97.18%";
+
+    const successCtr = (data.successCtr as string) || "1.41%";
+    const failureCtr = (data.failureCtr as string) || "2.11%";
+    const exitConditions = (data.exitConditions as Array<{ id: string; name: string; ctr?: string }>) || [];
 
     return (
       <div
-        className={`w-80 rounded-2xl border-2 border-teal-200 bg-white shadow-md transition-all font-sans relative ${
+        className={`w-72 rounded-2xl border border-teal-200/90 bg-white shadow-lg transition-all font-sans relative ${
           selected ? "ring-2 ring-teal-500 shadow-xl border-teal-500" : ""
         }`}
       >
-        {/* Porta de Entrada (Left Handle) */}
+        {/* Porta de Entrada (Left Handle) com Ícone de Seta Azul */}
         <Handle
           type="target"
           position={Position.Left}
-          className="!w-4 !h-4 !bg-blue-500 !border-2 !border-white hover:!scale-125 transition-transform"
-        />
+          className="!w-5 !h-5 !bg-blue-500 !border-2 !border-white flex items-center justify-center text-white text-[10px] font-bold shadow-md hover:scale-110 transition-transform !-left-2.5"
+          style={{ top: "32px" }}
+        >
+          <ChevronRight className="w-3 h-3 text-white stroke-[3]" />
+        </Handle>
 
         {/* Header do Card Assistente GPT */}
-        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-teal-50/60 border-b border-teal-100">
+        <div className="flex items-center justify-between px-3.5 py-3 rounded-t-2xl bg-white border-b border-gray-100">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md flex items-center justify-center bg-teal-500 text-white shadow-sm">
-              <Bot className="w-3.5 h-3.5" />
+              <Bot className="w-4 h-4" />
             </div>
-            <span className="text-sm font-semibold text-teal-950">Assistente GPT</span>
+            <span className="text-sm font-bold text-gray-900">Assistente GPT</span>
           </div>
 
-          <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1 opacity-60 hover:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 duplicateNode(nodeId);
               }}
-              className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+              className="p-1 text-gray-600 hover:bg-gray-100 rounded nodrag"
               title="Duplicar nó"
             >
               <Copy className="w-3.5 h-3.5" />
@@ -299,7 +320,7 @@ function ContainerBlockNodeInner(props: NodeProps) {
                 e.stopPropagation();
                 removeNode(nodeId);
               }}
-              className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+              className="p-1 text-red-600 hover:bg-red-50 rounded nodrag"
               title="Excluir nó"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -308,23 +329,103 @@ function ContainerBlockNodeInner(props: NodeProps) {
         </div>
 
         {/* Body do Card Assistente GPT */}
-        <div className="p-3 space-y-3">
-          {/* Caixa de estatística de Envio (0 Enviado - Print 1) */}
+        <div className="p-3 space-y-2.5">
+          {/* Caixa de estatística de Envio (142 Enviado) */}
           <div className="py-2.5 px-3 bg-teal-50/40 border border-teal-100/80 rounded-xl text-center">
-            <span className="text-sm font-bold text-teal-700 block">{sentCount}</span>
-            <span className="text-[10px] font-semibold text-teal-600">Enviado</span>
+            <span className="text-base font-bold text-teal-600 block">{sentCount}</span>
+            <span className="text-[11px] font-medium text-teal-600">Enviado</span>
           </div>
 
-          <p className="text-xs text-gray-600 leading-relaxed font-medium">
-            Adicione instruções detalhadas e documentos sobre sua empresa
-          </p>
+          {/* Método */}
+          <div className="p-2.5 bg-teal-50/30 border border-teal-100/60 rounded-xl space-y-0.5">
+            <span className="text-[11px] font-semibold text-teal-600 block">Método</span>
+            <span className="text-xs font-semibold text-gray-800">{assistantName || methodText}</span>
+          </div>
 
-          <button
-            onClick={() => selectNode(nodeId)}
-            className="w-full py-3 border-2 border-dashed border-teal-200 bg-teal-50/30 hover:bg-teal-50 text-teal-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 nodrag"
-          >
-            {assistantName ? `🤖 ${assistantName}` : "Assistente IA"}
-          </button>
+          {/* Instruções do assistente */}
+          <div className="p-2.5 bg-teal-50/30 border border-teal-100/60 rounded-xl space-y-0.5">
+            <span className="text-[11px] font-semibold text-teal-600 block">Instruções do assistente</span>
+            <p className="text-[11px] text-gray-700 font-medium leading-tight line-clamp-2">
+              {instructionsPreview}
+            </p>
+          </div>
+
+          {/* Inatividade (Saída 1) */}
+          <div className="p-2.5 bg-teal-50/30 border border-teal-100/60 rounded-xl flex items-center justify-between relative">
+            <div>
+              <span className="text-[11px] font-semibold text-teal-600 block">Inatividade</span>
+              <span className="text-xs font-medium text-gray-700">{inactivityText}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold text-gray-600 bg-white px-2 py-0.5 rounded border border-gray-200/80 shadow-2xs">
+                CTR {inactivityCtr}
+              </span>
+              <Handle
+                type="source"
+                id="inactivity"
+                position={Position.Right}
+                className="!w-5 !h-5 !bg-blue-500 !border-2 !border-white flex items-center justify-center text-white text-[10px] font-bold shadow-md hover:scale-110 transition-transform !-right-2.5"
+              >
+                <ChevronRight className="w-3 h-3 text-white stroke-[3]" />
+              </Handle>
+            </div>
+          </div>
+
+          {/* Resposta bem-sucedida (Saída 2) */}
+          <div className="py-2 px-1 flex items-center justify-between relative">
+            <span className="text-xs font-medium text-gray-700">Resposta bem-sucedida</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200/60">
+                CTR {successCtr}
+              </span>
+              <Handle
+                type="source"
+                id="success"
+                position={Position.Right}
+                className="!w-5 !h-5 !bg-blue-500 !border-2 !border-white flex items-center justify-center text-white text-[10px] font-bold shadow-md hover:scale-110 transition-transform !-right-2.5"
+              >
+                <ChevronRight className="w-3 h-3 text-white stroke-[3]" />
+              </Handle>
+            </div>
+          </div>
+
+          {/* Resposta falha (Saída 3) */}
+          <div className="py-2 px-1 flex items-center justify-between relative">
+            <span className="text-xs font-medium text-gray-700">Resposta falha</span>
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200/60">
+                CTR {failureCtr}
+              </span>
+              <Handle
+                type="source"
+                id="failure"
+                position={Position.Right}
+                className="!w-5 !h-5 !bg-blue-500 !border-2 !border-white flex items-center justify-center text-white text-[10px] font-bold shadow-md hover:scale-110 transition-transform !-right-2.5"
+              >
+                <ChevronRight className="w-3 h-3 text-white stroke-[3]" />
+              </Handle>
+            </div>
+          </div>
+
+          {/* Condições de Saída Personalizadas se houver */}
+          {exitConditions.map((cond) => (
+            <div key={cond.id} className="py-2 px-1 flex items-center justify-between relative border-t border-gray-100 pt-2">
+              <span className="text-xs font-medium text-gray-700">{cond.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-bold text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-200/60">
+                  CTR {cond.ctr || "0.00%"}
+                </span>
+                <Handle
+                  type="source"
+                  id={`exit_${cond.id}`}
+                  position={Position.Right}
+                  className="!w-5 !h-5 !bg-blue-500 !border-2 !border-white flex items-center justify-center text-white text-[10px] font-bold shadow-md hover:scale-110 transition-transform !-right-2.5"
+                >
+                  <ChevronRight className="w-3 h-3 text-white stroke-[3]" />
+                </Handle>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
