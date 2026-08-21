@@ -799,36 +799,91 @@ const conditionNode: NodeExecutor = {
 const aiNode: NodeExecutor = {
   async execute(node, ctx) {
     const agentId = String(node.data.agent_id ?? "");
-    if (!agentId) return { status: "skipped", message: "Nenhum agente configurado" };
-    const { data: agent } = await ctx.supabase
-      .from("ai_agents")
-      .select("id, name, model, personality, prompt")
-      .eq("id", agentId)
-      .maybeSingle();
-    if (!agent) return { status: "skipped", message: "Agente não encontrado" };
+    const customExitConditions = Array.isArray(node.data.exitConditions)
+      ? (node.data.exitConditions as Array<{ id: string; name: string }>)
+      : [];
 
-    if (ctx.dryRun) {
-      const simulated = `[IA/${agent.name}] resposta simulada para "${String(ctx.variables.last_message ?? "")}"`;
-      return { status: "ok", output: { agent: agent.name, simulated_reply: simulated }, vars: { ai: { output: simulated } } };
+    let agentName = "Assistente de IA";
+    let agentModel = "openai/gpt-4o-mini";
+    let agentSystemPrompt =
+      String(node.data.instructions ?? node.data.persona ?? node.data.prompt ?? "").trim() ||
+      "Você é um assistente virtual inteligente.";
+
+    if (agentId) {
+      const { data: agent } = await ctx.supabase
+        .from("ai_agents")
+        .select("id, name, model, personality, prompt")
+        .eq("id", agentId)
+        .maybeSingle();
+
+      if (agent) {
+        agentName = agent.name;
+        agentModel = agent.model || agentModel;
+        agentSystemPrompt = agent.personality || agent.prompt || agentSystemPrompt;
+      }
     }
 
-    const { buildGuardianModel } = await import("@/lib/ai-provider.server");
-    const { generateText } = await import("ai");
+    if (ctx.dryRun) {
+      const simulated = `[IA/${agentName}] resposta simulada para "${String(ctx.variables.last_message ?? "")}"`;
+      return {
+        status: "ok",
+        nextHandle: "success",
+        output: { agent: agentName, simulated_reply: simulated },
+        vars: { ai: { output: simulated } },
+      };
+    }
 
-    const t0 = Date.now();
-    const { model, modelId } = await buildGuardianModel(ctx.supabase, ctx.companyId, agent.model);
-    const result = await generateText({
-      model,
-      system: agent.personality || agent.prompt || "Você é um agente de atendimento.",
-      prompt: String(ctx.variables.last_message ?? "Olá"),
-    });
-    const reply = result.text.trim();
-    return {
-      status: "ok",
-      output: { agent: agent.name, model: modelId, reply },
-      vars: { ai: { output: reply } },
-      metrics: { ai_latency_ms: Date.now() - t0 },
-    };
+    try {
+      const { buildGuardianModel } = await import("@/lib/ai-provider.server");
+      const { generateText } = await import("ai");
+
+      const t0 = Date.now();
+      const { model, modelId } = await buildGuardianModel(ctx.supabase, ctx.companyId, agentModel);
+
+      let systemPrompt = agentSystemPrompt;
+      if (customExitConditions.length > 0) {
+        systemPrompt += `\n\nCondições de saída disponíveis: ${customExitConditions.map((c) => `[${c.id}] ${c.name}`).join("; ")}.`;
+      }
+
+      const userMessage = String(ctx.variables.last_message ?? ctx.variables.input ?? "Olá");
+      const result = await generateText({
+        model,
+        system: systemPrompt,
+        prompt: userMessage,
+      });
+
+      const reply = result.text.trim();
+
+      // Determina qual saída (handle) acionar
+      let chosenHandle = "success";
+      if (customExitConditions.length > 0) {
+        const matched = customExitConditions.find(
+          (c) =>
+            reply.toLowerCase().includes(c.name.toLowerCase()) ||
+            reply.includes(`[${c.id}]`) ||
+            reply.toLowerCase().includes(c.id.toLowerCase()),
+        );
+        if (matched) {
+          chosenHandle = matched.id;
+        }
+      }
+
+      return {
+        status: "ok",
+        nextHandle: chosenHandle,
+        output: { agent: agentName, model: modelId, reply, selected_handle: chosenHandle },
+        vars: { ai: { output: reply } },
+        metrics: { ai_latency_ms: Date.now() - t0 },
+      };
+    } catch (err: any) {
+      // Se houver erro na IA, desvia para a saída de falha ("failure")
+      return {
+        status: "ok",
+        nextHandle: "failure",
+        output: { error: err?.message ?? String(err) },
+        message: `Falha na execução da IA: ${err?.message ?? String(err)}`,
+      };
+    }
   },
 };
 
@@ -1297,9 +1352,93 @@ async function runStevoCall(node: NodeRow, ctx: ExecutionContext): Promise<NodeR
   };
 }
 
+async function runNotifyTeam(node: NodeRow, ctx: ExecutionContext): Promise<ActionResult> {
+  const targetUserId = String(
+    node.data.user_id ??
+      node.data.member_id ??
+      node.data.target_user_id ??
+      node.data.agent_user_id ??
+      node.data.team_member_id ??
+      "",
+  ).trim();
+  const rawMessage = String(
+    node.data.message ??
+      node.data.body ??
+      node.data.text ??
+      node.data.content ??
+      node.data.message_template ??
+      node.data.notification_text ??
+      "",
+  ).trim();
+
+  if (ctx.dryRun) {
+    return { status: "ok", output: { action: "notify_team", target_user_id: targetUserId, dry_run: true } };
+  }
+
+  // Substitui variáveis {primeiro-nome}, {telefone}, {{contact.name}}, etc.
+  let message = resolveVars(rawMessage, ctx.variables);
+  if (ctx.contact) {
+    message = message
+      .replace(/\{primeiro-nome\}/gi, ctx.contact.name?.split(" ")[0] ?? "Cliente")
+      .replace(/\{nome\}/gi, ctx.contact.name ?? "Cliente")
+      .replace(/\{telefone\}/gi, ctx.contact.phone ?? "")
+      .replace(/\{email\}/gi, (ctx.contact as any)?.email ?? "");
+  }
+
+  let targetPhone: string | null = null;
+  if (targetUserId) {
+    const { data: prof } = await ctx.supabase
+      .from("profiles")
+      .select("id, phone, email, full_name")
+      .eq("id", targetUserId)
+      .eq("company_id", ctx.companyId)
+      .maybeSingle();
+
+    if (prof?.phone) {
+      targetPhone = prof.phone;
+    }
+  }
+
+  // Tenta enviar mensagem WhatsApp ao membro da equipe se telefone estiver disponível
+  if (targetPhone && ctx.channel) {
+    try {
+      await dispatchSend(ctx.channel, {
+        type: "text",
+        to: targetPhone,
+        body: message || "[Notificação de Equipe]",
+      });
+    } catch {
+      // Ignora erro secundário para preservar execução do fluxo
+    }
+  }
+
+  // Registra notificação interna da equipe na conversa para visibilidade no Inbox
+  if (ctx.conversation.id) {
+    await ctx.supabase.from("channel_events").insert({
+      company_id: ctx.companyId,
+      channel_id: ctx.channel?.id ?? ctx.conversation.channelId ?? null,
+      conversation_id: ctx.conversation.id,
+      contact_id: ctx.contact?.id ?? null,
+      event_type: "team_notification",
+      payload: {
+        action: "notify_team",
+        target_user_id: targetUserId || null,
+        message: message || "Notificação enviada à equipe",
+        flow_run_id: ctx.runId,
+        flow_node_id: node.id,
+      },
+    });
+  }
+
+  return {
+    status: "ok",
+    output: { action: "notify_team", target_user_id: targetUserId || null, message },
+  };
+}
+
 const actionNode: NodeExecutor = {
   async execute(node, ctx) {
-    const actionType = String(node.data.action_type ?? "").trim();
+    const actionType = String(node.data.action_type ?? node.data.kind ?? "").trim();
     if (!actionType) return { status: "skipped", message: "Ação não configurada" };
     switch (actionType) {
       case "add_tag":
@@ -1308,6 +1447,13 @@ const actionNode: NodeExecutor = {
         return runRemoveTag(node, ctx);
       case "assign_agent":
         return runAssignAgent(node, ctx);
+      case "notify_team":
+      case "notify_member":
+      case "notify":
+      case "notify_team_member":
+      case "notify_user":
+      case "send_notification":
+        return runNotifyTeam(node, ctx);
       case "stevo_call":
       case "make_call":
       case "call":
@@ -2607,7 +2753,18 @@ export async function executeRun({ supabase, runId, maxSteps = 200 }: ExecuteOpt
       const outgoing = edgeMap.get(node.id) ?? [];
       const matched =
         result.nextHandle != null
-          ? outgoing.find((e) => e.source_handle === result.nextHandle)
+          ? outgoing.find(
+              (e) =>
+                e.source_handle === result.nextHandle ||
+                e.source_handle === `exit_${result.nextHandle}` ||
+                e.source_handle?.toLowerCase() === result.nextHandle?.toLowerCase() ||
+                (result.nextHandle === "success" &&
+                  (e.source_handle === "resposta_bem_sucedida" || e.source_handle === "resposta_sucesso")) ||
+                (result.nextHandle === "failure" &&
+                  (e.source_handle === "resposta_falha" || e.source_handle === "error")) ||
+                (result.nextHandle === "inactivity" &&
+                  (e.source_handle === "inatividade" || e.source_handle === "timeout")),
+            )
           : undefined;
       if (node.node_type === "question" && result.nextHandle != null && !matched) {
         errorMsg = `A saída "${result.nextHandle}" do bloco Fazer uma pergunta não está conectada.`;
