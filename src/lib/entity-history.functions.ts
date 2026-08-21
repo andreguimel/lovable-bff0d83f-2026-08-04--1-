@@ -27,7 +27,7 @@ export const listEntityHistory = createServerFn({ method: "GET" })
     const companyId = await currentCompanyId(context);
     let q = context.supabase
       .from("team_entity_history")
-      .select("*, profiles:actor_id(full_name, avatar_url, email)")
+      .select("*")
       .eq("company_id", companyId)
       .order("created_at", { ascending: false })
       .limit(data.limit);
@@ -38,10 +38,41 @@ export const listEntityHistory = createServerFn({ method: "GET" })
     if (data.from) q = q.gte("created_at", data.from);
     if (data.to) q = q.lte("created_at", data.to);
     if (data.cursor) q = q.lt("created_at", data.cursor);
-    const { data: rows, error } = await q;
+    const { data: rawRows, error } = await q;
     if (error) throw new Error(error.message);
+
+    const rows = rawRows ?? [];
+    const actorIds = Array.from(
+      new Set(
+        rows
+          .map((r: { actor_id?: string | null }) => r.actor_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    );
+
+    const profilesMap = new Map<string, { full_name: string | null; avatar_url: string | null; email: string | null }>();
+    if (actorIds.length > 0) {
+      const { data: profileRows } = await context.supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, email")
+        .in("id", actorIds);
+
+      (profileRows ?? []).forEach((p: { id: string; full_name: string | null; avatar_url: string | null; email: string | null }) => {
+        profilesMap.set(p.id, {
+          full_name: p.full_name ?? null,
+          avatar_url: p.avatar_url ?? null,
+          email: p.email ?? null,
+        });
+      });
+    }
+
+    const rowsWithProfiles = rows.map((r: { actor_id?: string | null }) => ({
+      ...r,
+      profiles: r.actor_id ? profilesMap.get(r.actor_id) ?? null : null,
+    }));
+
     return {
-      rows: rows ?? [],
-      nextCursor: rows && rows.length === data.limit ? rows[rows.length - 1].created_at : null,
+      rows: rowsWithProfiles,
+      nextCursor: rows.length === data.limit ? rows[rows.length - 1].created_at : null,
     };
   });
