@@ -119,6 +119,7 @@ function CrmHome() {
     if (typeof window !== "undefined") window.localStorage.setItem("crm.view", view);
   }, [view]);
 
+  const [importTab, setImportTab] = useState<"import" | "export">("import");
   const [openNew, setOpenNew] = useState(false);
   const [openImport, setOpenImport] = useState(false);
   const [openCF, setOpenCF] = useState(false);
@@ -236,10 +237,10 @@ function CrmHome() {
           <Button size="sm" variant="outline" onClick={() => setOpenCF(true)}>
             <Settings2 className="mr-1.5 h-4 w-4" /> Campos
           </Button>
-          <Button size="sm" variant="outline" onClick={() => setOpenImport(true)}>
+          <Button size="sm" variant="outline" onClick={() => { setImportTab("import"); setOpenImport(true); }}>
             <Upload className="mr-1.5 h-4 w-4" /> Importar
           </Button>
-          <Button size="sm" variant="outline" onClick={exportSelected}>
+          <Button size="sm" variant="outline" onClick={() => { setImportTab("export"); setOpenImport(true); }}>
             <Download className="mr-1.5 h-4 w-4" /> Exportar
           </Button>
           <Button size="sm" onClick={() => setOpenNew(true)}>
@@ -420,7 +421,7 @@ function CrmHome() {
       )}
 
       <ContactFormSheet open={openNew} onOpenChange={setOpenNew} />
-      <ImportCsvDialog open={openImport} onOpenChange={setOpenImport} />
+      <ImportCsvDialog open={openImport} onOpenChange={setOpenImport} defaultTab={importTab} />
       <CustomFieldsManager open={openCF} onOpenChange={setOpenCF} />
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
