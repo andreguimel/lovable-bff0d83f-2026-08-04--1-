@@ -747,16 +747,75 @@ export function ContainerInspectorDrawer() {
                 </button>
               </div>
 
-              {/* 16. Condição de Saída (Print 2) */}
-              <button
-                onClick={() => {
-                  const newExit = [...exitConditions, { id: `exit_${Date.now()}`, name: "Nova condição" }];
-                  updateNodeData(node.id, { exitConditions: newExit });
-                }}
-                className="w-full py-3 border-2 border-dashed border-teal-300 bg-teal-50/20 hover:bg-teal-50 text-teal-600 font-bold rounded-2xl text-xs transition-colors"
-              >
-                Adicionar nova condição de saída
-              </button>
+              {/* 16. Condições de Saída (Render Lista Completa + Edição + Exclusão - Prints 3, 4 e 5) */}
+              <div className="space-y-3 pt-2">
+                <span className="font-bold text-gray-800 block text-xs">Saídas Condicionais</span>
+
+                {exitConditions.map((cond, idx) => (
+                  <div key={cond.id} className="p-3 bg-teal-50/40 border border-teal-200/90 rounded-2xl space-y-2 relative">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-teal-800">Saída Condicional #{idx + 1}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = exitConditions.filter((c) => c.id !== cond.id);
+                          updateNodeData(node.id, { exitConditions: updated });
+                          toast.success("Saída condicional removida!");
+                        }}
+                        className="p-1 text-gray-400 hover:text-red-600 rounded transition-colors"
+                        title="Excluir saída condicional"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+
+                    {/* Título com contador de caracteres (ex: 12 / 20) */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-[10px] text-gray-500 font-semibold">
+                        <span>Nome da saída</span>
+                        <span>{cond.name.length} / 20</span>
+                      </div>
+                      <input
+                        type="text"
+                        maxLength={20}
+                        value={cond.name}
+                        onChange={(e) => {
+                          const updated = exitConditions.map((c) => (c.id === cond.id ? { ...c, name: e.target.value } : c));
+                          updateNodeData(node.id, { exitConditions: updated });
+                        }}
+                        placeholder="Ex: Espera 1 dia..."
+                        className="w-full p-2 bg-white border border-teal-200 rounded-xl text-xs font-semibold text-gray-800 focus:ring-2 focus:ring-teal-400 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Descrição / Instrução para a IA */}
+                    <div className="space-y-1">
+                      <span className="text-[10px] text-gray-500 font-semibold block">Regra para a IA entender</span>
+                      <textarea
+                        rows={2}
+                        value={(cond as any).description || ""}
+                        onChange={(e) => {
+                          const updated = exitConditions.map((c) => (c.id === cond.id ? { ...c, description: e.target.value } : c));
+                          updateNodeData(node.id, { exitConditions: updated });
+                        }}
+                        placeholder="# SAÍDA CONDICIONAL — Descreva quando a IA deve ativar esta saída..."
+                        className="w-full p-2 bg-white border border-teal-200 rounded-xl text-xs font-medium text-gray-700 focus:ring-2 focus:ring-teal-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newExit = [...exitConditions, { id: `exit_${Date.now()}`, name: "Nova condição", description: "" }];
+                    updateNodeData(node.id, { exitConditions: newExit });
+                  }}
+                  className="w-full py-3 border-2 border-dashed border-teal-300 bg-teal-50/20 hover:bg-teal-50 text-teal-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5"
+                >
+                  <Plus className="w-4 h-4" /> Adicionar nova condição de saída
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -1575,16 +1634,68 @@ export function ContainerInspectorDrawer() {
                 )}
 
                 {act.type === "notify_team" && (
-                  <input
-                    type="text"
-                    placeholder="Nome do membro da equipe..."
-                    value={act.memberName || ""}
-                    onChange={(e) => {
-                      const updated = actions.map((a) => (a.id === act.id ? { ...a, memberName: e.target.value } : a));
-                      updateNodeData(node.id, { actions: updated });
-                    }}
-                    className="w-full p-2 bg-white border border-amber-200 rounded-xl text-xs focus:ring-2 focus:ring-amber-400 focus:outline-none"
-                  />
+                  <div className="space-y-2.5 pt-1">
+                    {/* Caixa de Mensagem da Notificação (Imagem 2) */}
+                    <div className="p-2.5 bg-white border border-amber-200/90 rounded-xl space-y-1">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-amber-800">
+                        <span>Notificação membro da equipe</span>
+                      </div>
+                      <textarea
+                        rows={3}
+                        placeholder="Digite a mensagem de notificação...\nEx: IA Remarketing parou de atender por sucesso.\nNome: {primeiro-nome}\nTel: {telefone}"
+                        value={act.message || ""}
+                        onChange={(e) => {
+                          const updated = actions.map((a) => (a.id === act.id ? { ...a, message: e.target.value } : a));
+                          updateNodeData(node.id, { actions: updated });
+                        }}
+                        className="w-full p-2 bg-gray-50/50 border border-gray-200 rounded-lg text-xs font-medium text-gray-800 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                      />
+                    </div>
+
+                    {/* Checkboxes de Canais de Notificação (Imagem 2) */}
+                    <div className="space-y-1.5 pt-1">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={act.notifyWhatsApp !== false}
+                          onChange={(e) => {
+                            const updated = actions.map((a) => (a.id === act.id ? { ...a, notifyWhatsApp: e.target.checked } : a));
+                            updateNodeData(node.id, { actions: updated });
+                          }}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>Notificar por WhatsApp</span>
+                      </label>
+
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={!!act.notifyEmail}
+                          onChange={(e) => {
+                            const updated = actions.map((a) => (a.id === act.id ? { ...a, notifyEmail: e.target.checked } : a));
+                            updateNodeData(node.id, { actions: updated });
+                          }}
+                          className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                        />
+                        <span>Notificar por E-mail</span>
+                      </label>
+                    </div>
+
+                    {/* Quem você quer notificar? (Imagem 2) */}
+                    <div className="space-y-1 pt-1">
+                      <label className="text-[11px] font-bold text-gray-600 block">Quem você quer notificar?</label>
+                      <input
+                        type="text"
+                        placeholder="Nome do membro da equipe (ex: Talita Brenda)"
+                        value={act.memberName || ""}
+                        onChange={(e) => {
+                          const updated = actions.map((a) => (a.id === act.id ? { ...a, memberName: e.target.value } : a));
+                          updateNodeData(node.id, { actions: updated });
+                        }}
+                        className="w-full p-2 bg-white border border-gray-200 rounded-xl text-xs font-medium text-gray-800 focus:ring-2 focus:ring-amber-400 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 )}
               </div>
             ))}

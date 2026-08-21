@@ -64,6 +64,10 @@ export interface ContainerActionItem {
   duration?: string;
   memberName?: string;
   note?: string;
+  message?: string;
+  notifyWhatsApp?: boolean;
+  notifyEmail?: boolean;
+  editingMsg?: boolean;
 }
 
 function ContainerBlockNodeInner(props: NodeProps) {
@@ -260,23 +264,23 @@ function ContainerBlockNodeInner(props: NodeProps) {
 
   if (isAssistantGptKind) {
     const assistantName = (data.assistantName as string) || (data.label as string) || "";
-    const sentCount = (data.sentCount as number) ?? 142;
+    const sentCount = (data.sentCount as number) ?? 0;
     const methodText = (data.methodText as string) || "Assistente de IA";
 
     const rawInstructions =
       (data.instructions as string) ||
       (data.persona as string) ||
-      "PERSONA Você é Camila, especialista em recuperação de crédito ...";
+      "PERSONA Você é um assistente virtual inteligente...";
     const instructionsPreview =
       rawInstructions.length > 55 ? `${rawInstructions.slice(0, 55)} ...` : rawInstructions;
 
-    const inactivityValue = (data.inactivityTimeoutValue as number) ?? 24;
-    const inactivityUnit = (data.inactivityTimeoutUnit as string) || "h";
-    const inactivityText = `${inactivityValue} ${inactivityUnit.charAt(0).toLowerCase() === "h" ? "h" : inactivityUnit}`;
-    const inactivityCtr = (data.inactivityCtr as string) || "97.18%";
+    const inactivityValue = (data.inactivityTimeoutValue as number) ?? (data.inactivityValue as number) ?? 24;
+    const inactivityUnit = String(data.inactivityTimeoutUnit ?? data.inactivityUnit ?? "Horas");
+    const inactivityText = `${inactivityValue} ${inactivityUnit.toLowerCase().startsWith("h") ? "h" : "min"}`;
+    const inactivityCtr = (data.inactivityCtr as string) || "0.00%";
 
-    const successCtr = (data.successCtr as string) || "1.41%";
-    const failureCtr = (data.failureCtr as string) || "2.11%";
+    const successCtr = (data.successCtr as string) || "0.00%";
+    const failureCtr = (data.failureCtr as string) || "0.00%";
     const exitConditions = (data.exitConditions as Array<{ id: string; name: string; ctr?: string }>) || [];
 
     return (
