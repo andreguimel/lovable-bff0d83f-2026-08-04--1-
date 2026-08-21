@@ -237,11 +237,8 @@ function CrmHome() {
           <Button size="sm" variant="outline" onClick={() => setOpenCF(true)}>
             <Settings2 className="mr-1.5 h-4 w-4" /> Campos
           </Button>
-          <Button size="sm" variant="outline" onClick={() => { setImportTab("import"); setOpenImport(true); }}>
-            <Upload className="mr-1.5 h-4 w-4" /> Importar
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => { setImportTab("export"); setOpenImport(true); }}>
-            <Download className="mr-1.5 h-4 w-4" /> Exportar
+          <Button size="sm" variant="outline" onClick={() => setOpenImport(true)}>
+            <Upload className="mr-1.5 h-4 w-4 text-blue-500" /> Importar / Exportar
           </Button>
           <Button size="sm" onClick={() => setOpenNew(true)}>
             <Plus className="mr-1.5 h-4 w-4" /> Novo contato

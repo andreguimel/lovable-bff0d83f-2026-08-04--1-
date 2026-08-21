@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { importContacts } from "@/lib/crm.functions";
+import { importContacts, listContacts } from "@/lib/crm.functions";
 
 interface Props {
   open: boolean;
@@ -147,12 +147,48 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
     URL.revokeObjectURL(url);
   };
 
-  const handleExport = () => {
-    toast.info("Iniciando exportação de contatos...");
-    // Trigger download de contatos do CRM
-    qc.fetchQuery({ queryKey: ["contacts"] }).then(() => {
-      toast.success("Download concluído!");
-    });
+  const listFn = useServerFn(listContacts);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      toast.info("Buscando contatos para exportação...");
+      const res = await listFn({ data: { page: 1, pageSize: 200 } });
+      const contacts = res?.rows ?? [];
+      if (!Array.isArray(contacts) || contacts.length === 0) {
+        toast.warning("Nenhum contato encontrado para exportar.");
+        setExporting(false);
+        return;
+      }
+      const csv = Papa.unparse(
+        contacts.map((r: any) => ({
+          Nome: r.name ?? "",
+          Empresa: r.company_name ?? "",
+          Telefone: r.phone ?? "",
+          Email: r.email ?? "",
+          Estagio: r.funnel_stage ?? r.stage ?? "",
+          Valor: r.deal_value_cents ? (r.deal_value_cents / 100).toFixed(2) : "",
+          Score: r.lead_score ?? "",
+          Tags: Array.isArray(r.contact_tags)
+            ? r.contact_tags.map((ct: any) => ct.tag?.name).filter(Boolean).join(", ")
+            : "",
+          "Ultima Interacao": r.last_interaction_at ?? "",
+        })),
+      );
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `crm-clientes-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${contacts.length} contatos exportados com sucesso!`);
+    } catch (err: any) {
+      toast.error("Erro ao exportar contatos: " + (err?.message ?? "Falha no servidor"));
+    } finally {
+      setExporting(false);
+    }
   };
 
   // Verifica se todos os campos obrigatórios (nome e telefone) foram mapeados
