@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import Papa from "papaparse";
+import * as XLSX from "xlsx";
 import {
   Upload,
   Download,
@@ -63,6 +64,7 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
   const importFn = useServerFn(importContacts);
 
   const [activeTab, setActiveTab] = useState<"import" | "export">(defaultTab);
+  const [exportFormat, setExportFormat] = useState<"xlsx" | "csv">("xlsx");
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<Record<string, string>[]>([]);
   const [mapping, setMapping] = useState<Record<string, FieldKey>>({});
@@ -82,15 +84,27 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
     setResult(null);
   };
 
-  const onFile = (file: File) => {
+  const onFile = async (file: File) => {
     reset();
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      complete: (res) => {
-        const h = res.meta.fields ?? [];
+    const ext = file.name.split(".").pop()?.toLowerCase();
+
+    if (ext === "xls" || ext === "xlsx") {
+      try {
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        if (!sheetName) throw new Error("Planilha vazia");
+        const sheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(sheet, { raw: false, defval: "" });
+
+        if (jsonData.length === 0) {
+          toast.error("O arquivo Excel não possui dados nas linhas.");
+          return;
+        }
+
+        const h = Object.keys(jsonData[0] ?? {});
         setHeaders(h);
-        setRows(res.data.slice(0, 2000));
+        setRows(jsonData.slice(0, 2000));
         setStep("map");
 
         // Auto-map por aproximação de nome do cabeçalho
@@ -106,9 +120,35 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
           else guess[col] = "ignore";
         });
         setMapping(guess);
-      },
-      error: (err) => toast.error("Erro ao ler CSV: " + err.message),
-    });
+      } catch (err: any) {
+        toast.error("Erro ao processar arquivo Excel: " + (err?.message ?? "Formato inválido"));
+      }
+    } else {
+      Papa.parse<Record<string, string>>(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (res) => {
+          const h = res.meta.fields ?? [];
+          setHeaders(h);
+          setRows(res.data.slice(0, 2000));
+          setStep("map");
+
+          const guess: Record<string, FieldKey> = {};
+          h.forEach((col) => {
+            const l = col.toLowerCase().trim();
+            if (l.includes("nome") || l === "name") guess[col] = "name";
+            else if (l.includes("tel") || l.includes("phone") || l.includes("whats") || l.includes("celular"))
+              guess[col] = "phone";
+            else if (l.includes("mail")) guess[col] = "email";
+            else if (l.includes("tag")) guess[col] = "tags";
+            else if (l.includes("nota") || l.includes("obs") || l.includes("note")) guess[col] = "notes";
+            else guess[col] = "ignore";
+          });
+          setMapping(guess);
+        },
+        error: (err) => toast.error("Erro ao ler CSV: " + err.message),
+      });
+    }
   };
 
   const mut = useMutation({
@@ -153,7 +193,7 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
   const handleExport = async () => {
     try {
       setExporting(true);
-      toast.info("Buscando contatos para exportação...");
+      toast.info(`Buscando contatos para exportar em ${exportFormat.toUpperCase()}...`);
       const res = await listFn({ data: { page: 1, pageSize: 200 } });
       const contacts = res?.rows ?? [];
       if (!Array.isArray(contacts) || contacts.length === 0) {
@@ -161,29 +201,40 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
         setExporting(false);
         return;
       }
-      const csv = Papa.unparse(
-        contacts.map((r: any) => ({
-          Nome: r.name ?? "",
-          Empresa: r.company_name ?? "",
-          Telefone: r.phone ?? "",
-          Email: r.email ?? "",
-          Estagio: r.funnel_stage ?? r.stage ?? "",
-          Valor: r.deal_value_cents ? (r.deal_value_cents / 100).toFixed(2) : "",
-          Score: r.lead_score ?? "",
-          Tags: Array.isArray(r.contact_tags)
-            ? r.contact_tags.map((ct: any) => ct.tag?.name).filter(Boolean).join(", ")
-            : "",
-          "Ultima Interacao": r.last_interaction_at ?? "",
-        })),
-      );
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `crm-clientes-${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`${contacts.length} contatos exportados com sucesso!`);
+
+      const formattedData = contacts.map((r: any) => ({
+        Nome: r.name ?? "",
+        Empresa: r.company_name ?? "",
+        Telefone: r.phone ?? "",
+        Email: r.email ?? "",
+        Estagio: r.funnel_stage ?? r.stage ?? "",
+        Valor: r.deal_value_cents ? Number((r.deal_value_cents / 100).toFixed(2)) : 0,
+        Score: r.lead_score ?? "",
+        Tags: Array.isArray(r.contact_tags)
+          ? r.contact_tags.map((ct: any) => ct.tag?.name).filter(Boolean).join(", ")
+          : "",
+        "Ultima Interacao": r.last_interaction_at ?? "",
+      }));
+
+      const dateStr = new Date().toISOString().slice(0, 10);
+
+      if (exportFormat === "xlsx") {
+        const worksheet = XLSX.utils.json_to_sheet(formattedData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Clientes");
+        XLSX.writeFile(workbook, `crm-clientes-${dateStr}.xlsx`);
+        toast.success(`${contacts.length} contatos exportados em Excel (.xlsx)!`);
+      } else {
+        const csv = Papa.unparse(formattedData);
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `crm-clientes-${dateStr}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`${contacts.length} contatos exportados em CSV!`);
+      }
     } catch (err: any) {
       toast.error("Erro ao exportar contatos: " + (err?.message ?? "Falha no servidor"));
     } finally {
@@ -251,12 +302,12 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
                     <Upload className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-base font-bold text-gray-900">Clique para selecionar um arquivo CSV</p>
-                    <p className="text-xs text-gray-500 mt-1">Ou arraste e solte seu arquivo aqui</p>
+                    <p className="text-base font-bold text-gray-900">Clique para selecionar um arquivo CSV ou Excel</p>
+                    <p className="text-xs text-gray-500 mt-1">Suporta arquivos .csv, .xls e .xlsx</p>
                   </div>
                   <input
                     type="file"
-                    accept=".csv,text/csv"
+                    accept=".csv, .xls, .xlsx, text/csv, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                     className="hidden"
                     onChange={(e) => e.target.files?.[0] && onFile(e.target.files[0])}
                   />
@@ -405,14 +456,40 @@ export function ImportCsvDialog({ open, onOpenChange, defaultTab = "import" }: P
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-gray-900">Exportar Base de Contatos</h3>
-                    <p className="text-xs text-gray-500">Faça o download de todos os seus clientes em formato CSV</p>
+                    <p className="text-xs text-gray-500">Faça o download dos seus clientes em planilha Excel ou CSV</p>
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-gray-200/60 flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-600">Formato: CSV (.csv)</span>
-                  <Button onClick={handleExport} className="rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white">
-                    <Download className="mr-2 h-4 w-4" /> Exportar Clientes
+                <div className="pt-3 border-t border-gray-200/60 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-600 mr-1">Formato:</span>
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat("xlsx")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        exportFormat === "xlsx"
+                          ? "bg-emerald-600 text-white shadow-xs"
+                          : "bg-gray-200/80 text-gray-700 hover:bg-gray-300/80"
+                      }`}
+                    >
+                      Excel (.xlsx)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setExportFormat("csv")}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        exportFormat === "csv"
+                          ? "bg-blue-600 text-white shadow-xs"
+                          : "bg-gray-200/80 text-gray-700 hover:bg-gray-300/80"
+                      }`}
+                    >
+                      CSV (.csv)
+                    </button>
+                  </div>
+
+                  <Button onClick={handleExport} disabled={exporting} className="rounded-xl font-bold bg-blue-600 hover:bg-blue-700 text-white">
+                    {exporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+                    Exportar Clientes ({exportFormat.toUpperCase()})
                   </Button>
                 </div>
               </div>
