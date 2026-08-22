@@ -206,7 +206,9 @@ const BLOCKS: BlockSpec[] = [
     },
     validate: (d) => {
       if (Array.isArray(d.actions) && d.actions.length > 0) return ok();
-      return s(d.body) ? ok() : err("body", "Escreva a mensagem que será enviada ao contato.");
+      if (Array.isArray(d.items) && d.items.length > 0) return ok();
+      const text = s(d.body) || s(d.text) || s(d.message);
+      return text ? ok() : err("body", "Escreva a mensagem que será enviada ao contato.");
     },
     fields: [
       {
@@ -659,8 +661,10 @@ const BLOCKS: BlockSpec[] = [
       ],
     },
     preview: (d) => (s(d.agent_label) ? `Agente: ${d.agent_label}` : s(d.agent_id) ? "Agente definido" : null),
-    validate: (d) =>
-      s(d.agent_id) ? ok() : err("agent_id", "Selecione o agente de IA que responderá."),
+    validate: (d) => {
+      const hasConfig = s(d.agent_id) || s(d.assistantName) || s(d.instructions) || s(d.persona) || s(d.prompt);
+      return hasConfig ? ok() : err("agent_id", "Selecione o agente de IA que responderá.");
+    },
     fields: [
       {
         type: "select",
@@ -1169,16 +1173,17 @@ const BLOCKS: BlockSpec[] = [
       return null;
     },
     validate: (d) => {
+      if (Array.isArray(d.actions) && d.actions.length > 0) return ok();
       const t = s(d.action_type);
       if (!t) return err("action_type", "Escolha a ação que será executada.");
       if (t === "add_tag" || t === "remove_tag") {
-        if (!s(d.tag_id)) {
+        if (!s(d.tag_id) && !s(d.tag_name) && !s(d.tagName)) {
           const verb = t === "add_tag" ? "adicionada" : "removida";
           return err("tag_id", `Selecione a etiqueta que será ${verb}.`);
         }
       }
       if (t === "assign_agent") {
-        if (!s(d.agent_user_id)) {
+        if (!s(d.agent_user_id) && !s(d.memberName)) {
           return err("agent_user_id", "Selecione o atendente que receberá o contato.");
         }
       }
