@@ -24,6 +24,7 @@ import {
   Bot,
   Settings,
   ChevronRight,
+  StopCircle,
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 
@@ -122,6 +123,71 @@ function ContainerBlockNodeInner(props: NodeProps) {
   }
 
   const isMenuKind = kind === "menu";
+  const isEndKind = kind === "end";
+
+  if (isEndKind) {
+    return (
+      <div
+        className={`w-80 rounded-2xl border-2 border-red-200 bg-white shadow-md transition-all font-sans relative ${
+          selected ? "ring-2 ring-red-500 shadow-xl border-red-500" : ""
+        }`}
+      >
+        {/* Porta de Entrada (Left Handle) */}
+        <Handle
+          type="target"
+          position={Position.Left}
+          className="!w-4 !h-4 !bg-red-500 !border-2 !border-white hover:!scale-125 transition-transform"
+        />
+
+        {/* Header do Card Fim */}
+        <div className="flex items-center justify-between px-3.5 py-2.5 rounded-t-xl bg-red-50 border-b border-red-100">
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-red-100 text-red-600">
+              <StopCircle className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-sm font-bold text-red-900 block leading-tight">Fim</span>
+              <span className="text-[9px] font-extrabold uppercase tracking-wider text-red-500 block">FIM DO ATENDIMENTO</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                duplicateNode(nodeId);
+              }}
+              className="p-1 text-gray-600 hover:bg-white/60 rounded nodrag"
+              title="Duplicar nó"
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                removeNode(nodeId);
+              }}
+              className="p-1 text-red-600 hover:bg-white/60 rounded nodrag"
+              title="Excluir nó"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Body do Card Fim */}
+        <div className="p-3 space-y-1">
+          <p className="text-xs font-medium text-gray-600">Fim do atendimento automático</p>
+        </div>
+
+        {/* Rodapé Status Fim */}
+        <div className="px-3.5 py-2 border-t border-red-100 flex items-center gap-2 bg-red-50/40 rounded-b-xl">
+          <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-[11px] font-bold text-red-500 tracking-tight">Fim configurado</span>
+        </div>
+      </div>
+    );
+  }
 
   if (isMenuKind) {
     const menuMode = (data.menuMode as string) || "list";

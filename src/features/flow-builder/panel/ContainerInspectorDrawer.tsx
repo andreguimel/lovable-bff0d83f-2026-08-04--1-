@@ -31,6 +31,7 @@ import {
   Bot,
   Settings,
   Upload,
+  StopCircle,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -102,6 +103,7 @@ export function ContainerInspectorDrawer() {
               { kind: "wait", label: "Atraso inteligente", icon: Clock, color: "#F97316", bg: "#FFF7ED", data: { seconds: 259200 } },
               { kind: "http_request", label: "Integração", icon: Code, color: "#EC4899", bg: "#FDF2F8" },
               { kind: "ai", label: "Assistente GPT", icon: Bookmark, color: "#14B8A6", bg: "#F0FDFA" },
+              { kind: "end", label: "Fim (Encerrar Atendimento)", icon: StopCircle, color: "#EF4444", bg: "#FEF2F2", data: { label: "Fim" } },
             ].map((opt) => {
               const Icon = opt.icon;
               return (
