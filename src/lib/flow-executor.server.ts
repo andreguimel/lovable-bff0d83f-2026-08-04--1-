@@ -235,7 +235,25 @@ const startEnd: NodeExecutor = {
 const messageNode: NodeExecutor = {
   async execute(node, ctx) {
     const nd = node.data;
-    const body = String(nd.body ?? nd.text ?? nd.message ?? "");
+    let body = "";
+
+    // Prioritize text from ContainerBlockNode items array
+    if (Array.isArray(nd.items) && nd.items.length > 0) {
+      const textItems = (nd.items as Array<Record<string, unknown>>).filter(
+        (i) => i && (i.type === "text" || i.content != null || i.body != null || i.text != null),
+      );
+      if (textItems.length > 0) {
+        body = textItems
+          .map((i) => String(i.content ?? i.body ?? i.text ?? ""))
+          .filter((t) => t.trim().length > 0)
+          .join("\n\n");
+      }
+    }
+
+    if (!body) {
+      body = String(nd.body ?? nd.text ?? nd.message ?? "");
+    }
+
     if (!body) return { status: "skipped", message: "Mensagem sem conteúdo" };
     const rendered = resolveVars(body, ctx.variables);
 

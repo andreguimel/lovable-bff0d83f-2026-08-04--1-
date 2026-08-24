@@ -313,14 +313,31 @@ export const saveFlowGraph = createServerFn({ method: "POST" })
 
     if (data.nodes.length > 0) {
       const insNodes = await context.supabase.from("flow_nodes").insert(
-        data.nodes.map((n) => ({
-          id: n.id,
-          flow_id: data.flowId,
-          company_id: flow.company_id,
-          node_type: n.node_type,
-          position: n.position as unknown as import("@/integrations/supabase/types").Json,
-          data: n.data as unknown as import("@/integrations/supabase/types").Json,
-        })),
+        data.nodes.map((n) => {
+          const d = { ...(n.data || {}) } as Record<string, unknown>;
+          if (Array.isArray(d.items) && d.items.length > 0) {
+            const textItems = (d.items as Array<Record<string, unknown>>).filter(
+              (i) => i && (i.type === "text" || i.content != null || i.body != null || i.text != null),
+            );
+            if (textItems.length > 0) {
+              const textContent = textItems
+                .map((i) => String(i.content ?? i.body ?? i.text ?? ""))
+                .filter((t) => t.trim().length > 0)
+                .join("\n\n");
+              if (textContent) {
+                d.body = textContent;
+              }
+            }
+          }
+          return {
+            id: n.id,
+            flow_id: data.flowId,
+            company_id: flow.company_id,
+            node_type: n.node_type,
+            position: n.position as unknown as import("@/integrations/supabase/types").Json,
+            data: d as unknown as import("@/integrations/supabase/types").Json,
+          };
+        }),
       );
       if (insNodes.error) throw new Error(insNodes.error.message);
     }
