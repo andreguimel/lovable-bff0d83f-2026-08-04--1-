@@ -147,7 +147,8 @@ export function resolveVars(text: string, vars: Record<string, unknown>): string
   if (!text) return "";
 
   const contactObj = (vars.contact ?? {}) as Record<string, unknown>;
-  const fullName = String(contactObj.name ?? contactObj.nome ?? vars["nome-completo"] ?? vars.nome ?? "").trim();
+  const rawName = String(contactObj.name ?? contactObj.nome ?? vars["nome-completo"] ?? vars.nome ?? "").trim();
+  const fullName = rawName;
   const nameParts = fullName ? fullName.split(/\s+/) : [];
   const firstName = nameParts[0] ?? "";
   const lastName = nameParts.slice(1).join(" ") ?? "";
@@ -160,28 +161,48 @@ export function resolveVars(text: string, vars: Record<string, unknown>): string
   }
 
   const sysMap: Record<string, unknown> = {
-    "nome-completo": fullName,
-    "primeiro-nome": firstName,
+    // Nomes e variações BotConversa + Sistema
+    "nome-completo": fullName || "Cliente",
+    "primeiro-nome": firstName || "Cliente",
+    "primeiro_nome": firstName || "Cliente",
+    "first_name": firstName || "Cliente",
+    "last_name": lastName,
     sobrenome: lastName,
-    nome: fullName,
+    nome: fullName || "Cliente",
+    "contact.name": fullName || "Cliente",
+    "contact.first_name": firstName || "Cliente",
+    "contact.last_name": lastName,
+    "contact.phone": contactObj.phone ?? vars.phone ?? "",
+    "contact.email": contactObj.email ?? vars.email ?? "",
+
+    // Telefone e DDD
     telefone: contactObj.phone ?? vars.phone ?? "",
     ddd: ddd,
     email: contactObj.email ?? vars.email ?? "",
+
+    // Indicações
     "nome-indicador": contactObj.referrer_name ?? vars["nome-indicador"] ?? "",
     "numero-de-indicacoes": contactObj.referral_count ?? vars["numero-de-indicacoes"] ?? 0,
     "codigo-indicacao": contactObj.referral_code ?? vars["codigo-indicacao"] ?? "",
+
+    // Contexto de Atendimento
     canal: (vars.channel as any)?.name ?? vars.canal ?? "",
     empresa: (vars.company as any)?.name ?? vars.empresa ?? "",
     atendente: (vars.user as any)?.name ?? (vars.agent as any)?.name ?? vars.atendente ?? "",
+
+    // Fluxo & Respostas
     reply: vars.reply ?? vars.resposta ?? "",
     resposta: vars.reply ?? vars.resposta ?? "",
     last_message: vars.last_message ?? vars.ultima_mensagem ?? "",
+    "ai.output": vars["ai.output"] ?? (vars.ai as any)?.output ?? "",
+    "http.body": vars["http.body"] ?? (vars.http as any)?.body ?? "",
   };
 
   return text.replace(/\{{1,2}\s*([\w.-]+)\s*\}}{1,2}/g, (match, path: string) => {
     const key = path.trim();
-    if (key in sysMap && sysMap[key] !== undefined && sysMap[key] !== "") {
-      return String(sysMap[key]);
+    if (key in sysMap) {
+      const val = sysMap[key];
+      return val == null ? "" : String(val);
     }
 
     const parts = key.split(".");
@@ -190,7 +211,7 @@ export function resolveVars(text: string, vars: Record<string, unknown>): string
       if (cur && typeof cur === "object" && p in (cur as Record<string, unknown>)) {
         cur = (cur as Record<string, unknown>)[p];
       } else {
-        return match;
+        return "";
       }
     }
     return cur == null ? "" : String(cur);
