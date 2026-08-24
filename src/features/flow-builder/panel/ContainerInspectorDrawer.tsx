@@ -57,6 +57,8 @@ export function ContainerInspectorDrawer() {
   const [activeSaveConfigId, setActiveSaveConfigId] = useState<string | null>(null);
   const [actionSearch, setActionSearch] = useState("");
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [flowSelectOpen, setFlowSelectOpen] = useState(false);
+  const [conditionSelectOpen, setConditionSelectOpen] = useState(false);
 
   const addNode = useBuilderStore((s) => s.addNode);
   const connect = useBuilderStore((s) => s.connect);
@@ -1251,7 +1253,6 @@ export function ContainerInspectorDrawer() {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTargetFlowId);
     const targetFlowId = isUUID ? rawTargetFlowId : "";
     const targetFlowName = isUUID ? ((data.target_flow_label as string) || (data.targetFlowName as string) || (data.flowName as string) || "") : "";
-    const [selectOpen, setSelectOpen] = useState(false);
 
     const availableFlows = flowsList.filter((f: any) => f.id !== currentFlowId);
 
@@ -1263,7 +1264,7 @@ export function ContainerInspectorDrawer() {
         targetFlowName: name,
         flowName: name,
       });
-      setSelectOpen(false);
+      setFlowSelectOpen(false);
       toast.success(`Fluxo "${name}" conectado`);
     };
 
@@ -1294,15 +1295,15 @@ export function ContainerInspectorDrawer() {
           {/* Botão Selecionar Fluxo */}
           <div className="relative space-y-3">
             <button
-              onClick={() => setSelectOpen(!selectOpen)}
+              onClick={() => setFlowSelectOpen(!flowSelectOpen)}
               className="w-full py-3.5 px-3 border-2 border-dashed border-emerald-300 bg-emerald-50/30 hover:bg-emerald-50 text-emerald-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-between gap-2"
             >
               <span className="truncate">{targetFlowName ? `▶ ${targetFlowName}` : "Selecionar Fluxo"}</span>
-              <ChevronRight className={`w-4 h-4 text-emerald-500 shrink-0 transition-transform ${selectOpen ? "rotate-90" : ""}`} />
+              <ChevronRight className={`w-4 h-4 text-emerald-500 shrink-0 transition-transform ${flowSelectOpen ? "rotate-90" : ""}`} />
             </button>
 
             {/* Dropdown de Seleção dos Fluxos */}
-            {selectOpen && (
+            {flowSelectOpen && (
               <div className="mt-2 p-2 bg-white border border-gray-200 rounded-2xl shadow-xl space-y-1 text-xs animate-in zoom-in-95 duration-150 z-40 relative max-h-64 overflow-y-auto">
                 <span className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider block py-1">
                   FLUXOS DISPONÍVEIS NO SISTEMA
@@ -1352,7 +1353,7 @@ export function ContainerInspectorDrawer() {
   if (kind === "condition") {
     const matchRule = (data.matchRule as string) || "any";
     const conditions = (data.conditions as Array<{ id: string; label: string; category?: string; operator?: string; value?: string }>) || [];
-    const [selectOpen, setSelectOpen] = useState(false);
+    const [conditionSelectOpen, setConditionSelectOpen] = useState(false);
 
     const CONDITION_CATEGORIES = [
       {
@@ -1400,7 +1401,7 @@ export function ContainerInspectorDrawer() {
         category: categoryTitle,
       };
       updateNodeData(node.id, { conditions: [...conditions, newCond] });
-      setSelectOpen(false);
+      setConditionSelectOpen(false);
       toast.success(`Condição "${itemLabel}" adicionada`);
     };
 
@@ -1465,14 +1466,14 @@ export function ContainerInspectorDrawer() {
           {/* Dropdown de Seleção de Condição (Prints 1, 2, 3, 4) */}
           <div className="relative">
             <button
-              onClick={() => setSelectOpen(!selectOpen)}
+              onClick={() => setConditionSelectOpen(!conditionSelectOpen)}
               className="w-full p-2.5 bg-blue-50/40 border-2 border-blue-200 hover:border-blue-400 rounded-xl text-left font-medium text-blue-900 flex items-center justify-between transition-colors"
             >
               <span>Selecionar Condição</span>
-              <ChevronRight className={`w-4 h-4 text-blue-500 transition-transform ${selectOpen ? "rotate-90" : ""}`} />
+              <ChevronRight className={`w-4 h-4 text-blue-500 transition-transform ${conditionSelectOpen ? "rotate-90" : ""}`} />
             </button>
 
-            {selectOpen && (
+            {conditionSelectOpen && (
               <div className="mt-1 p-2 bg-white border border-gray-200 rounded-2xl shadow-xl max-h-72 overflow-y-auto space-y-3 text-xs animate-in zoom-in-95 duration-150 z-40 relative">
                 {CONDITION_CATEGORIES.map((cat) => (
                   <div key={cat.title} className="space-y-1">
