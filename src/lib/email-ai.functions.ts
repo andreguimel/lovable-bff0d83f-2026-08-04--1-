@@ -188,11 +188,37 @@ export const sendLeadEmail = createServerFn({ method: "POST" })
         .parse(input),
   )
   .handler(async ({ data, context }) => {
-    const resendKey = process.env.RESEND_API_KEY;
-    const from = process.env.RESEND_FROM_EMAIL;
+    // Escopo por company_id
+    const { data: conv, error: convErr } = await context.supabase
+      .from("conversations")
+      .select("id, company_id, contact_id, channel_id")
+      .eq("id", data.conversationId)
+      .maybeSingle();
+    if (convErr || !conv) throw new Error("Conversa não encontrada");
+
+    // Resolver credenciais Resend: DB -> process.env
+    let resendKey = process.env.RESEND_API_KEY;
+    let from = process.env.RESEND_FROM_EMAIL;
+
+    if (conv.company_id) {
+      const { data: dbResend } = await context.supabase
+        .from("integrations")
+        .select("credentials, config")
+        .eq("company_id", conv.company_id)
+        .eq("provider", "resend")
+        .eq("enabled", true)
+        .maybeSingle();
+      if (dbResend) {
+        const creds = (dbResend.credentials ?? {}) as Record<string, string>;
+        const conf = (dbResend.config ?? {}) as Record<string, string>;
+        if (creds.api_key) resendKey = creds.api_key;
+        if (conf.from_email) from = conf.from_email;
+      }
+    }
+
     if (!resendKey || !from) {
       const err = new Error(
-        "Resend não configurado. Adicione RESEND_API_KEY e RESEND_FROM_EMAIL em Configurações → APIs.",
+        "Resend não configurado. Adicione a chave API e remetente em Configurações → APIs ou no arquivo .env.",
       );
       (err as Error & { code?: string }).code = "resend_not_configured";
       throw err;
@@ -211,14 +237,6 @@ export const sendLeadEmail = createServerFn({ method: "POST" })
     }
     if (totalBytes > 20 * 1024 * 1024)
       throw new Error("O total de anexos ultrapassa 20 MB.");
-
-    // Escopo por company_id
-    const { data: conv, error: convErr } = await context.supabase
-      .from("conversations")
-      .select("id, company_id, contact_id, channel_id")
-      .eq("id", data.conversationId)
-      .maybeSingle();
-    if (convErr || !conv) throw new Error("Conversa não encontrada");
 
     // Envio Resend
     const resendRes = await fetch("https://api.resend.com/emails", {

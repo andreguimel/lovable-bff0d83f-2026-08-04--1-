@@ -99,17 +99,47 @@ export const updateNotificationPrefs = createServerFn({ method: "POST" })
 
 export const getIntegrationsStatus = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () => ({
-    resend: {
-      configured: Boolean(process.env.RESEND_API_KEY),
-      from: process.env.RESEND_FROM_EMAIL ?? null,
-    },
-    aiProviders: {
-      configured: Boolean(
-        process.env.OPENAI_API_KEY ||
-          process.env.ANTHROPIC_API_KEY ||
-          process.env.GEMINI_API_KEY ||
-          process.env.GOOGLE_GENERATIVE_AI_API_KEY
-      ),
-    },
-  }));
+  .handler(async ({ context }) => {
+    let resendConfigured = Boolean(process.env.RESEND_API_KEY);
+    let resendFrom = process.env.RESEND_FROM_EMAIL ?? null;
+
+    const { data: profile } = await context.supabase
+      .from("profiles")
+      .select("company_id")
+      .eq("id", context.userId)
+      .maybeSingle();
+
+    if (profile?.company_id) {
+      const { data: dbResend } = await context.supabase
+        .from("integrations")
+        .select("credentials, config, enabled")
+        .eq("company_id", profile.company_id)
+        .eq("provider", "resend")
+        .eq("enabled", true)
+        .maybeSingle();
+
+      if (dbResend) {
+        const creds = (dbResend.credentials ?? {}) as Record<string, string>;
+        const conf = (dbResend.config ?? {}) as Record<string, string>;
+        if (creds.api_key) {
+          resendConfigured = true;
+          resendFrom = conf.from_email ?? resendFrom;
+        }
+      }
+    }
+
+    return {
+      resend: {
+        configured: resendConfigured,
+        from: resendFrom,
+      },
+      aiProviders: {
+        configured: Boolean(
+          process.env.OPENAI_API_KEY ||
+            process.env.ANTHROPIC_API_KEY ||
+            process.env.GEMINI_API_KEY ||
+            process.env.GOOGLE_GENERATIVE_AI_API_KEY
+        ),
+      },
+    };
+  });

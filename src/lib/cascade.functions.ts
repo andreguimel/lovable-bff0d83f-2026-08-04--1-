@@ -305,31 +305,52 @@ async function executeStep(sb: SupabaseClient, runId: string) {
       if (!contact.email) {
         status = "skipped";
         error = "Contato sem e-mail";
-      } else if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
-        status = "skipped";
-        error = "Resend não configurado";
       } else {
-        const resendRes = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-          },
-          body: JSON.stringify({
-            from: process.env.RESEND_FROM_EMAIL,
-            to: [contact.email],
-            subject: renderTemplate(step.subject || "Retomando nosso contato", contact),
-            text: renderTemplate(step.message, contact),
-          }),
-        });
-        if (!resendRes.ok) {
-          const raw = await resendRes.text();
-          status = "failed";
-          error = `Resend ${resendRes.status}: ${raw.slice(0, 150)}`;
+        let resendKey = process.env.RESEND_API_KEY;
+        let fromEmail = process.env.RESEND_FROM_EMAIL;
+
+        if (run.company_id) {
+          const { data: dbResend } = await sb
+            .from("integrations")
+            .select("credentials, config")
+            .eq("company_id", run.company_id)
+            .eq("provider", "resend")
+            .eq("enabled", true)
+            .maybeSingle();
+          if (dbResend) {
+            const creds = (dbResend.credentials ?? {}) as Record<string, string>;
+            const conf = (dbResend.config ?? {}) as Record<string, string>;
+            if (creds.api_key) resendKey = creds.api_key;
+            if (conf.from_email) fromEmail = conf.from_email;
+          }
+        }
+
+        if (!resendKey || !fromEmail) {
+          status = "skipped";
+          error = "Resend não configurado";
         } else {
-          const j = (await resendRes.json()) as { id?: string };
-          providerId = j.id ?? null;
-          status = "sent";
+          const resendRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${resendKey}`,
+            },
+            body: JSON.stringify({
+              from: fromEmail,
+              to: [contact.email],
+              subject: renderTemplate(step.subject || "Retomando nosso contato", contact),
+              text: renderTemplate(step.message, contact),
+            }),
+          });
+          if (!resendRes.ok) {
+            const raw = await resendRes.text();
+            status = "failed";
+            error = `Resend ${resendRes.status}: ${raw.slice(0, 150)}`;
+          } else {
+            const j = (await resendRes.json()) as { id?: string };
+            providerId = j.id ?? null;
+            status = "sent";
+          }
         }
       }
     } else if (step.channel_type === "whatsapp") {
