@@ -32,9 +32,12 @@ import {
   Settings,
   Upload,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
 import { VariablePickerPopover } from "@/components/flows/variable-picker-popover";
+import { listFlows } from "@/lib/flows.functions";
 import { toast } from "sonner";
 
 export function ContainerInspectorDrawer() {
@@ -42,6 +45,13 @@ export function ContainerInspectorDrawer() {
   const node = useBuilderStore((s) => (selectedNodeId ? s.nodesById[selectedNodeId] : null));
   const updateNodeData = useBuilderStore((s) => s.updateNodeData);
   const clearSelection = useBuilderStore((s) => s.clearSelection);
+  const currentFlowId = useBuilderStore((s) => s.meta.flowId);
+
+  const listFlowsFn = useServerFn(listFlows);
+  const { data: flowsList = [], isLoading: loadingFlows } = useQuery({
+    queryKey: ["flows-list-for-connection"],
+    queryFn: () => listFlowsFn(),
+  });
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [activeSaveConfigId, setActiveSaveConfigId] = useState<string | null>(null);
@@ -1237,21 +1247,22 @@ export function ContainerInspectorDrawer() {
   }
 
   if (kind === "subflow" || kind === "flow_connection") {
-    const targetFlowName = (data.targetFlowName as string) || (data.flowName as string) || "";
+    const targetFlowId = (data.target_flow_id as string) || (data.targetFlowId as string) || "";
+    const targetFlowName = (data.target_flow_label as string) || (data.targetFlowName as string) || (data.flowName as string) || "";
     const [selectOpen, setSelectOpen] = useState(false);
 
-    const SYSTEM_FLOWS = [
-      { id: "flow_1", name: "Fluxo de Vendas Principal" },
-      { id: "flow_2", name: "Suporte Técnico Automático" },
-      { id: "flow_3", name: "Boas-vindas & Onboarding" },
-      { id: "flow_4", name: "Recuperação de Carrinho" },
-      { id: "flow_5", name: "Pesquisa de Satisfação (NPS)" },
-    ];
+    const availableFlows = flowsList.filter((f: any) => f.id !== currentFlowId);
 
-    const handleSelectFlow = (flowName: string) => {
-      updateNodeData(node.id, { targetFlowName: flowName, flowName: flowName });
+    const handleSelectFlow = (id: string, name: string) => {
+      updateNodeData(node.id, {
+        target_flow_id: id,
+        targetFlowId: id,
+        target_flow_label: name,
+        targetFlowName: name,
+        flowName: name,
+      });
       setSelectOpen(false);
-      toast.success(`Fluxo "${flowName}" conectado`);
+      toast.success(`Fluxo "${name}" conectado`);
     };
 
     return (
@@ -1273,34 +1284,47 @@ export function ContainerInspectorDrawer() {
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-5 text-xs">
-          {/* Instrução Inicial (Print do Usuário) */}
+          {/* Instrução Inicial */}
           <p className="text-[11px] text-gray-500 leading-relaxed">
-            Clique no botão abaixo e selecione um fluxo para iniciar logo após o bloco conectado a este bloco for executado.
+            Selecione o fluxo do sistema que será iniciado logo após a ação anterior ser executada.
           </p>
 
-          {/* Botão Selecionar Fluxo (Verde Pontilhado - Print do Usuário) */}
+          {/* Botão Selecionar Fluxo */}
           <div className="relative">
             <button
               onClick={() => setSelectOpen(!selectOpen)}
-              className="w-full py-3.5 border-2 border-dashed border-emerald-300 bg-emerald-50/30 hover:bg-emerald-50 text-emerald-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-2"
+              className="w-full py-3.5 px-3 border-2 border-dashed border-emerald-300 bg-emerald-50/30 hover:bg-emerald-50 text-emerald-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-between gap-2"
             >
-              <span>{targetFlowName ? `▶ ${targetFlowName}` : "Selecionar Fluxo"}</span>
-              <ChevronRight className={`w-4 h-4 text-emerald-500 transition-transform ${selectOpen ? "rotate-90" : ""}`} />
+              <span className="truncate">{targetFlowName ? `▶ ${targetFlowName}` : "Selecionar Fluxo"}</span>
+              <ChevronRight className={`w-4 h-4 text-emerald-500 shrink-0 transition-transform ${selectOpen ? "rotate-90" : ""}`} />
             </button>
 
             {/* Dropdown de Seleção dos Fluxos */}
             {selectOpen && (
-              <div className="mt-2 p-2 bg-white border border-gray-200 rounded-2xl shadow-xl space-y-1 text-xs animate-in zoom-in-95 duration-150 z-40 relative">
+              <div className="mt-2 p-2 bg-white border border-gray-200 rounded-2xl shadow-xl space-y-1 text-xs animate-in zoom-in-95 duration-150 z-40 relative max-h-64 overflow-y-auto">
                 <span className="px-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider block py-1">
-                  FLUXOS DISPONÍVEIS
+                  FLUXOS DISPONÍVEIS NO SISTEMA
                 </span>
-                {SYSTEM_FLOWS.map((f) => (
+                {loadingFlows && (
+                  <div className="p-3 text-center text-gray-400 text-xs">Carregando fluxos...</div>
+                )}
+                {!loadingFlows && availableFlows.length === 0 && (
+                  <div className="p-3 text-center text-gray-400 text-xs">Nenhum outro fluxo disponível</div>
+                )}
+                {availableFlows.map((f: any) => (
                   <button
                     key={f.id}
-                    onClick={() => handleSelectFlow(f.name)}
-                    className="w-full text-left px-3 py-2 font-medium text-gray-700 hover:bg-emerald-50 hover:text-emerald-900 rounded-xl transition-colors block"
+                    onClick={() => handleSelectFlow(f.id, f.name)}
+                    className={`w-full text-left px-3 py-2 font-medium rounded-xl transition-colors block text-xs ${
+                      targetFlowId === f.id
+                        ? "bg-emerald-100 text-emerald-900 font-bold"
+                        : "text-gray-700 hover:bg-emerald-50 hover:text-emerald-900"
+                    }`}
                   >
-                    {f.name}
+                    <div className="font-semibold truncate">{f.name}</div>
+                    {f.status && (
+                      <span className="text-[10px] opacity-60 capitalize">{f.status}</span>
+                    )}
                   </button>
                 ))}
               </div>
