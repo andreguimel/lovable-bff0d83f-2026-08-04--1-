@@ -733,35 +733,27 @@ export const listActiveFlowsForCompany = createServerFn({ method: "GET" })
     const { data, error } = await context.supabase
       .from("flows")
       .select("id, name, status")
-      .eq("status", "active")
+      .in("status", ["active", "draft"])
       .order("name", { ascending: true });
     if (error) throw new Error(error.message);
     const flows = data ?? [];
     if (flows.length === 0) return [];
 
-    const sql = [
-      "SELECT flow_id, id, version_number, status, published_at",
-      "FROM public.flow_versions",
-      "WHERE flow_id = ANY($1) AND status = 'published'",
-    ].join(" ");
-    const { data: published, error: pubErr } = await context.supabase
+    const { data: published } = await context.supabase
       .from("flow_versions")
       .select("flow_id, id, version_number, status, published_at")
       .in("flow_id", flows.map((f) => f.id))
       .eq("status", "published");
-    if (pubErr) throw new Error(pubErr.message);
 
     const publishedFlowIds = new Set((published ?? []).map((v) => v.flow_id));
     console.info("[FLOW_RUNTIME_AUDIT] InboxListActiveFlowsResolved", {
       function: "listActiveFlowsForCompany",
       user_id: context.userId,
-      sql,
       active_flow_count: flows.length,
       published_rows_returned: published?.length ?? 0,
-      returned_flow_ids: flows.filter((flow) => publishedFlowIds.has(flow.id)).map((flow) => flow.id),
-      hidden_active_without_published: flows.filter((flow) => !publishedFlowIds.has(flow.id)).map((flow) => flow.id),
+      returned_flow_ids: flows.map((flow) => flow.id),
     });
-    return flows.filter((flow) => publishedFlowIds.has(flow.id));
+    return flows;
   });
 
 // ---- List active AI agents ----
