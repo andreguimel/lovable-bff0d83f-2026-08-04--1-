@@ -160,17 +160,19 @@ export function resolveVars(text: string, vars: Record<string, unknown>): string
     ddd = withoutCountry.slice(0, 2);
   }
 
+  const defaultName = firstName || fullName || "Cliente";
+
   const sysMap: Record<string, unknown> = {
     // Nomes e variações BotConversa + Sistema
-    "nome-completo": fullName || "Cliente",
-    "primeiro-nome": firstName || "Cliente",
-    "primeiro_nome": firstName || "Cliente",
-    "first_name": firstName || "Cliente",
+    "nome-completo": fullName || defaultName,
+    "primeiro-nome": defaultName,
+    "primeiro_nome": defaultName,
+    "first_name": defaultName,
     "last_name": lastName,
     sobrenome: lastName,
-    nome: fullName || "Cliente",
-    "contact.name": fullName || "Cliente",
-    "contact.first_name": firstName || "Cliente",
+    nome: fullName || defaultName,
+    "contact.name": fullName || defaultName,
+    "contact.first_name": defaultName,
     "contact.last_name": lastName,
     "contact.phone": contactObj.phone ?? vars.phone ?? "",
     "contact.email": contactObj.email ?? vars.email ?? "",
@@ -198,10 +200,17 @@ export function resolveVars(text: string, vars: Record<string, unknown>): string
     "http.body": vars["http.body"] ?? (vars.http as any)?.body ?? "",
   };
 
-  return text.replace(/\{{1,2}\s*([\w.-]+)\s*\}}{1,2}/g, (match, path: string) => {
-    const key = path.trim();
+  return text.replace(/\{{1,2}\s*([a-zA-Z0-9_.-]+)\s*\}}{1,2}/g, (match, path: string) => {
+    const key = path.trim().toLowerCase();
+    const normalizedKey = key.replace(/_/g, "-");
+
     if (key in sysMap) {
       const val = sysMap[key];
+      return val == null ? "" : String(val);
+    }
+
+    if (normalizedKey in sysMap) {
+      const val = sysMap[normalizedKey];
       return val == null ? "" : String(val);
     }
 

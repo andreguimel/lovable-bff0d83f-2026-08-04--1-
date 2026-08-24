@@ -63,7 +63,7 @@ export function VariablePickerPopover({
   const flowFields = filtered.filter((v) => v.category === "flow");
 
   const handlePick = (key: string) => {
-    onSelect(`{${key}}`);
+    onSelect(`{{${key}}}`);
     setOpen(false);
     setSearch("");
   };
