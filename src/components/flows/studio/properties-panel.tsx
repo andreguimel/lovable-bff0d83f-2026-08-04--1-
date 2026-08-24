@@ -26,17 +26,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { MediaPicker, type MediaKind } from "@/components/flows/media-picker";
+import { VariablePickerPopover } from "@/components/flows/variable-picker-popover";
 import { BLOCKS, type NodeKind } from "./blocks";
 import type { ActionItem, FlowNodeData } from "./custom-node";
 
 const PRESET_VARIABLES = [
   {
-    group: "Dados do Contato",
+    group: "Campos do Sistema (BotConversa)",
+    items: [
+      { value: "nome-completo", label: "👤 Nome Completo ({nome-completo})" },
+      { value: "primeiro-nome", label: "👤 Primeiro Nome ({primeiro-nome})" },
+      { value: "sobrenome", label: "👤 Sobrenome ({sobrenome})" },
+      { value: "telefone", label: "📱 Telefone ({telefone})" },
+      { value: "ddd", label: "📞 DDD ({ddd})" },
+      { value: "email", label: "✉️ E-mail ({email})" },
+      { value: "nome-indicador", label: "🤝 Nome do Indicador ({nome-indicador})" },
+      { value: "numero-de-indicacoes", label: "🔢 Nº de Indicações ({numero-de-indicacoes})" },
+      { value: "codigo-indicacao", label: "🏷️ Código de Indicação ({codigo-indicacao})" },
+    ],
+  },
+  {
+    group: "Dados do Contato & Sistema",
     items: [
       { value: "contact.name", label: "👤 Nome do Contato (contact.name)" },
       { value: "contact.phone", label: "📱 Telefone (contact.phone)" },
       { value: "contact.email", label: "✉️ E-mail (contact.email)" },
       { value: "contact.tags", label: "🏷️ Etiquetas (contact.tags)" },
+      { value: "canal", label: "📡 Nome do Canal ({canal})" },
+      { value: "empresa", label: "🏢 Nome da Empresa ({empresa})" },
+      { value: "atendente", label: "👨‍💼 Nome do Atendente ({atendente})" },
     ],
   },
   {
@@ -387,12 +405,33 @@ export function PropertiesPanel({
                         <div className="p-3 space-y-3 bg-background/40 border-t border-border/40">
                           {(act.kind === "message" || act.kind === "question") && (
                             <div className="grid gap-1.5">
-                              <Label className="text-[10px] text-muted-foreground">Mensagem</Label>
+                              <div className="flex items-center justify-between">
+                                <Label className="text-[10px] text-muted-foreground">Mensagem</Label>
+                                <VariablePickerPopover
+                                  onSelect={(tag) => updateAction(idx, { body: (act.body || "") + tag })}
+                                />
+                              </div>
+                              <div className="flex flex-wrap gap-1 mb-0.5">
+                                {[
+                                  { label: "primeiro-nome", tag: "{primeiro-nome}" },
+                                  { label: "telefone", tag: "{telefone}" },
+                                  { label: "email", tag: "{email}" },
+                                ].map((item) => (
+                                  <button
+                                    key={item.label}
+                                    type="button"
+                                    onClick={() => updateAction(idx, { body: (act.body || "") + item.tag })}
+                                    className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                                  >
+                                    +{item.label}
+                                  </button>
+                                ))}
+                              </div>
                               <Textarea
                                 rows={3}
                                 value={act.body || ""}
                                 onChange={(e) => updateAction(idx, { body: e.target.value })}
-                                placeholder="Digite a mensagem..."
+                                placeholder="Digite a mensagem... Use {primeiro-nome}, {telefone}, etc."
                                 className="resize-none text-xs"
                               />
                             </div>
@@ -587,20 +626,39 @@ export function PropertiesPanel({
           <>
             {(kind === "message" || kind === "question") && (
               <div className="grid gap-1.5">
-                <Label htmlFor="body" className="text-[11px] text-muted-foreground">
-                  Conteúdo
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="body" className="text-[11px] text-muted-foreground">
+                    Conteúdo da Mensagem
+                  </Label>
+                  <VariablePickerPopover
+                    onSelect={(tag) => onChange({ body: (typeof data.body === "string" ? data.body : "") + tag })}
+                  />
+                </div>
+                <div className="flex flex-wrap gap-1 mb-0.5">
+                  {[
+                    { label: "primeiro-nome", tag: "{primeiro-nome}" },
+                    { label: "telefone", tag: "{telefone}" },
+                    { label: "email", tag: "{email}" },
+                    { label: "nome-completo", tag: "{nome-completo}" },
+                  ].map((item) => (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => onChange({ body: (typeof data.body === "string" ? data.body : "") + item.tag })}
+                      className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                    >
+                      +{item.label}
+                    </button>
+                  ))}
+                </div>
                 <Textarea
                   id="body"
                   rows={5}
                   value={typeof data.body === "string" ? data.body : ""}
                   onChange={(e) => onChange({ body: e.target.value })}
-                  placeholder="Digite a mensagem enviada ao contato…"
+                  placeholder="Digite a mensagem enviada ao contato… Ex: Olá {primeiro-nome}, seu número é {telefone}"
                   className="resize-none text-sm"
                 />
-                <p className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                  <Info className="h-3 w-3" /> variáveis: {"{{contact.name}}"}, {"{{ai.output}}"}
-                </p>
               </div>
             )}
 

@@ -144,13 +144,54 @@ export type NodeExecutor = {
 // ---- Variable manager ---------------------------------------------------
 
 export function resolveVars(text: string, vars: Record<string, unknown>): string {
-  return text.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, path: string) => {
-    const parts = path.split(".");
+  if (!text) return "";
+
+  const contactObj = (vars.contact ?? {}) as Record<string, unknown>;
+  const fullName = String(contactObj.name ?? contactObj.nome ?? vars["nome-completo"] ?? vars.nome ?? "").trim();
+  const nameParts = fullName ? fullName.split(/\s+/) : [];
+  const firstName = nameParts[0] ?? "";
+  const lastName = nameParts.slice(1).join(" ") ?? "";
+
+  const rawPhone = String(contactObj.phone ?? contactObj.telefone ?? vars.phone ?? vars.telefone ?? "").replace(/\D/g, "");
+  let ddd = "";
+  if (rawPhone.length >= 10) {
+    const withoutCountry = rawPhone.length >= 12 && rawPhone.startsWith("55") ? rawPhone.slice(2) : rawPhone;
+    ddd = withoutCountry.slice(0, 2);
+  }
+
+  const sysMap: Record<string, unknown> = {
+    "nome-completo": fullName,
+    "primeiro-nome": firstName,
+    sobrenome: lastName,
+    nome: fullName,
+    telefone: contactObj.phone ?? vars.phone ?? "",
+    ddd: ddd,
+    email: contactObj.email ?? vars.email ?? "",
+    "nome-indicador": contactObj.referrer_name ?? vars["nome-indicador"] ?? "",
+    "numero-de-indicacoes": contactObj.referral_count ?? vars["numero-de-indicacoes"] ?? 0,
+    "codigo-indicacao": contactObj.referral_code ?? vars["codigo-indicacao"] ?? "",
+    canal: (vars.channel as any)?.name ?? vars.canal ?? "",
+    empresa: (vars.company as any)?.name ?? vars.empresa ?? "",
+    atendente: (vars.user as any)?.name ?? (vars.agent as any)?.name ?? vars.atendente ?? "",
+    reply: vars.reply ?? vars.resposta ?? "",
+    resposta: vars.reply ?? vars.resposta ?? "",
+    last_message: vars.last_message ?? vars.ultima_mensagem ?? "",
+  };
+
+  return text.replace(/\{{1,2}\s*([\w.-]+)\s*\}}{1,2}/g, (match, path: string) => {
+    const key = path.trim();
+    if (key in sysMap && sysMap[key] !== undefined && sysMap[key] !== "") {
+      return String(sysMap[key]);
+    }
+
+    const parts = key.split(".");
     let cur: unknown = vars;
     for (const p of parts) {
       if (cur && typeof cur === "object" && p in (cur as Record<string, unknown>)) {
         cur = (cur as Record<string, unknown>)[p];
-      } else return `{{${path}}}`;
+      } else {
+        return match;
+      }
     }
     return cur == null ? "" : String(cur);
   });
