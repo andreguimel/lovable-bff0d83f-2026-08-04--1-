@@ -51,7 +51,7 @@ export const listContacts = createServerFn({ method: "GET" })
     const sort = data?.sort ?? "recent";
     if (sort === "name") q = q.order("name", { ascending: true });
     else if (sort === "created") q = q.order("created_at", { ascending: false });
-    else q = q.order("last_interaction_at", { ascending: false, nullsFirst: false });
+    else q = q.order("last_interaction_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
 
     const { data: rows, error, count } = await q.range(from, to);
     if (error) throw new Error(error.message);
@@ -174,6 +174,7 @@ export const createContact = createServerFn({ method: "POST" })
       .single();
     if (!profile?.company_id) throw new Error("Empresa não encontrada");
 
+    const now = new Date().toISOString();
     const canonical = toE164(data.phone);
 
     // Canonical dedupe (identidade forte por telefone E.164)
@@ -187,6 +188,15 @@ export const createContact = createServerFn({ method: "POST" })
         .is("merged_into_id", null)
         .maybeSingle();
       if (existingByCanon) {
+        await context.supabase
+          .from("contacts")
+          .update({
+            name: data.name,
+            email: data.email || undefined,
+            notes: data.notes || undefined,
+            last_interaction_at: now,
+          })
+          .eq("id", existingByCanon.id);
         return { id: existingByCanon.id, existed: true as const };
       }
     }
@@ -200,6 +210,7 @@ export const createContact = createServerFn({ method: "POST" })
         phone_canonical: canonical,
         email: data.email || null,
         notes: data.notes || null,
+        last_interaction_at: now,
       })
       .select("id")
       .single();
