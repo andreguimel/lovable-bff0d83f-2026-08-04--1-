@@ -2083,24 +2083,6 @@ export function validateGraphForPublish(
 ): { ok: true } | { ok: false; error: string } {
   const base = validateGraph(nodes, edges);
   if (!base.ok) return base;
-
-  const outgoing = new Map<string, number>();
-  for (const n of nodes) outgoing.set(n.id, 0);
-  for (const e of edges) outgoing.set(e.source_node_id, (outgoing.get(e.source_node_id) ?? 0) + 1);
-
-  const badLeaves = nodes.filter(
-    (n) => n.node_type !== "end" && (outgoing.get(n.id) ?? 0) === 0,
-  );
-  if (badLeaves.length > 0) {
-    const label = (n: NodeRow) => {
-      const d = (n.data ?? {}) as { label?: string };
-      return d.label ? `${n.node_type} "${d.label}"` : n.node_type;
-    };
-    return {
-      ok: false,
-      error: `Nó(s) sem próximo passo: ${badLeaves.map(label).join(", ")}. Conecte ao próximo nó ou finalize com um nó "Fim".`,
-    };
-  }
   return { ok: true };
 }
 
@@ -2785,11 +2767,7 @@ export async function executeRun({ supabase, runId, maxSteps = 200 }: ExecuteOpt
         break;
       }
       if (!cursor) {
-        // CRITICAL-01 P2: grafo terminou num nó-folha que não é `end`.
-        // Publicações novas são bloqueadas por validateGraphForPublish;
-        // aqui apenas registramos sinal claro para runs legadas.
         finalState = "COMPLETED";
-        errorMsg = `Fluxo terminou no nó ${node.node_type} sem passar por um nó "Fim". Adicione um nó de fim ou uma próxima etapa.`;
         break;
       }
 
