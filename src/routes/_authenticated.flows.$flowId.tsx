@@ -51,9 +51,32 @@ const NODE_TYPES: NodeTypes = { flow: FlowNode };
 export const Route = createFileRoute("/_authenticated/flows/$flowId")({
   head: () => ({ meta: [{ title: "Flow Studio — Zenda" }] }),
   component: FlowRoute,
-  errorComponent: ({ error }) => (
-    <div className="p-6 text-sm text-destructive">Erro: {error.message}</div>
-  ),
+  errorComponent: ({ error }) => {
+    const msg = error instanceof Error ? error.message : String(error);
+    const isAccessError = msg.includes("Fluxo não encontrado") || msg.includes("permission") || msg.includes("310");
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center space-y-3">
+        <div className="w-10 h-10 rounded-full bg-amber-500/10 text-amber-600 flex items-center justify-center text-lg font-bold">
+          ⚠️
+        </div>
+        <h3 className="text-sm font-semibold text-foreground">
+          {isAccessError ? "Fluxo indisponível ou sem permissão" : "Não foi possível carregar o fluxo"}
+        </h3>
+        <p className="text-xs text-muted-foreground max-w-md">
+          {isAccessError
+            ? "Este fluxo pode ter sido excluído, arquivado ou pertence a outra empresa/workspace."
+            : msg}
+        </p>
+        <button
+          type="button"
+          onClick={() => (window.location.href = "/flows")}
+          className="mt-2 text-xs font-medium px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+        >
+          Voltar para a lista de fluxos
+        </button>
+      </div>
+    );
+  },
   notFoundComponent: () => <div className="p-6 text-sm">Fluxo não encontrado.</div>,
 });
 

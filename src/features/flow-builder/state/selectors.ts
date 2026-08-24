@@ -57,7 +57,9 @@ export function useDirty(): boolean {
 }
 
 export function useSaveState() {
-  return useBuilderStore((s) => ({ state: s.saveState, error: s.saveError }));
+  const state = useBuilderStore((s) => s.saveState);
+  const error = useBuilderStore((s) => s.saveError);
+  return { state, error };
 }
 
 export function useFlowId(): string | null {
