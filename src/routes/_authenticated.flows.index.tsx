@@ -12,6 +12,8 @@ import {
   Plus,
   Star,
   StarOff,
+  Play,
+  Pause,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -42,10 +44,36 @@ import {
   duplicateFlow,
   listFlows,
   listFlowTemplates,
+  setFlowStatus,
   toggleFlowTemplate,
 } from "@/lib/flows.functions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileFlowsHome } from "@/components/flows/mobile/mobile-flows-home";
+
+function getStatusBadge(status?: string) {
+  if (status === "published" || status === "active") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        Publicado
+      </span>
+    );
+  }
+  if (status === "archived") {
+    return (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 border border-gray-200">
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
+        Arquivado
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200/80">
+      <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+      Rascunho
+    </span>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/flows/")({
   head: () => ({
@@ -75,6 +103,7 @@ function FlowsHomeBotconversa() {
   const deleteFn = useServerFn(deleteFlow);
   const dupFn = useServerFn(duplicateFlow);
   const toggleTplFn = useServerFn(toggleFlowTemplate);
+  const setStatusFn = useServerFn(setFlowStatus);
 
   const { data: flows = [], isLoading } = useQuery({
     queryKey: ["flows-list"],
@@ -90,6 +119,7 @@ function FlowsHomeBotconversa() {
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [name, setName] = useState("");
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
   const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
 
   const createMut = useMutation({
@@ -131,6 +161,17 @@ function FlowsHomeBotconversa() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao alterar modelo"),
   });
 
+  const statusMut = useMutation({
+    mutationFn: ({ flowId, status }: { flowId: string; status: "active" | "draft" | "archived" }) =>
+      setStatusFn({ data: { flowId, status } }),
+    onSuccess: (_, vars) => {
+      const msg = vars.status === "active" ? "Fluxo publicado com sucesso!" : vars.status === "draft" ? "Fluxo alterado para Rascunho." : "Fluxo arquivado.";
+      toast.success(msg);
+      qc.invalidateQueries({ queryKey: ["flows-list"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao alterar status"),
+  });
+
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { flowId: id } }),
     onSuccess: () => {
@@ -151,10 +192,16 @@ function FlowsHomeBotconversa() {
   });
 
   const filtered = useMemo(() => {
-    if (!q.trim()) return flows;
-    const term = q.toLowerCase();
-    return flows.filter((f) => f.name.toLowerCase().includes(term));
-  }, [flows, q]);
+    return flows.filter((f: any) => {
+      if (q.trim() && !f.name.toLowerCase().includes(q.toLowerCase())) return false;
+      if (statusFilter === "published" && f.status !== "published" && f.status !== "active") return false;
+      if (statusFilter === "draft" && f.status !== "draft" && f.status != null) return false;
+      return true;
+    });
+  }, [flows, q, statusFilter]);
+
+  const publishedCount = useMemo(() => flows.filter((f: any) => f.status === "published" || f.status === "active").length, [flows]);
+  const draftCount = useMemo(() => flows.filter((f: any) => f.status === "draft" || !f.status).length, [flows]);
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto font-sans">
@@ -248,15 +295,50 @@ function FlowsHomeBotconversa() {
 
       {/* Seção: Todos os Fluxos */}
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-bold text-gray-800">Todos os Fluxos</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="text-base font-bold text-gray-800">Todos os Fluxos</h2>
+
+            {/* Filtros de Status */}
+            <div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-xl text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("all")}
+                className={`px-3 py-1 rounded-lg transition-all ${
+                  statusFilter === "all" ? "bg-white text-gray-900 shadow-xs font-bold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                Todos ({flows.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("published")}
+                className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+                  statusFilter === "published" ? "bg-white text-emerald-800 shadow-xs font-bold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Publicados ({publishedCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("draft")}
+                className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+                  statusFilter === "draft" ? "bg-white text-amber-800 shadow-xs font-bold" : "text-gray-500 hover:text-gray-800"
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                Rascunhos ({draftCount})
+              </button>
+            </div>
+          </div>
 
           {/* Campo de Busca */}
           <div className="relative w-64">
             <Input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Busca"
+              placeholder="Busca por nome"
               className="h-9 pl-3 pr-8 bg-gray-100/70 border-none rounded-lg text-xs placeholder:text-gray-400 focus:ring-1 focus:ring-blue-400"
             />
             <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2.5" />
@@ -272,6 +354,7 @@ function FlowsHomeBotconversa() {
                   <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                 </th>
                 <th className="py-3 px-4 font-normal text-gray-500">Nome</th>
+                <th className="py-3 px-4 font-normal text-gray-500 text-center">Status</th>
                 <th className="py-3 px-4 font-normal text-gray-500 text-center">Conexões</th>
                 <th className="py-3 px-4 font-normal text-gray-500 text-center">Execuções</th>
                 <th className="py-3 px-4 font-normal text-gray-500 text-center">CTR, %</th>
@@ -283,14 +366,14 @@ function FlowsHomeBotconversa() {
             <tbody className="divide-y divide-gray-50 text-xs text-gray-700 font-medium">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-400">
+                  <td colSpan={8} className="py-8 text-center text-gray-400">
                     <Loader2 className="w-5 h-5 animate-spin mx-auto mb-2" />
                     Carregando fluxos...
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-gray-400">
+                  <td colSpan={8} className="py-8 text-center text-gray-400">
                     Nenhum fluxo encontrado.
                   </td>
                 </tr>
@@ -319,6 +402,9 @@ function FlowsHomeBotconversa() {
                           )}
                         </div>
                       </td>
+                      <td className="py-3.5 px-4 text-center">
+                        {getStatusBadge(f.status)}
+                      </td>
                       <td className="py-3.5 px-4 text-center text-gray-400">-</td>
                       <td className="py-3.5 px-4 text-center text-gray-400">
                         {f.runs_count > 0 ? f.runs_count : "-"}
@@ -334,7 +420,16 @@ function FlowsHomeBotconversa() {
                               <MoreVertical className="w-4 h-4" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-52">
+                          <DropdownMenuContent align="end" className="w-56">
+                            {f.status === "published" || f.status === "active" ? (
+                              <DropdownMenuItem onClick={() => statusMut.mutate({ flowId: f.id, status: "draft" })}>
+                                <Pause className="w-3.5 h-3.5 mr-2 text-amber-600" /> Mudar para Rascunho
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem onClick={() => statusMut.mutate({ flowId: f.id, status: "active" })}>
+                                <Play className="w-3.5 h-3.5 mr-2 text-emerald-600" /> Publicar Fluxo
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() => toggleTplMut.mutate({ flowId: f.id, isTemplate: !f.isTemplate })}
                             >
