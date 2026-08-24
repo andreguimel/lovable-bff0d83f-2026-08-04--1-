@@ -46,7 +46,13 @@ function makeSupabase(state: State): SupabaseClient {
   function selectFlowRuns(filters: Record<string, unknown>): FlowRun[] {
     return state.runs.filter((r) => {
       for (const [k, v] of Object.entries(filters)) {
-        if ((r as unknown as Record<string, unknown>)[k] !== v) return false;
+        if (k.endsWith("_in")) {
+          const field = k.replace("_in", "");
+          const arr = v as unknown[];
+          if (!arr.includes((r as unknown as Record<string, unknown>)[field])) return false;
+        } else if ((r as unknown as Record<string, unknown>)[k] !== v) {
+          return false;
+        }
       }
       return true;
     });
@@ -77,6 +83,10 @@ function makeSupabase(state: State): SupabaseClient {
         },
         eq(col: string, val: unknown) {
           filters[col] = val;
+          return chain;
+        },
+        in(col: string, vals: unknown[]) {
+          filters[`${col}_in`] = vals;
           return chain;
         },
         order() {

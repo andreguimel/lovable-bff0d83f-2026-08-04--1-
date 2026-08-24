@@ -120,7 +120,7 @@ export const BLOCK_KEYWORDS: Record<string, BlockKeywords> = {
 
   ai: {
     group: "IA",
-    aliases: ["ia", "ai", "agente", "chatgpt", "gpt", "llm", "assistente"],
+    aliases: ["ia", "ai", "chamar ia", "agente", "chatgpt", "gpt", "llm", "assistente"],
     keywords: ["responder com IA", "classificar", "extrair dados", "resposta automática"],
     examples: [
       "Rotear a conversa ao Agente de Suporte.",

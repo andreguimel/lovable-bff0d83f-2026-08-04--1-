@@ -58,7 +58,7 @@ export function scoreItem(item: LibraryItem, termRaw: string): number {
   if (label.startsWith(term)) return 80;
   if (label.includes(term)) return 60;
 
-  if (aliases.some((a) => a === term)) return 55;
+  if (aliases.some((a) => a === term)) return 60;
   if (aliases.some((a) => a.startsWith(term))) return 45;
   if (aliases.some((a) => a.includes(term))) return 35;
 
