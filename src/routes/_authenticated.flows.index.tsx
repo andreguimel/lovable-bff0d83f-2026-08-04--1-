@@ -10,6 +10,8 @@ import {
   Trash2,
   Copy,
   Plus,
+  Star,
+  StarOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -40,6 +42,7 @@ import {
   duplicateFlow,
   listFlows,
   listFlowTemplates,
+  toggleFlowTemplate,
 } from "@/lib/flows.functions";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobileFlowsHome } from "@/components/flows/mobile/mobile-flows-home";
@@ -71,6 +74,7 @@ function FlowsHomeBotconversa() {
   const createFromTplFn = useServerFn(createFlowFromTemplate);
   const deleteFn = useServerFn(deleteFlow);
   const dupFn = useServerFn(duplicateFlow);
+  const toggleTplFn = useServerFn(toggleFlowTemplate);
 
   const { data: flows = [], isLoading } = useQuery({
     queryKey: ["flows-list"],
@@ -83,6 +87,7 @@ function FlowsHomeBotconversa() {
   });
 
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [name, setName] = useState("");
   const [q, setQ] = useState("");
   const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
@@ -115,6 +120,17 @@ function FlowsHomeBotconversa() {
     onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao criar fluxo do modelo"),
   });
 
+  const toggleTplMut = useMutation({
+    mutationFn: ({ flowId, isTemplate }: { flowId: string; isTemplate: boolean }) =>
+      toggleTplFn({ data: { flowId, isTemplate } }),
+    onSuccess: (res) => {
+      toast.success(res.isTemplate ? "Fluxo definido como modelo padrão!" : "Removido dos modelos padrões.");
+      qc.invalidateQueries({ queryKey: ["flows-list"] });
+      qc.invalidateQueries({ queryKey: ["flow-templates"] });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Erro ao alterar modelo"),
+  });
+
   const deleteMut = useMutation({
     mutationFn: (id: string) => deleteFn({ data: { flowId: id } }),
     onSuccess: () => {
@@ -135,48 +151,36 @@ function FlowsHomeBotconversa() {
   });
 
   const filtered = useMemo(() => {
-    return flows.filter((f) => {
-      if (q && !f.name.toLowerCase().includes(q.toLowerCase())) return false;
-      return true;
-    });
+    if (!q.trim()) return flows;
+    const term = q.toLowerCase();
+    return flows.filter((f) => f.name.toLowerCase().includes(term));
   }, [flows, q]);
 
   return (
-    <div className="min-h-screen bg-gray-50/40 p-6 md:p-8 font-sans space-y-8">
-      {/* Header Botconversa */}
+    <div className="p-6 space-y-6 max-w-7xl mx-auto font-sans">
+      {/* Header com Título e Botão de Criar Fluxo */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Fluxos de conversa</h1>
+        <h1 className="text-2xl font-black text-gray-900 tracking-tight">Fluxos de conversa</h1>
 
         <div className="flex items-center gap-3">
-          {/* Popover de Criação de Fluxo Estilo Botconversa */}
           <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
             <PopoverTrigger asChild>
-              <Button className="h-10 px-5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-semibold shadow-md transition-all">
+              <Button className="bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-full px-6 py-5 shadow-lg shadow-blue-500/25 text-sm transition-all hover:scale-[1.02]">
                 Criar Novo Fluxo +
               </Button>
             </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              sideOffset={8}
-              className="w-80 p-4 bg-white rounded-2xl shadow-xl border border-gray-100 space-y-3"
-            >
+            <PopoverContent align="end" className="w-80 p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-800">Nome do novo fluxo</h3>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Nome"
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && name.trim()) {
-                    createMut.mutate();
-                  }
-                }}
-                className="h-11 bg-gray-50 border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="Ex: Qualificação de Leads Vendas"
+                className="text-xs"
               />
-
               <Button
-                onClick={() => createMut.mutate()}
                 disabled={!name.trim() || createMut.isPending}
-                className="w-full h-11 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-xl transition-colors"
+                onClick={() => createMut.mutate()}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs"
               >
                 {createMut.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -192,28 +196,49 @@ function FlowsHomeBotconversa() {
       {/* Seção: Modelos de Fluxos Padrões */}
       {templates.length > 0 && (
         <div className="space-y-3">
-          <div className="flex items-center gap-1 text-sm font-semibold text-gray-700">
-            <span>Fluxos Padrões Básicos</span>
-            <ChevronDown className="w-4 h-4 text-gray-400" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
+              <span>Fluxos Padrões & Modelos ({templates.length})</span>
+            </div>
+            {templates.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAllTemplates(!showAllTemplates)}
+                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
+              >
+                {showAllTemplates ? "Mostrar menos" : "Ver todos os modelos"}
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllTemplates ? "rotate-180" : ""}`} />
+              </button>
+            )}
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {templates.slice(0, 3).map((tpl) => (
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
+            {(showAllTemplates ? templates : templates.slice(0, 4)).map((tpl: any) => (
               <div
                 key={tpl.slug}
                 onClick={() => createFromTplMut.mutate(tpl)}
-                className="p-4 bg-white hover:bg-blue-50/30 rounded-2xl border-2 border-dashed border-blue-200 flex items-center justify-between cursor-pointer transition-colors group"
+                className="p-3.5 bg-white hover:bg-blue-50/40 rounded-2xl border-2 border-dashed border-blue-200 hover:border-blue-400 flex flex-col justify-between cursor-pointer transition-all shadow-sm group min-h-[95px]"
               >
-                <div>
-                  <p className="text-[11px] font-medium text-blue-500">Modelo Padrão</p>
-                  <p className="text-sm font-bold text-gray-800 group-hover:text-blue-600 transition-colors">
-                    {tpl.name}
-                  </p>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="space-y-0.5">
+                    <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${tpl.isCustom ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>
+                      {tpl.isCustom ? "Modelo da Empresa" : "Modelo Padrão"}
+                    </span>
+                    <p className="text-xs font-bold text-gray-800 group-hover:text-blue-600 transition-colors pt-0.5">
+                      {tpl.name}
+                    </p>
+                  </div>
+                  {createFromTplMut.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
+                  ) : (
+                    <Plus className="w-4 h-4 text-blue-500 opacity-60 group-hover:opacity-100 shrink-0" />
+                  )}
                 </div>
-                {createFromTplMut.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
-                ) : (
-                  <Plus className="w-4 h-4 text-blue-500 opacity-60 group-hover:opacity-100" />
+                {tpl.description && (
+                  <p className="text-[10px] text-gray-400 line-clamp-1 mt-1 font-normal">
+                    {tpl.description}
+                  </p>
                 )}
               </div>
             ))}
@@ -270,7 +295,7 @@ function FlowsHomeBotconversa() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((f) => {
+                filtered.map((f: any) => {
                   const updatedDate = f.updated_at
                     ? new Date(f.updated_at).toLocaleDateString("pt-BR")
                     : "-";
@@ -285,7 +310,14 @@ function FlowsHomeBotconversa() {
                         <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                       </td>
                       <td className="py-3.5 px-4 font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
-                        {f.name}
+                        <div className="flex items-center gap-2">
+                          <span>{f.name}</span>
+                          {f.isTemplate && (
+                            <span className="bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1">
+                              <Star className="w-2.5 h-2.5 fill-amber-600" /> Modelo
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4 text-center text-gray-400">-</td>
                       <td className="py-3.5 px-4 text-center text-gray-400">
@@ -302,7 +334,22 @@ function FlowsHomeBotconversa() {
                               <MoreVertical className="w-4 h-4" />
                             </button>
                           </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuContent align="end" className="w-52">
+                            <DropdownMenuItem
+                              onClick={() => toggleTplMut.mutate({ flowId: f.id, isTemplate: !f.isTemplate })}
+                            >
+                              {f.isTemplate ? (
+                                <>
+                                  <StarOff className="w-3.5 h-3.5 mr-2 text-amber-600" />
+                                  Remover dos Modelos
+                                </>
+                              ) : (
+                                <>
+                                  <Star className="w-3.5 h-3.5 mr-2 text-amber-500 fill-amber-500" />
+                                  Marcar como Modelo Padrão
+                                </>
+                              )}
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => dupMut.mutate(f.id)}>
                               <Copy className="w-3.5 h-3.5 mr-2" /> Duplicar
                             </DropdownMenuItem>
@@ -324,20 +371,20 @@ function FlowsHomeBotconversa() {
         </div>
       </div>
 
-      {/* Modal de Exclusão */}
-      <AlertDialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+      {/* Dialog de Confirmação de Exclusão */}
+      <AlertDialog open={!!toDelete} onOpenChange={(open) => !open && setToDelete(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir fluxo?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir fluxo</AlertDialogTitle>
             <AlertDialogDescription>
-              "{toDelete?.name}" e todas as suas configurações serão removidos.
+              Tem certeza que deseja excluir o fluxo &quot;{toDelete?.name}&quot;? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => toDelete && deleteMut.mutate(toDelete.id)}
-              className="bg-red-600 text-white hover:bg-red-700"
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               Excluir
             </AlertDialogAction>

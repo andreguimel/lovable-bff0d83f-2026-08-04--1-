@@ -871,7 +871,7 @@ const FLOW_TEMPLATES: FlowTemplate[] = [
         node_type: "message",
         x: 240,
         y: 0,
-        data: { body: "Olá {{contact.name}}! 👋 Bem-vindo(a). Como posso ajudar hoje?" },
+        data: { body: "Olá {primeiro-nome}! 👋 Bem-vindo(a). Como posso ajudar hoje?" },
       },
       { key: "e", node_type: "end", x: 480, y: 0, data: { label: "Fim" } },
     ],
@@ -893,18 +893,86 @@ const FLOW_TEMPLATES: FlowTemplate[] = [
         node_type: "message",
         x: 240,
         y: 0,
-        data: { body: "Ótimo, {{contact.name}}! Qual solução mais te interessa?" },
+        data: { body: "Ótimo, {primeiro-nome}! Qual solução mais te interessa?" },
       },
       { key: "w", node_type: "wait_reply", x: 480, y: 0, data: { label: "Aguardar resposta" } },
       { key: "t", node_type: "transfer", x: 720, y: 0, data: { label: "Transferir para vendas" } },
-      { key: "e", node_type: "end", x: 960, y: 0, data: { label: "Fim" } },
     ],
     edges: [
       { from: "s", to: "q" },
       { from: "q", to: "w" },
       { from: "w", to: "t" },
-      { from: "t", to: "e" },
     ],
+  },
+  {
+    slug: "cart-recovery",
+    name: "Recuperação de Carrinho",
+    description: "Notifica sobre itens pendentes e oferece suporte ou cupom.",
+    triggerType: "manual",
+    triggerConfig: {},
+    nodes: [
+      { key: "s", node_type: "start", x: 0, y: 0, data: { label: "Início" } },
+      {
+        key: "m1",
+        node_type: "message",
+        x: 240,
+        y: 0,
+        data: { body: "Olá {primeiro-nome}! 👋 Vimos que você deixou alguns itens no carrinho. Gostaria de ajuda para finalizar com desconto especial?" },
+      },
+      { key: "w", node_type: "wait_reply", x: 480, y: 0, data: { label: "Aguardar resposta" } },
+      { key: "t", node_type: "transfer", x: 720, y: 0, data: { label: "Transferir para Vendas" } },
+    ],
+    edges: [
+      { from: "s", to: "m1" },
+      { from: "m1", to: "w" },
+      { from: "w", to: "t" },
+    ],
+  },
+  {
+    slug: "nps-survey",
+    name: "Pesquisa de Satisfação (NPS)",
+    description: "Coleta nota de atendimento e registra agradecimento.",
+    triggerType: "manual",
+    triggerConfig: {},
+    nodes: [
+      { key: "s", node_type: "start", x: 0, y: 0, data: { label: "Início" } },
+      {
+        key: "q",
+        node_type: "question",
+        x: 240,
+        y: 0,
+        data: { question: "De 1 a 10, qual nota você dá para nosso atendimento hoje?" },
+      },
+      {
+        key: "m",
+        node_type: "message",
+        x: 480,
+        y: 0,
+        data: { body: "Muito obrigado pela avaliação, {primeiro-nome}! Seu feedback é valioso para nós. 🙏" },
+      },
+    ],
+    edges: [
+      { from: "s", to: "q" },
+      { from: "q", to: "m" },
+    ],
+  },
+  {
+    slug: "out-of-hours",
+    name: "Fora do Horário Comercial",
+    description: "Avisa que o atendimento está fechado e colhe mensagem.",
+    triggerType: "inbound_message",
+    triggerConfig: {},
+    nodes: [
+      { key: "s", node_type: "start", x: 0, y: 0, data: { label: "Início" } },
+      {
+        key: "m",
+        node_type: "message",
+        x: 240,
+        y: 0,
+        data: { body: "Olá {primeiro-nome}! Nosso horário de atendimento é de segunda a sexta, das 08h às 18h. Deixe sua mensagem e responderemos assim que retornarmos! ⏰" },
+      },
+    ],
+    edges: [{ from: "s", to: "m" }],
   },
   {
     slug: "faq-ai",
@@ -922,18 +990,16 @@ const FLOW_TEMPLATES: FlowTemplate[] = [
         y: 0,
         data: { body: "{{ai.output}}" },
       },
-      { key: "e", node_type: "end", x: 720, y: 0, data: { label: "Fim" } },
     ],
     edges: [
       { from: "s", to: "ai" },
       { from: "ai", to: "m" },
-      { from: "m", to: "e" },
     ],
   },
   {
     slug: "welcome-media",
     name: "Boas-vindas com mídia",
-    description: "Cumprimenta com áudio + imagem e finaliza com texto. Configure a mídia depois.",
+    description: "Cumprimenta com áudio + imagem e finaliza com texto.",
     triggerType: "new_contact",
     triggerConfig: {},
     nodes: [
@@ -943,7 +1009,7 @@ const FLOW_TEMPLATES: FlowTemplate[] = [
         node_type: "send_image",
         x: 240,
         y: 0,
-        data: { label: "Enviar imagem de capa", caption: "Olá {{contact.name}}! 👋" },
+        data: { label: "Enviar imagem de capa", caption: "Olá {primeiro-nome}! 👋" },
       },
       {
         key: "aud",
@@ -959,28 +1025,70 @@ const FLOW_TEMPLATES: FlowTemplate[] = [
         y: 0,
         data: { body: "Estamos aqui para te ajudar. Como podemos começar?" },
       },
-      { key: "e", node_type: "end", x: 960, y: 0, data: { label: "Fim" } },
     ],
     edges: [
       { from: "s", to: "img" },
       { from: "img", to: "aud" },
       { from: "aud", to: "m" },
-      { from: "m", to: "e" },
     ],
   },
 ];
 
 export const listFlowTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async () =>
-    FLOW_TEMPLATES.map((t) => ({
+  .handler(async ({ context }) => {
+    const builtIn = FLOW_TEMPLATES.map((t) => ({
       slug: t.slug,
       name: t.name,
       description: t.description,
       triggerType: t.triggerType,
       nodeCount: t.nodes.length,
-    })),
-  );
+      isCustom: false,
+    }));
+
+    const { data: customFlows } = await context.supabase
+      .from("flows")
+      .select("id, name, description, trigger_type, trigger_config")
+      .order("name", { ascending: true });
+
+    const userCustomTemplates = (customFlows ?? [])
+      .filter((f) => !!(f.trigger_config as any)?.is_template)
+      .map((f) => ({
+        slug: `custom:${f.id}`,
+        name: f.name,
+        description: f.description || "Modelo padrão criado por você",
+        triggerType: f.trigger_type,
+        nodeCount: 0,
+        isCustom: true,
+      }));
+
+    return [...userCustomTemplates, ...builtIn];
+  });
+
+export const toggleFlowTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { flowId: string; isTemplate: boolean }) =>
+    z.object({ flowId: z.string().uuid(), isTemplate: z.boolean() }).parse(input),
+  )
+  .handler(async ({ data, context }) => {
+    const { data: flow, error: fErr } = await context.supabase
+      .from("flows")
+      .select("id, trigger_config")
+      .eq("id", data.flowId)
+      .maybeSingle();
+    if (fErr || !flow) throw new Error("Fluxo não encontrado");
+
+    const cfg = (flow.trigger_config as Record<string, unknown>) ?? {};
+    const updatedCfg = { ...cfg, is_template: data.isTemplate };
+
+    const { error } = await context.supabase
+      .from("flows")
+      .update({ trigger_config: updatedCfg as Json })
+      .eq("id", data.flowId);
+
+    if (error) throw new Error(error.message);
+    return { ok: true, isTemplate: data.isTemplate };
+  });
 
 export const createFlowFromTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -994,9 +1102,86 @@ export const createFlowFromTemplate = createServerFn({ method: "POST" })
       .parse(input),
   )
   .handler(async ({ data, context }) => {
+    const companyId = await getCompanyId(context.supabase as never, context.userId);
+
+    // 1. Template Customizado do Usuário
+    if (data.slug.startsWith("custom:")) {
+      const srcFlowId = data.slug.replace("custom:", "");
+      const [{ data: srcNodes }, { data: srcEdges }] = await Promise.all([
+        context.supabase
+          .from("flow_nodes")
+          .select("id, node_type, position, data")
+          .eq("flow_id", srcFlowId),
+        context.supabase
+          .from("flow_edges")
+          .select("source_node_id, target_node_id, source_handle, label")
+          .eq("flow_id", srcFlowId),
+      ]);
+
+      const { data: flow, error } = await context.supabase
+        .from("flows")
+        .insert({
+          company_id: companyId,
+          name: data.name,
+          description: data.description ?? "Criado a partir do seu modelo padrão",
+          status: "draft",
+          trigger_type: "manual",
+          trigger_config: {},
+        })
+        .select("id")
+        .single();
+      if (error || !flow) throw new Error(error?.message ?? "Falha ao criar fluxo do modelo");
+
+      const nodeMap = new Map<string, string>();
+      if (srcNodes && srcNodes.length > 0) {
+        for (const n of srcNodes) {
+          nodeMap.set((n as any).id, crypto.randomUUID());
+        }
+        await context.supabase.from("flow_nodes").insert(
+          srcNodes.map((n: any) => ({
+            id: nodeMap.get(n.id)!,
+            flow_id: flow.id,
+            company_id: companyId,
+            node_type: n.node_type,
+            position: n.position,
+            data: n.data,
+          })),
+        );
+      }
+
+      if (srcEdges && srcEdges.length > 0) {
+        await context.supabase.from("flow_edges").insert(
+          srcEdges.map((e: any) => ({
+            id: crypto.randomUUID(),
+            flow_id: flow.id,
+            company_id: companyId,
+            source_node_id: nodeMap.get(e.source_node_id) ?? e.source_node_id,
+            target_node_id: nodeMap.get(e.target_node_id) ?? e.target_node_id,
+            source_handle: e.source_handle ?? null,
+            label: e.label ?? null,
+          })),
+        );
+      }
+
+      const snapshot = await buildSnapshot(context.supabase, flow.id);
+      const hash = await sha256Hex(stableStringify(snapshot));
+      await context.supabase.from("flow_versions").insert({
+        flow_id: flow.id,
+        company_id: companyId,
+        version_number: 1,
+        description: "Versão inicial criada via modelo customizado",
+        snapshot: snapshot as unknown as Json,
+        integrity_hash: hash,
+        status: "published",
+        published_at: new Date().toISOString(),
+      });
+
+      return { id: flow.id };
+    }
+
+    // 2. Template Built-in Padrão
     const tpl = FLOW_TEMPLATES.find((t) => t.slug === data.slug);
     if (!tpl) throw new Error("Template não encontrado");
-    const companyId = await getCompanyId(context.supabase as never, context.userId);
     const { data: flow, error } = await context.supabase
       .from("flows")
       .insert({
