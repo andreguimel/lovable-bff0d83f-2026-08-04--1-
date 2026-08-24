@@ -149,6 +149,47 @@ type BotBubbleInput = DistOmit<
   "id" | "ts" | "from" | "tick"
 >;
 
+function formatSimVars(text: string, userPhone = "+55 11 99999-8888", userName = "Contato Teste"): string {
+  if (!text) return "";
+  const nameParts = userName.trim().split(/\s+/);
+  const firstName = nameParts[0] ?? "Contato";
+  const lastName = nameParts.slice(1).join(" ") ?? "";
+  const rawPhone = userPhone.replace(/\D/g, "");
+  let ddd = "11";
+  if (rawPhone.length >= 10) {
+    const withoutCountry = rawPhone.length >= 12 && rawPhone.startsWith("55") ? rawPhone.slice(2) : rawPhone;
+    ddd = withoutCountry.slice(0, 2);
+  }
+
+  const sysMap: Record<string, string> = {
+    "nome-completo": userName,
+    "primeiro-nome": firstName,
+    sobrenome: lastName,
+    nome: userName,
+    telefone: userPhone,
+    ddd: ddd,
+    email: "teste@exemplo.com",
+    "nome-indicador": "Maria Silva",
+    "numero-de-indicacoes": "3",
+    "codigo-indicacao": "REF123",
+    canal: "WhatsApp Principal",
+    empresa: "Minha Empresa",
+    atendente: "Atendente Teste",
+    reply: "Resposta de teste",
+    resposta: "Resposta de teste",
+    last_message: "Olá, gostaria de informações",
+    "contact.name": userName,
+    "contact.phone": userPhone,
+    "contact.email": "teste@exemplo.com",
+  };
+
+  return text.replace(/\{{1,2}\s*([\w.-]+)\s*\}}{1,2}/g, (match, path: string) => {
+    const key = path.trim();
+    if (key in sysMap) return sysMap[key];
+    return match;
+  });
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -496,16 +537,18 @@ export function TestChatDrawer({ open, onClose }: Props) {
                 if (subType === "text") {
                   const content = (sub.content as string) || (sub.text as string) || "";
                   if (content) {
-                    const id = sendFromBot({ kind: "text", text: content });
+                    const id = sendFromBot({ kind: "text", text: formatSimVars(content) });
                     upgradeTicks(id);
                   }
                 } else if (subType === "image") {
                   const url = (sub.url as string) || "https://images.unsplash.com/photo-1579546929518-9e396f3cc809";
-                  const id = sendFromBot({ kind: "image", url, caption: "Imagem enviada" });
+                  const caption = sub.caption ? formatSimVars(String(sub.caption)) : "Imagem enviada";
+                  const id = sendFromBot({ kind: "image", url, caption });
                   upgradeTicks(id);
                 } else if (subType === "video") {
                   const url = (sub.url as string) || "https://www.w3schools.com/html/mov_bbb.mp4";
-                  const id = sendFromBot({ kind: "video", url, caption: "Vídeo enviado" });
+                  const caption = sub.caption ? formatSimVars(String(sub.caption)) : "Vídeo enviado";
+                  const id = sendFromBot({ kind: "video", url, caption });
                   upgradeTicks(id);
                 } else if (subType === "audio") {
                   const url = (sub.url as string) || "https://www.w3schools.com/html/horse.mp3";
@@ -541,7 +584,7 @@ export function TestChatDrawer({ open, onClose }: Props) {
                   });
                 } else if (subType === "save_response") {
                   const q = (sub.question as string) || "Insira sua pergunta aqui";
-                  const id = sendFromBot({ kind: "text", text: q });
+                  const id = sendFromBot({ kind: "text", text: formatSimVars(q) });
                   upgradeTicks(id);
                   setWaiting({ kind: "text", nodeId: node.id, itemToken: String(sub.id || "") });
                   setStatus("waiting");
@@ -553,7 +596,7 @@ export function TestChatDrawer({ open, onClose }: Props) {
             } else {
               const txt = pickText(data, "body", "text", "message", "label");
               if (txt) {
-                const id = sendFromBot({ kind: "text", text: txt });
+                const id = sendFromBot({ kind: "text", text: formatSimVars(txt) });
                 upgradeTicks(id);
               }
             }
@@ -562,7 +605,7 @@ export function TestChatDrawer({ open, onClose }: Props) {
           }
           case "question": {
             const txt = pickText(data, "body", "text", "message", "question", "label");
-            const id = sendFromBot({ kind: "text", text: txt || "(pergunta vazia)" });
+            const id = sendFromBot({ kind: "text", text: formatSimVars(txt) || "(pergunta vazia)" });
             upgradeTicks(id);
             setWaiting({ kind: "text", nodeId: node.id });
             setStatus("waiting");
@@ -572,10 +615,10 @@ export function TestChatDrawer({ open, onClose }: Props) {
             const url = pickText(data, "media_url", "url");
             const caption = pickText(data, "caption", "body", "text");
             if (url) {
-              const id = sendFromBot({ kind: "image", url, caption: caption || undefined });
+              const id = sendFromBot({ kind: "image", url, caption: caption ? formatSimVars(caption) : undefined });
               upgradeTicks(id);
             } else {
-              const id = sendFromBot({ kind: "text", text: caption || "(imagem sem URL)" });
+              const id = sendFromBot({ kind: "text", text: caption ? formatSimVars(caption) : "(imagem sem URL)" });
               upgradeTicks(id);
             }
             current = nextFromHandle(node.id, null);
