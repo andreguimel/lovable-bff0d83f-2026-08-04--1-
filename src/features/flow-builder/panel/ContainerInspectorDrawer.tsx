@@ -1247,8 +1247,10 @@ export function ContainerInspectorDrawer() {
   }
 
   if (kind === "subflow" || kind === "flow_connection") {
-    const targetFlowId = (data.target_flow_id as string) || (data.targetFlowId as string) || "";
-    const targetFlowName = (data.target_flow_label as string) || (data.targetFlowName as string) || (data.flowName as string) || "";
+    const rawTargetFlowId = (data.target_flow_id as string) || (data.targetFlowId as string) || "";
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTargetFlowId);
+    const targetFlowId = isUUID ? rawTargetFlowId : "";
+    const targetFlowName = isUUID ? ((data.target_flow_label as string) || (data.targetFlowName as string) || (data.flowName as string) || "") : "";
     const [selectOpen, setSelectOpen] = useState(false);
 
     const availableFlows = flowsList.filter((f: any) => f.id !== currentFlowId);
@@ -1290,7 +1292,7 @@ export function ContainerInspectorDrawer() {
           </p>
 
           {/* Botão Selecionar Fluxo */}
-          <div className="relative">
+          <div className="relative space-y-3">
             <button
               onClick={() => setSelectOpen(!selectOpen)}
               className="w-full py-3.5 px-3 border-2 border-dashed border-emerald-300 bg-emerald-50/30 hover:bg-emerald-50 text-emerald-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-between gap-2"
@@ -1328,6 +1330,18 @@ export function ContainerInspectorDrawer() {
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* Botão de Atalho para Abrir o Fluxo Conectado */}
+            {targetFlowId && (
+              <button
+                type="button"
+                onClick={() => window.open(`/flows/${targetFlowId}`, "_blank")}
+                className="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
+              >
+                <Rocket className="w-3.5 h-3.5" />
+                <span>Abrir / Editar fluxo conectado</span>
+              </button>
             )}
           </div>
         </div>

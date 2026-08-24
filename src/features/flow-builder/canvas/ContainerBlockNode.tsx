@@ -740,7 +740,9 @@ function ContainerBlockNodeInner(props: NodeProps) {
   const isFlowConnectionKind = kind === "subflow" || kind === "flow_connection";
 
   if (isFlowConnectionKind) {
-    const targetFlowName = (data.targetFlowName as string) || (data.flowName as string) || "";
+    const rawTargetFlowId = (data.target_flow_id as string) || (data.targetFlowId as string) || "";
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawTargetFlowId);
+    const targetFlowName = isUUID ? ((data.target_flow_label as string) || (data.targetFlowName as string) || (data.flowName as string) || "") : "";
 
     return (
       <div
