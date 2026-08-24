@@ -17,9 +17,10 @@ export type SystemVariable = {
 };
 
 export const SYSTEM_VARIABLES: SystemVariable[] = [
-  // Campos do Sistema (Padrão BotConversa)
-  { key: "nome-completo", label: "nome-completo", category: "system", description: "Nome completo do contato" },
+  // Campos do Sistema (Padrão WhatsApp / BotConversa)
+  { key: "nome", label: "nome", category: "system", description: "Nome do contato (WhatsApp)" },
   { key: "primeiro-nome", label: "primeiro-nome", category: "system", description: "Primeiro nome do contato" },
+  { key: "nome-completo", label: "nome-completo", category: "system", description: "Nome completo do contato" },
   { key: "sobrenome", label: "sobrenome", category: "system", description: "Sobrenome do contato" },
   { key: "telefone", label: "telefone", category: "system", description: "Número de telefone com DDD" },
   { key: "ddd", label: "ddd", category: "system", description: "Código DDD do telefone" },
