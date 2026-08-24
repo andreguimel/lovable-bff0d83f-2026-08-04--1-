@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { useBuilderStore } from "../state/store";
 import type { ContainerSubItem, ContainerActionItem } from "../canvas/ContainerBlockNode";
+import { VariablePickerPopover } from "@/components/flows/variable-picker-popover";
 import { toast } from "sonner";
 
 export function ContainerInspectorDrawer() {
@@ -1636,9 +1637,34 @@ export function ContainerInspectorDrawer() {
                 {act.type === "notify_team" && (
                   <div className="space-y-2.5 pt-1">
                     {/* Caixa de Mensagem da Notificação (Imagem 2) */}
-                    <div className="p-2.5 bg-white border border-amber-200/90 rounded-xl space-y-1">
+                    <div className="p-2.5 bg-white border border-amber-200/90 rounded-xl space-y-1.5">
                       <div className="flex items-center justify-between text-[11px] font-bold text-amber-800">
                         <span>Notificação membro da equipe</span>
+                        <VariablePickerPopover
+                          onSelect={(tag) => {
+                            const updated = actions.map((a) => (a.id === act.id ? { ...a, message: (act.message || "") + tag } : a));
+                            updateNodeData(node.id, { actions: updated });
+                          }}
+                        />
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {[
+                          { label: "primeiro-nome", tag: "{primeiro-nome}" },
+                          { label: "telefone", tag: "{telefone}" },
+                          { label: "email", tag: "{email}" },
+                        ].map((item) => (
+                          <button
+                            key={item.label}
+                            type="button"
+                            onClick={() => {
+                              const updated = actions.map((a) => (a.id === act.id ? { ...a, message: (act.message || "") + item.tag } : a));
+                              updateNodeData(node.id, { actions: updated });
+                            }}
+                            className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+                          >
+                            +{item.label}
+                          </button>
+                        ))}
                       </div>
                       <textarea
                         rows={3}
@@ -1849,7 +1875,9 @@ export function ContainerInspectorDrawer() {
                       <Bold className="w-4 h-4 cursor-pointer hover:text-gray-700" />
                       <Italic className="w-4 h-4 cursor-pointer hover:text-gray-700" />
                       <AlignLeft className="w-4 h-4 cursor-pointer hover:text-gray-700" />
-                      <Code className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <VariablePickerPopover
+                        onSelect={(tag) => handleUpdateItem(item.id, { content: (item.content || "") + tag })}
+                      />
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-1">
@@ -2043,7 +2071,9 @@ export function ContainerInspectorDrawer() {
                       <Bold className="w-4 h-4 cursor-pointer hover:text-gray-700" />
                       <Italic className="w-4 h-4 cursor-pointer hover:text-gray-700" />
                       <AlignLeft className="w-4 h-4 cursor-pointer hover:text-gray-700" />
-                      <Code className="w-4 h-4 cursor-pointer hover:text-gray-700" />
+                      <VariablePickerPopover
+                        onSelect={(tag) => handleUpdateItem(item.id, { question: (item.question || "") + tag })}
+                      />
                     </div>
                   </div>
                   <div className="flex justify-between items-center pt-1">
