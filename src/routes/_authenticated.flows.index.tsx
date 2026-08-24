@@ -116,11 +116,19 @@ function FlowsHomeBotconversa() {
   });
 
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [selectExistingOpen, setSelectExistingOpen] = useState(false);
+  const [existingSearch, setExistingSearch] = useState("");
   const [showAllTemplates, setShowAllTemplates] = useState(false);
   const [name, setName] = useState("");
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "published" | "draft">("all");
   const [toDelete, setToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  const filteredExistingFlows = useMemo(() => {
+    if (!existingSearch.trim()) return flows;
+    const term = existingSearch.toLowerCase();
+    return flows.filter((f: any) => f.name.toLowerCase().includes(term));
+  }, [flows, existingSearch]);
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -216,18 +224,22 @@ function FlowsHomeBotconversa() {
                 Criar Novo Fluxo +
               </Button>
             </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-4 space-y-3">
+            <PopoverContent align="end" className="w-80 p-4 space-y-3 shadow-2xl rounded-2xl border-gray-100">
               <h3 className="font-semibold text-sm text-gray-800">Nome do novo fluxo</h3>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Ex: Qualificação de Leads Vendas"
-                className="text-xs"
+                className="text-xs h-10 rounded-xl"
+                autoFocus
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && name.trim()) createMut.mutate();
+                }}
               />
               <Button
                 disabled={!name.trim() || createMut.isPending}
                 onClick={() => createMut.mutate()}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs"
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs py-2.5 rounded-xl shadow-sm"
               >
                 {createMut.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -240,58 +252,117 @@ function FlowsHomeBotconversa() {
         </div>
       </div>
 
-      {/* Seção: Modelos de Fluxos Padrões */}
-      {templates.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
-              <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
-              <span>Fluxos Padrões & Modelos ({templates.length})</span>
-            </div>
-            {templates.length > 3 && (
+      {/* Seção: Modelos de Fluxos Padrões estilo BotConversa */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-sm font-bold text-gray-800">
+            <span>Fluxos Padrões Básicos</span>
+            <ChevronDown className="w-4 h-4 text-gray-400" />
+          </div>
+          {templates.length > 4 && (
+            <button
+              type="button"
+              onClick={() => setShowAllTemplates(!showAllTemplates)}
+              className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
+            >
+              {showAllTemplates ? "Mostrar menos" : "Ver todos os modelos"}
+              <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllTemplates ? "rotate-180" : ""}`} />
+            </button>
+          )}
+        </div>
+
+        {/* Botões de Ação estilo BotConversa: [ Selecionar existente ] | [ Criar novo ] */}
+        <div className="flex items-center gap-2">
+          {/* Botão Selecionar existente */}
+          <Popover open={selectExistingOpen} onOpenChange={setSelectExistingOpen}>
+            <PopoverTrigger asChild>
               <button
                 type="button"
-                onClick={() => setShowAllTemplates(!showAllTemplates)}
-                className="text-xs font-semibold text-blue-600 hover:underline flex items-center gap-1"
+                className="py-2.5 px-4 border-2 border-dashed border-blue-300 bg-blue-50/40 hover:bg-blue-100/60 text-blue-600 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
               >
-                {showAllTemplates ? "Mostrar menos" : "Ver todos os modelos"}
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showAllTemplates ? "rotate-180" : ""}`} />
+                <span>Selecionar existente</span>
               </button>
-            )}
-          </div>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-72 p-2.5 bg-white rounded-2xl shadow-2xl border border-gray-100 space-y-2 z-50">
+              <div className="relative">
+                <Input
+                  value={existingSearch}
+                  onChange={(e) => setExistingSearch(e.target.value)}
+                  placeholder="Busca"
+                  className="h-8.5 pl-3 pr-8 bg-gray-50 border-gray-200 text-xs rounded-xl"
+                  autoFocus
+                />
+                <Search className="w-3.5 h-3.5 text-gray-400 absolute right-2.5 top-2.5" />
+              </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3.5">
-            {(showAllTemplates ? templates : templates.slice(0, 4)).map((tpl: any) => (
-              <div
-                key={tpl.slug}
-                onClick={() => createFromTplMut.mutate(tpl)}
-                className="p-3.5 bg-white hover:bg-blue-50/40 rounded-2xl border-2 border-dashed border-blue-200 hover:border-blue-400 flex flex-col justify-between cursor-pointer transition-all shadow-sm group min-h-[95px]"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${tpl.isCustom ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>
-                      {tpl.isCustom ? "Modelo da Empresa" : "Modelo Padrão"}
-                    </span>
-                    <p className="text-xs font-bold text-gray-800 group-hover:text-blue-600 transition-colors pt-0.5">
-                      {tpl.name}
-                    </p>
-                  </div>
-                  {createFromTplMut.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
-                  ) : (
-                    <Plus className="w-4 h-4 text-blue-500 opacity-60 group-hover:opacity-100 shrink-0" />
-                  )}
-                </div>
-                {tpl.description && (
-                  <p className="text-[10px] text-gray-400 line-clamp-1 mt-1 font-normal">
-                    {tpl.description}
-                  </p>
+              <div className="max-h-64 overflow-y-auto space-y-0.5 text-xs pt-1">
+                {filteredExistingFlows.length === 0 ? (
+                  <div className="p-3 text-center text-gray-400 text-xs">Nenhum fluxo encontrado</div>
+                ) : (
+                  filteredExistingFlows.map((f: any) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => {
+                        toggleTplMut.mutate({ flowId: f.id, isTemplate: true });
+                        setSelectExistingOpen(false);
+                        navigate({ to: "/flows/$flowId", params: { flowId: f.id } });
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-xl hover:bg-blue-50 text-gray-800 hover:text-blue-900 font-bold uppercase transition-colors truncate block"
+                    >
+                      {f.name}
+                    </button>
+                  ))
                 )}
               </div>
-            ))}
-          </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Botão Criar novo */}
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="py-2.5 px-4 border-2 border-dashed border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-bold rounded-2xl text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs"
+              >
+                <span>Criar novo</span>
+              </button>
+            </PopoverTrigger>
+          </Popover>
         </div>
-      )}
+
+        {/* Cards de Modelos */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3.5 pt-1">
+          {(showAllTemplates ? templates : templates.slice(0, 4)).map((tpl: any) => (
+            <div
+              key={tpl.slug}
+              onClick={() => createFromTplMut.mutate(tpl)}
+              className="p-3.5 bg-white hover:bg-blue-50/40 rounded-2xl border-2 border-dashed border-blue-200 hover:border-blue-400 flex flex-col justify-between cursor-pointer transition-all shadow-sm group min-h-[95px]"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-0.5">
+                  <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded ${tpl.isCustom ? "bg-amber-100 text-amber-800" : "bg-blue-100 text-blue-800"}`}>
+                    {tpl.isCustom ? "Modelo da Empresa" : "Modelo Padrão"}
+                  </span>
+                  <p className="text-xs font-bold text-gray-800 group-hover:text-blue-600 transition-colors pt-0.5">
+                    {tpl.name}
+                  </p>
+                </div>
+                {createFromTplMut.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-blue-500 shrink-0" />
+                ) : (
+                  <Plus className="w-4 h-4 text-blue-500 opacity-60 group-hover:opacity-100 shrink-0" />
+                )}
+              </div>
+              {tpl.description && (
+                <p className="text-[10px] text-gray-400 line-clamp-1 mt-1 font-normal">
+                  {tpl.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Seção: Todos os Fluxos */}
       <div className="space-y-4">
