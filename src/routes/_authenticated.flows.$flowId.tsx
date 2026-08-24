@@ -385,7 +385,14 @@ function FlowStudio() {
     mutationFn: async () => {
       setSaveState("saving");
       const payload = buildSavePayload();
-      return saveGraphFn({ data: { flowId, ...payload } });
+      const res = await saveGraphFn({ data: { flowId, ...payload } });
+      const status = data?.flow?.status;
+      if (!status || status === "active" || (status as string) === "published") {
+        await createVersionFn({
+          data: { flowId, publish: true, description: "Auto-publicado ao salvar" },
+        });
+      }
+      return res;
     },
     onSuccess: () => {
       setDirty(false);

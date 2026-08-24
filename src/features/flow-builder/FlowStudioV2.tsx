@@ -202,7 +202,14 @@ function FlowStudioV2Inner({ flowId }: Props) {
       // O schema do server usa um enum estrito de `node_type`; o Registry
       // V2 conhece exatamente os mesmos kinds (definitions.ts), então o
       // cast é seguro.
-      return saveGraphFn({ data: { flowId, ...payload } as never });
+      const res = await saveGraphFn({ data: { flowId, ...payload } as never });
+      const status = data?.flow?.status;
+      if (!status || status === "active" || (status as string) === "published") {
+        await createVersionFn({
+          data: { flowId, publish: true, description: "Auto-publicado ao salvar" },
+        });
+      }
+      return res;
     },
     onSuccess: () => {
       useBuilderStore.getState().markSaved();
